@@ -1,0 +1,76 @@
+name: Assignment Unblock
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # GitHub 最短间隔 5 分钟；*/3 不会触发
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+  repository_dispatch:
+    types: [assignment-unblock]
+  workflow_run:
+    workflows:
+      - "Gmail Lead Poller"
+      - "Facebook Lead Poller"
+    types:
+      - completed
+
+concurrency:
+  group: assignment-unblock-${{ github.event.client_payload.record_id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    name: Unblock Assignment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - name: Wait for Feishu formulas (post poller / webhook)
+        if: github.event_name == 'workflow_run' || github.event_name == 'repository_dispatch'
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            sleep 30
+          else
+            sleep 45
+          fi
+      - name: Suboffice assignee fix
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
+          SUBOFFICE_FIX_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: python3 cloud-suboffice-assignee-fix.py
+      - name: Fix channel-queue assignment anomalies
+        continue-on-error: true
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
+          FIX_ANOMALY_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: python3 scripts/fix_assignment_anomalies.py
+      - name: Run assignment unblock
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_ALERT_WEBHOOK: ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          ASSIGN_UNBLOCK_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: python3 cloud-assignment-unblock.py

@@ -1,0 +1,49 @@
+name: Post-Merge Doc Update
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  update-docs:
+    # 只在 PR 合并 + 来自 fix/ 分支时运行
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'fix/')
+    name: Update Anomaly Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GHA_PAT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run post-merge agent
+        env:
+          ZHIPU_API_KEY:     ${{ secrets.ZHIPU_API_KEY }}
+          GITHUB_TOKEN:      ${{ secrets.GHA_PAT }}
+          PR_NUMBER:         ${{ github.event.pull_request.number }}
+          PR_TITLE:          ${{ github.event.pull_request.title }}
+          PR_BODY:           ${{ github.event.pull_request.body }}
+          PR_BRANCH:         ${{ github.event.pull_request.head.ref }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DRY_RUN:           "false"
+        run: python post-merge-agent.py
+
+      - name: Upload agent log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-merge-log-${{ github.event.pull_request.number }}
+          path: "post-merge-*.log"
+          retention-days: 7
+          if-no-files-found: ignore

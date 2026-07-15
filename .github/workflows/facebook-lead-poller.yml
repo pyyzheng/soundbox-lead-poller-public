@@ -1,0 +1,94 @@
+name: Facebook Lead Poller
+
+on:
+  # webhook 为主；定时 Poller 作漏单安全网（飞书按 Leadgen ID / 邮箱去重，可安全重跑）
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run（不写入飞书）"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      since:
+        description: "只拉取此时间之后的线索 (ISO 8601)"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: facebook-lead-poller
+  cancel-in-progress: false
+
+jobs:
+  facebook-poll:
+    name: Poll Facebook Leads & Write to Feishu
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 恢复去重状态文件（记录已处理的 lead_id）
+      - name: Restore dedup state
+        uses: actions/cache@v4
+        with:
+          path: facebook-tasks.json
+          key: fb-tasks-state
+
+      - name: Run Facebook lead poller
+        env:
+          META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
+          FEISHU_APP_ID:          ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:      ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          ZHIPU_API_KEY:          ${{ secrets.GLM_API_KEY }}
+          DRY_RUN:                ${{ github.event.inputs.dry_run || 'false' }}
+          SINCE:                  ${{ github.event.inputs.since || '' }}
+        run: |
+          ARGS=""
+          [ "$DRY_RUN" = "true" ] && ARGS="$ARGS --dry-run"
+          [ -n "$SINCE" ] && ARGS="$ARGS --since $SINCE"
+          python facebook-lead-poller.py $ARGS
+
+      - name: Upload run log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fb-poller-error-log-${{ github.run_id }}
+          path: "*.log"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  wait-for-assignment:
+    needs: facebook-poll
+    if: ${{ !cancelled() }}
+    name: Wait for Feishu Automation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 90s for salesperson assignment
+        run: sleep 90
+
+  auto-reply:
+    needs: wait-for-assignment
+    if: ${{ !cancelled() }}
+    name: Auto-Reply (Facebook Leads)
+    uses: ./.github/workflows/auto-reply-worker.yml
+    with:
+      dry_run: ${{ github.event.inputs.dry_run || 'false' }}
+    secrets: inherit

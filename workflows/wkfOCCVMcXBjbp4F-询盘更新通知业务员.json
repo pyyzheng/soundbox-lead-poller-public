@@ -1,0 +1,214 @@
+{
+  "title": "询盘更新通知业务员",
+  "steps": [
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "匹配的业务员账号",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "未命中规则",
+                    "value_type": "text"
+                  }
+                ]
+              },
+              {
+                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "匹配错误请检查",
+                    "value_type": "text"
+                  }
+                ]
+              },
+              {
+                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "公式计算异常",
+                    "value_type": "text"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "field_watch_info": [
+          {
+            "field_name": "Enquiry details（询盘内容）"
+          }
+        ],
+        "table_name": "线索总池 Case Database",
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      },
+      "id": "trigEvBreo",
+      "next": "actEnquiryLookup",
+      "title": "修改记录时",
+      "type": "SetRecordTrigger"
+    },
+    {
+      "id": "actEnquiryLookup",
+      "type": "FindRecordAction",
+      "title": "查找记录",
+      "next": "actEnquirySwitch",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "业务通知名单",
+        "field_names": [
+          "对应业务",
+          "业务名单"
+        ],
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "业务名单",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigEvBreo.fldOMcCv5Y",
+                  "value_type": "ref"
+                }
+              ]
+            }
+          ]
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true
+      }
+    },
+    {
+      "id": "actEnquirySwitch",
+      "type": "SwitchBranch",
+      "title": "多分支（Switch）",
+      "children": {
+        "links": [
+          {
+            "desc": "分支 1",
+            "kind": "case",
+            "label": "branch_1",
+            "to": "act36Vyyk"
+          },
+          {
+            "desc": "默认分支",
+            "kind": "case",
+            "label": "default",
+            "to": ""
+          }
+        ]
+      },
+      "data": {
+        "mode": "exclusive",
+        "no_match_action": "classifyToOther",
+        "child_branch_list": [
+          {
+            "name": "分支 1",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "operator": "isGreater",
+                      "left_value": {
+                        "value": "$.actEnquiryLookup.recordNum",
+                        "value_type": "ref"
+                      },
+                      "right_value": [
+                        {
+                          "value": 0,
+                          "value_type": "number"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "btn_list": [
+          {
+            "text": "查看详情",
+            "btn_action": "openLink",
+            "link": [
+              {
+                "value": "$.trigEvBreo.recordLink",
+                "value_type": "ref"
+              }
+            ]
+          }
+        ],
+        "content": [
+          {
+            "value": "您好，您负责的线索询盘内容已更新，请及时查看。\n线索ID：",
+            "value_type": "text"
+          },
+          {
+            "value": "$.trigEvBreo.flde0LY8qQ",
+            "value_type": "ref"
+          },
+          {
+            "value": "\n询盘内容：",
+            "value_type": "text"
+          },
+          {
+            "value": "$.trigEvBreo.fldNLj6Btg",
+            "value_type": "ref"
+          }
+        ],
+        "receiver": [
+          {
+            "value": "$.actEnquiryLookup.firstfieldsRecord.fldEVPOdP6",
+            "value_type": "ref"
+          }
+        ],
+        "send_to_everyone": false,
+        "title": [
+          {
+            "value": "询盘内容更新提醒",
+            "value_type": "text"
+          }
+        ]
+      },
+      "id": "act36Vyyk",
+      "title": "发送飞书消息",
+      "type": "LarkMessageAction"
+    }
+  ]
+}

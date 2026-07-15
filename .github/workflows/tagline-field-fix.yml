@@ -1,0 +1,52 @@
+name: Tagline Field Fix
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run（只打印将回填的记录，不写飞书）"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      recent_hours:
+        description: "扫描最近 N 小时记录"
+        required: false
+        default: "72"
+
+concurrency:
+  group: tagline-field-fix
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    name: Fix Tagline Fields
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tagline field fixer
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
+          TAGLINE_FIX_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          TAGLINE_FIX_RECENT_HOURS: ${{ inputs.recent_hours || '72' }}
+        run: python3 cloud-tagline-field-fix.py

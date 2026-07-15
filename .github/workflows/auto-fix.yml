@@ -1,0 +1,52 @@
+name: Auto Fix Agent
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  auto-fix:
+    # 只在 auto-detected 标签被添加时运行
+    if: github.event.label.name == 'auto-detected'
+    name: AI Auto-Fix Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GHA_PAT }}
+
+      - name: Configure git identity
+        run: |
+          git config user.name "auto-fix-bot[bot]"
+          git config user.email "auto-fix-bot[bot]@users.noreply.github.com"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run auto-fix agent
+        env:
+          ZHIPU_API_KEY:     ${{ secrets.ZHIPU_API_KEY }}
+          GITHUB_TOKEN:      ${{ secrets.GHA_PAT }}
+          ISSUE_NUMBER:      ${{ github.event.issue.number }}
+          ISSUE_TITLE:       ${{ github.event.issue.title }}
+          ISSUE_BODY:        ${{ github.event.issue.body }}
+          DRY_RUN:           "false"
+        run: python auto-fix-agent.py
+
+      - name: Upload agent log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-fix-log-${{ github.event.issue.number }}
+          path: "auto-fix-*.log"
+          retention-days: 7
+          if-no-files-found: ignore

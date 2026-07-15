@@ -1,0 +1,294 @@
+{
+  "title": "子办规则分配自动化",
+  "steps": [
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Duplicate（重复）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": {
+                      "name": "查重命中"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "Duplicate（重复）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": {
+                      "name": "查重冲突"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "队列Key",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Country（国家）",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Channels（渠道）",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Allocation Method（分配方式）",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": {
+                      "name": "Automatic（自动）"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "Allocation Status（是否成功分配）",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": {
+                      "name": "No（否）"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "子办规则命中负责人",
+                "operator": "isEmpty",
+                "value": []
+              }
+            ]
+          }
+        ],
+        "field_watch_info": [
+          {
+            "field_name": "Channels（渠道）"
+          },
+          {
+            "field_name": "Country（国家）"
+          },
+          {
+            "field_name": "Allocation Method（分配方式）"
+          },
+          {
+            "field_name": "是否是子办国家"
+          }
+        ],
+        "table_name": "线索总池 Case Database",
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      },
+      "id": "trigpJUkcCnQ",
+      "next": "actPIQDoV",
+      "title": "修改记录时",
+      "type": "SetRecordTrigger"
+    },
+    {
+      "children": {
+        "links": [
+          {
+            "desc": "分支 1",
+            "kind": "case",
+            "label": "branch_1",
+            "to": "actVWM1Z5"
+          },
+          {
+            "desc": "默认分支",
+            "kind": "case",
+            "label": "default",
+            "to": ""
+          }
+        ]
+      },
+      "data": {
+        "child_branch_list": [
+          {
+            "name": "分支 1",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value": "$.trigpJUkcCnQ.fld9kCu7o6",
+                        "value_type": "ref"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value": {
+                            "name": "是"
+                          },
+                          "value_type": "option"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "mode": "exclusive",
+        "no_match_action": "classifyToOther"
+      },
+      "id": "actPIQDoV",
+      "title": "多分支（Switch）",
+      "type": "SwitchBranch"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_names": [
+          "负责人"
+        ],
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "国家",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigpJUkcCnQ.fldAEhwYJU",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "是否启用",
+              "operator": "is",
+              "value": [
+                {
+                  "value": {
+                    "name": "启用"
+                  },
+                  "value_type": "option"
+                }
+              ]
+            }
+          ]
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true,
+        "table_name": "子办分配规则表"
+      },
+      "id": "actVWM1Z5",
+      "next": "actSubRuleSwitch",
+      "title": "查找记录",
+      "type": "FindRecordAction"
+    },
+    {
+      "id": "actSubRuleSwitch",
+      "type": "SwitchBranch",
+      "title": "多分支（Switch）",
+      "children": {
+        "links": [
+          {
+            "desc": "命中子办规则",
+            "kind": "case",
+            "label": "branch_1",
+            "to": "act1jaIFY"
+          },
+          {
+            "desc": "默认分支",
+            "kind": "case",
+            "label": "default",
+            "to": ""
+          }
+        ]
+      },
+      "data": {
+        "mode": "exclusive",
+        "no_match_action": "classifyToOther",
+        "child_branch_list": [
+          {
+            "name": "命中子办规则",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "operator": "isGreater",
+                      "left_value": {
+                        "value": "$.actVWM1Z5.recordNum",
+                        "value_type": "ref"
+                      },
+                      "right_value": [
+                        {
+                          "value": 0,
+                          "value_type": "number"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "act1jaIFY",
+      "type": "SetRecordAction",
+      "title": "修改记录",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_values": [
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "value": [
+              {
+                "value": {
+                  "name": "Yes（是）"
+                },
+                "value_type": "option"
+              }
+            ]
+          }
+        ],
+        "filter_info": null,
+        "max_set_record_num": 100,
+        "ref_info": {
+          "step_id": "trigpJUkcCnQ"
+        },
+        "table_name": "线索总池 Case Database"
+      }
+    }
+  ]
+}

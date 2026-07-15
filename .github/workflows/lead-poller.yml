@@ -1,0 +1,122 @@
+name: Gmail Lead Poller
+
+# 触发来源（优先级从高到低）：
+#   1. Google Apps Script Gmail 触发器（scripts/gmail-trigger.gs）— 有新邮件时近实时触发 Public 仓
+#   2. cron-job.org workflow_dispatch — 备用定时触发（建议降到 1 小时）
+#   3. GitHub schedule 兜底：每天 1 次全量扫未处理邮件（UTC 01:00 = 北京 09:00）
+#      实时性由 Apps Script 提供，schedule 仅作兜底防漏（实时通道挂掉时最多延迟 1 天）
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run（仅搜索邮件，不写飞书、不打标签）"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+concurrency:
+  group: gmail-inquiry-poller
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    name: Poll Gmail & Write to Feishu
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      reply_count: ${{ steps.poll.outputs.reply_count }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run lead poller
+        id: poll
+        env:
+          GMAIL_CLIENT_ID:      ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET:  ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN:  ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          FEISHU_APP_ID:        ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:    ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          ZHIPU_API_KEY:        ${{ secrets.GLM_API_KEY }}
+          FEISHU_ALERT_WEBHOOK: ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          DRY_RUN:              ${{ github.event.inputs.dry_run || 'false' }}
+          AUTO_REPLY_ENABLED:   'false'  # 内联自动回复已关闭：无 salesperson 过滤 + 收件人 bug，改用独立 worker
+          AUTO_REPLY_DRY_RUN:   ${{ secrets.AUTO_REPLY_DRY_RUN || 'true' }}
+          AUTO_REPLY_SAMPLE_RATE: ${{ secrets.AUTO_REPLY_SAMPLE_RATE || '1.0' }}
+          FEISHU_FILTER_LOG_TABLE_ID: ${{ secrets.FEISHU_FILTER_LOG_TABLE_ID }}
+          FEISHU_FOLLOWUP_TABLE:       ${{ secrets.FEISHU_FOLLOWUP_TABLE }}
+        run: python cloud-lead-poller.py
+
+      - name: Upload run log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lead-poller-error-log-${{ github.run_id }}
+          path: "*.log"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  auto-reply:
+    needs: poll
+    if: ${{ !cancelled() && needs.poll.result == 'success' }}
+    name: Auto-Reply (Stephanie)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Wait for Feishu automation
+        run: sleep 90
+
+      - name: Run auto-reply worker
+        env:
+          GMAIL_CLIENT_ID:              ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET:          ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN:          ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          FEISHU_APP_ID:                ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:            ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_ALERT_WEBHOOK:         ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          AUTO_REPLY_WORKER_ENABLED:    ${{ secrets.AUTO_REPLY_WORKER_ENABLED || 'false' }}
+          AUTO_REPLY_WORKER_DRY_RUN:    ${{ secrets.AUTO_REPLY_WORKER_DRY_RUN || 'true' }}
+          AUTO_REPLY_ALLOWED_SALESPERSONS: ${{ secrets.AUTO_REPLY_ALLOWED_SALESPERSONS || 'Stephanie' }}
+          FEISHU_FOLLOWUP_TABLE:       ${{ secrets.FEISHU_FOLLOWUP_TABLE }}
+        run: python cloud-auto-reply-worker.py
+
+      - name: Upload run log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-reply-error-log-${{ github.run_id }}
+          path: "*.log"
+          retention-days: 7
+          if-no-files-found: ignore

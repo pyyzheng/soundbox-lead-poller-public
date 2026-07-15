@@ -1,0 +1,36 @@
+name: Weekly Lead Report
+
+on:
+  schedule:
+    - cron: "30 1 * * 1"  # UTC 01:30 = 北京时间 09:30（周一）
+  workflow_dispatch:
+
+jobs:
+  report:
+    name: Generate Weekly Lead Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run weekly report
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_FILTER_LOG_TABLE_ID: ${{ secrets.FEISHU_FILTER_LOG_TABLE_ID }}
+          FEISHU_REPORT_WEBHOOK: ${{ secrets.FEISHU_REPORT_WEBHOOK }}
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          ZHIPU_MODEL: ${{ vars.ZHIPU_MODEL || 'glm-4.5-air' }}
+        run: python cloud-weekly-report.py

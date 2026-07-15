@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "description": "Clue Level × Customer Grade → Follow-up Priority 矩阵",
+  "matrix": {
+    "L1": {"A": "P1", "B": "P1", "C": "P2", "D": "P2"},
+    "L2": {"A": "P2", "B": "P2", "C": "P2", "D": "P3"},
+    "L3": {"A": "P2", "B": "P3", "C": "P3", "D": "P4"},
+    "L4": {"A": "P4", "B": "P4", "C": "P4", "D": "P4"}
+  },
+  "defaults": {
+    "no_research": "Pending",
+    "invalid_clue_level": "Pending",
+    "invalid_company_grade": "Pending"
+  }
+}

@@ -1,0 +1,56 @@
+name: Auto-Reply Worker
+
+# 已改为按需触发：由 lead-poller.yml 的 auto-reply job 调用，不再定时轮询
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run（不实际发送邮件）"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+  workflow_call:
+    inputs:
+      dry_run:
+        description: "Dry run（不实际发送邮件）"
+        required: false
+        default: "true"
+        type: string
+
+jobs:
+  auto-reply:
+    name: Auto-Reply Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run auto-reply worker
+        env:
+          GMAIL_CLIENT_ID:              ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET:          ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN:          ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          FEISHU_APP_ID:                ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:            ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_ALERT_WEBHOOK:         ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          AUTO_REPLY_WORKER_ENABLED:    ${{ secrets.AUTO_REPLY_WORKER_ENABLED || 'false' }}
+          AUTO_REPLY_WORKER_DRY_RUN:    ${{ inputs.dry_run || secrets.AUTO_REPLY_WORKER_DRY_RUN || 'true' }}
+          AUTO_REPLY_ALLOWED_SALESPERSONS: ${{ secrets.AUTO_REPLY_ALLOWED_SALESPERSONS || 'Stephanie' }}
+          FEISHU_FOLLOWUP_TABLE:       ${{ secrets.FEISHU_FOLLOWUP_TABLE }}
+        run: python cloud-auto-reply-worker.py

@@ -1,0 +1,653 @@
+{
+  "title": "代理区域分配自动化",
+  "steps": [
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "condition_list": [
+          {
+            "conditions": [
+              {
+                "field_name": "是否命中代理国家",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": {
+                      "name": "是"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "Duplicate（重复）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": {
+                      "name": "查重命中"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "Duplicate（重复）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": {
+                      "name": "查重冲突"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "Channel segmentation (细分渠道)",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Country（国家）",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Allocation Method（分配方式）",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": {
+                      "name": "Automatic（自动）"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "Allocation Status（是否成功分配）",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": {
+                      "name": "No（否）"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              }
+            ],
+            "conjunction": "and"
+          }
+        ],
+        "field_watch_info": [
+          {
+            "field_name": "是否是子办国家",
+            "operator": "is",
+            "value": [
+              {
+                "value": {
+                  "name": "否"
+                },
+                "value_type": "option"
+              }
+            ]
+          },
+          {
+            "field_name": "Product Categories（产品大类）",
+            "operator": "doesNotContainAny",
+            "value": [
+              {
+                "value": {
+                  "name": "无法识别"
+                },
+                "value_type": "option"
+              },
+              {
+                "value": {
+                  "name": "无可用选项"
+                },
+                "value_type": "option"
+              }
+            ]
+          },
+          {
+            "field_name": "Product model（具体型号）"
+          },
+          {
+            "field_name": "Country（国家）"
+          },
+          {
+            "field_name": "Channel segmentation (细分渠道)"
+          }
+        ],
+        "table_name": "线索总池 Case Database",
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      },
+      "id": "trigYl0y5W",
+      "next": "branchhWywIAFT",
+      "title": "修改记录时",
+      "type": "SetRecordTrigger"
+    },
+    {
+      "children": {
+        "links": [
+          {
+            "kind": "if_true",
+            "to": "acter14Zh6v"
+          },
+          {
+            "kind": "if_false",
+            "to": "actlMXhJW"
+          }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conditions": [
+            {
+              "conditions": [
+                {
+                  "left_value": {
+                    "value": "$.trigYl0y5W.fldFPAEOQA",
+                    "value_type": "ref"
+                  },
+                  "operator": "is",
+                  "right_value": [
+                    {
+                      "value": {
+                        "name": "Acoustic products 声学产品"
+                      },
+                      "value_type": "option"
+                    }
+                  ]
+                }
+              ],
+              "conjunction": "and"
+            }
+          ],
+          "conjunction": "or"
+        }
+      },
+      "id": "branchhWywIAFT",
+      "title": "条件判断（If/Else）",
+      "type": "IfElseBranch"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_values": [
+          {
+            "field_name": "是否命中代理产品",
+            "value": [
+              {
+                "value": {
+                  "name": "否"
+                },
+                "value_type": "option"
+              }
+            ]
+          },
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "value": [
+              {
+                "value": {
+                  "name": "No（否）"
+                },
+                "value_type": "option"
+              }
+            ]
+          }
+        ],
+        "filter_info": null,
+        "max_set_record_num": 100,
+        "ref_info": {
+          "step_id": "trigYl0y5W"
+        },
+        "table_name": "线索总池 Case Database"
+      },
+      "id": "acter14Zh6v",
+      "title": "修改记录",
+      "type": "SetRecordAction"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_names": [
+          "业务员"
+        ],
+        "filter_info": {
+          "conditions": [
+            {
+              "field_name": "国家",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigYl0y5W.fldAEhwYJU",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "产品大类",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigYl0y5W.fldFPAEOQA",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "具体型号",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigYl0y5W.fld1mYUXOF",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "是否启用",
+              "operator": "is",
+              "value": [
+                {
+                  "value": {
+                    "name": "启用"
+                  },
+                  "value_type": "option"
+                }
+              ]
+            }
+          ],
+          "conjunction": "and"
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true,
+        "table_name": "代理优先规则表"
+      },
+      "id": "actlMXhJW",
+      "next": "actWcLcGT",
+      "title": "查找记录",
+      "type": "FindRecordAction"
+    },
+    {
+      "children": {
+        "links": [
+          {
+            "kind": "if_true",
+            "to": "actfxjmzT"
+          },
+          {
+            "kind": "if_false",
+            "to": "branch3AHWu3mS"
+          }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conditions": [
+            {
+              "conditions": [
+                {
+                  "left_value": {
+                    "value": "$.actlMXhJW.recordNum",
+                    "value_type": "ref"
+                  },
+                  "operator": "isGreater",
+                  "right_value": [
+                    {
+                      "value": 0,
+                      "value_type": "number"
+                    }
+                  ]
+                }
+              ],
+              "conjunction": "and"
+            }
+          ],
+          "conjunction": "or"
+        }
+      },
+      "id": "actWcLcGT",
+      "title": "条件判断",
+      "type": "IfElseBranch"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_values": [
+          {
+            "field_name": "是否命中代理产品",
+            "value": [
+              {
+                "value": {
+                  "name": "待确认"
+                },
+                "value_type": "option"
+              }
+            ]
+          },
+          {
+            "field_name": "代理规则命中业务员",
+            "value": [
+              {
+                "value": "$.actlMXhJW.fields.fldcmDUWhH",
+                "value_type": "ref"
+              }
+            ]
+          },
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "value": [
+              {
+                "value": {
+                  "name": "Yes（是）"
+                },
+                "value_type": "option"
+              }
+            ]
+          }
+        ],
+        "filter_info": null,
+        "max_set_record_num": 100,
+        "ref_info": {
+          "step_id": "trigYl0y5W"
+        },
+        "table_name": "线索总池 Case Database"
+      },
+      "id": "actfxjmzT",
+      "title": "修改记录",
+      "type": "SetRecordAction"
+    },
+    {
+      "children": {
+        "links": [
+          {
+            "kind": "if_true",
+            "to": "actEAGoVb3P"
+          },
+          {
+            "kind": "if_false",
+            "to": "act3Nvoal"
+          }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conditions": [
+            {
+              "conditions": [
+                {
+                  "left_value": {
+                    "value": "$.trigYl0y5W.fld1mYUXOF",
+                    "value_type": "ref"
+                  },
+                  "operator": "isEmpty"
+                }
+              ],
+              "conjunction": "and"
+            }
+          ],
+          "conjunction": "or"
+        }
+      },
+      "id": "branch3AHWu3mS",
+      "title": "条件判断（If/Else）",
+      "type": "IfElseBranch"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_values": [
+          {
+            "field_name": "是否命中代理产品",
+            "value": [
+              {
+                "value": {
+                  "name": "待确认"
+                },
+                "value_type": "option"
+              }
+            ]
+          },
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "value": [
+              {
+                "value": {
+                  "name": "No（否）"
+                },
+                "value_type": "option"
+              }
+            ]
+          }
+        ],
+        "filter_info": null,
+        "max_set_record_num": 100,
+        "ref_info": {
+          "step_id": "trigYl0y5W"
+        },
+        "table_name": "线索总池 Case Database"
+      },
+      "id": "actEAGoVb3P",
+      "title": "修改记录",
+      "type": "SetRecordAction"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_names": [
+          "业务员"
+        ],
+        "filter_info": {
+          "conditions": [
+            {
+              "field_name": "国家",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigYl0y5W.fldAEhwYJU",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "产品大类",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigYl0y5W.fldFPAEOQA",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "具体型号",
+              "operator": "is",
+              "value": [
+                {
+                  "value": {
+                    "name": "全系列"
+                  },
+                  "value_type": "option"
+                }
+              ]
+            },
+            {
+              "field_name": "是否启用",
+              "operator": "is",
+              "value": [
+                {
+                  "value": {
+                    "name": "启用"
+                  },
+                  "value_type": "option"
+                }
+              ]
+            }
+          ],
+          "conjunction": "and"
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true,
+        "table_name": "代理优先规则表"
+      },
+      "id": "act3Nvoal",
+      "next": "actjNg1xu",
+      "title": "查找记录",
+      "type": "FindRecordAction"
+    },
+    {
+      "children": {
+        "links": [
+          {
+            "kind": "if_true",
+            "to": "actBTQP7f"
+          },
+          {
+            "kind": "if_false",
+            "to": "act6JyqTx"
+          }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conditions": [
+            {
+              "conditions": [
+                {
+                  "left_value": {
+                    "value": "$.act3Nvoal.recordNum",
+                    "value_type": "ref"
+                  },
+                  "operator": "isGreater",
+                  "right_value": [
+                    {
+                      "value": 0,
+                      "value_type": "number"
+                    }
+                  ]
+                }
+              ],
+              "conjunction": "and"
+            }
+          ],
+          "conjunction": "or"
+        }
+      },
+      "id": "actjNg1xu",
+      "title": "条件判断",
+      "type": "IfElseBranch"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_values": [
+          {
+            "field_name": "是否命中代理产品",
+            "value": [
+              {
+                "value": {
+                  "name": "是"
+                },
+                "value_type": "option"
+              }
+            ]
+          },
+          {
+            "field_name": "代理规则命中业务员",
+            "value": [
+              {
+                "value": "$.act3Nvoal.fields.fldcmDUWhH",
+                "value_type": "ref"
+              }
+            ]
+          },
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "value": [
+              {
+                "value": {
+                  "name": "No（否）"
+                },
+                "value_type": "option"
+              }
+            ]
+          }
+        ],
+        "filter_info": null,
+        "max_set_record_num": 100,
+        "ref_info": {
+          "step_id": "trigYl0y5W"
+        },
+        "table_name": "线索总池 Case Database"
+      },
+      "id": "actBTQP7f",
+      "title": "修改记录",
+      "type": "SetRecordAction"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_values": [
+          {
+            "field_name": "是否命中代理产品",
+            "value": [
+              {
+                "value": {
+                  "name": "否"
+                },
+                "value_type": "option"
+              }
+            ]
+          },
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "value": [
+              {
+                "value": {
+                  "name": "No（否）"
+                },
+                "value_type": "option"
+              }
+            ]
+          }
+        ],
+        "filter_info": null,
+        "max_set_record_num": 100,
+        "ref_info": {
+          "step_id": "trigYl0y5W"
+        },
+        "table_name": "线索总池 Case Database"
+      },
+      "id": "act6JyqTx",
+      "title": "修改记录",
+      "type": "SetRecordAction"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+name: Multi-Agent Scan
+
+on:
+  schedule:
+    - cron: "30 2 * * *"   # 每天 1 次（UTC 02:30 = 北京 10:30，错开 health-check）
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "扫描项目"
+        required: false
+        default: "google-leads"
+      check_hours:
+        description: "检查最近 N 小时的记录"
+        required: false
+        default: "24"
+
+jobs:
+  agent-scan:
+    name: Agent Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run agent scan
+        env:
+          FEISHU_APP_ID:        ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:    ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          GITHUB_TOKEN:         ${{ secrets.GHA_PAT }}
+          GHA_PAT:              ${{ secrets.GHA_PAT }}
+          GMAIL_CLIENT_ID:      ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET:  ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN:  ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          ZHIPU_API_KEY:        ${{ secrets.ZHIPU_API_KEY }}
+          ZHIPU_FIX_MODEL:      glm-4.7-flash
+          CHECK_HOURS:          ${{ github.event.inputs.check_hours || '24' }}
+        run: python -m agents --scan --project ${{ github.event.inputs.project || 'google-leads' }}

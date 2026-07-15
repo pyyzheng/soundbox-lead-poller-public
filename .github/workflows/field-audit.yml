@@ -1,0 +1,33 @@
+name: Field Name Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Bilingual Field Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Static field name audit
+        run: python3 scripts/audit_bilingual_fields.py
+      - name: Unit tests (assignment / workflow bilingual)
+        run: |
+          python3 -m pytest \
+            tests/test_bilingual_field_audit.py \
+            tests/test_workflow_bilingual.py \
+            tests/test_feishu_writer.py \
+            tests/test_suboffice_assignee_fix.py \
+            tests/test_option_field_match.py \
+            tests/test_channel_queue_assign.py \
+            -q

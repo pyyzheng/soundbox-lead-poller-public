@@ -1,0 +1,375 @@
+{
+  "title": "渠道轮转自动化",
+  "steps": [
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "condition_list": [
+          {
+            "conditions": [
+              {
+                "field_name": "Allocation Status（是否成功分配）",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": {
+                      "name": "No（否）"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "Allocation Method（分配方式）",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": {
+                      "name": "Automatic（自动）"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "是否满足渠道轮转",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": "是",
+                    "value_type": "text"
+                  }
+                ]
+              },
+              {
+                "field_name": "Channel segmentation (细分渠道)",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Country（国家）",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Duplicate（重复）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": {
+                      "name": "查重命中"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "Duplicate（重复）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": {
+                      "name": "查重冲突"
+                    },
+                    "value_type": "option"
+                  }
+                ]
+              },
+              {
+                "field_name": "渠道顺序队列匹配业务员",
+                "operator": "isEmpty",
+                "value": []
+              }
+            ],
+            "conjunction": "and"
+          }
+        ],
+        "field_watch_info": [
+          {
+            "field_name": "Channel segmentation (细分渠道)",
+            "operator": "isNotEmpty",
+            "value": []
+          },
+          {
+            "field_name": "Country（国家）",
+            "operator": "isNotEmpty",
+            "value": []
+          },
+          {
+            "field_name": "Dup Formula Ready（公式查重就绪）",
+            "operator": "is",
+            "value": [
+              {
+                "value": "是",
+                "value_type": "text"
+              }
+            ]
+          },
+          {
+            "field_name": "Allocation Method（分配方式）"
+          },
+          {
+            "field_name": "是否满足渠道轮转",
+            "operator": "is",
+            "value": [
+              {
+                "value": "是",
+                "value_type": "text"
+              }
+            ]
+          },
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "operator": "is",
+            "value": [
+              {
+                "value": {
+                  "name": "No（否）"
+                },
+                "value_type": "option"
+              }
+            ]
+          },
+          {
+            "field_name": "渠道顺序队列匹配业务员"
+          },
+          {
+            "field_name": "队列Key"
+          }
+        ],
+        "table_name": "线索总池 Case Database",
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      },
+      "id": "triggzwCHjB9",
+      "next": "actJShk3sEn",
+      "title": "修改记录时",
+      "type": "SetRecordTrigger"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_names": [
+          "当前顺序号",
+          "最大顺序号"
+        ],
+        "filter_info": {
+          "conditions": [
+            {
+              "field_name": "队列Key",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.triggzwCHjB9.fldbw1JCI5",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "是否启用",
+              "operator": "is",
+              "value": [
+                {
+                  "value": {
+                    "name": "启用"
+                  },
+                  "value_type": "option"
+                }
+              ]
+            }
+          ],
+          "conjunction": "and"
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true,
+        "table_name": "队列指针表"
+      },
+      "id": "actJShk3sEn",
+      "next": "acteml359jG",
+      "title": "查找记录",
+      "type": "FindRecordAction"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_names": [
+          "业务员"
+        ],
+        "filter_info": {
+          "conditions": [
+            {
+              "field_name": "队列Key",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.triggzwCHjB9.fldbw1JCI5",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "顺位",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.actJShk3sEn.firstfieldsRecord.fldcacfxDL",
+                  "value_type": "ref"
+                }
+              ]
+            },
+            {
+              "field_name": "是否启用",
+              "operator": "is",
+              "value": [
+                {
+                  "value": {
+                    "name": "启用"
+                  },
+                  "value_type": "option"
+                }
+              ]
+            }
+          ],
+          "conjunction": "and"
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true,
+        "table_name": "渠道顺序队列表"
+      },
+      "id": "acteml359jG",
+      "next": "actqDWjTh",
+      "title": "查找记录",
+      "type": "FindRecordAction"
+    },
+    {
+      "children": {
+        "links": [
+          {
+            "desc": "分支 1",
+            "kind": "case",
+            "label": "branch_1",
+            "to": "act5O1gwL2N"
+          },
+          {
+            "desc": "默认分支",
+            "kind": "case",
+            "label": "default",
+            "to": "actnfeoNaFo"
+          }
+        ]
+      },
+      "data": {
+        "child_branch_list": [
+          {
+            "condition": {
+              "conditions": [
+                {
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value": "$.acteml359jG.recordNum",
+                        "value_type": "ref"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value": 0,
+                          "value_type": "number"
+                        }
+                      ]
+                    }
+                  ],
+                  "conjunction": "and"
+                }
+              ],
+              "conjunction": "or"
+            },
+            "name": "分支 1"
+          }
+        ],
+        "mode": "exclusive",
+        "no_match_action": "classifyToOther"
+      },
+      "id": "actqDWjTh",
+      "title": "多分支（Switch）",
+      "type": "SwitchBranch"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_values": [
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "value": [
+              {
+                "value": {
+                  "name": "No（否）"
+                },
+                "value_type": "option"
+              }
+            ]
+          }
+        ],
+        "filter_info": null,
+        "max_set_record_num": 100,
+        "ref_info": {
+          "step_id": "triggzwCHjB9"
+        },
+        "table_name": "线索总池 Case Database"
+      },
+      "id": "act5O1gwL2N",
+      "title": "修改记录",
+      "type": "SetRecordAction"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_values": [
+          {
+            "field_name": "渠道顺序队列匹配业务员",
+            "value": [
+              {
+                "value": "$.acteml359jG.fields.fldJSP0l6d",
+                "value_type": "ref"
+              }
+            ]
+          },
+          {
+            "field_name": "Allocation Status（是否成功分配）",
+            "value": [
+              {
+                "value": {
+                  "name": "Yes（是）"
+                },
+                "value_type": "option"
+              }
+            ]
+          }
+        ],
+        "filter_info": null,
+        "max_set_record_num": 100,
+        "ref_info": {
+          "step_id": "triggzwCHjB9"
+        },
+        "table_name": "线索总池 Case Database"
+      },
+      "id": "actnfeoNaFo",
+      "title": "修改记录",
+      "type": "SetRecordAction"
+    }
+  ]
+}

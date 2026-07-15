@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+metrics.json
+
+# 敏感文件
+*.env
+*.env.*
+!.env.example
+.secrets.local
+.secrets.*
+!.secrets.local.example
+tmp-formulas/
+.infisical.json
+credentials.json
+service-account*.json
+facebook-tasks.json
+facebook-pending.jsonl
+*.pem
+*.key
