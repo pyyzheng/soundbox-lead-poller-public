@@ -1,0 +1,78 @@
+{
+  "title": "跟进双向同步（Quick→Records）",
+  "status": "enabled",
+  "steps": [
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "field_watch_info": [
+          {
+            "field_name": "Quick Follow-up / 快捷跟进"
+          }
+        ],
+        "table_name": "线索总池 Case Database",
+        "trigger_control_list": []
+      },
+      "id": "trigger",
+      "next": "http_sync",
+      "title": "Quick Follow-up 变更",
+      "type": "SetRecordTrigger"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "body_type": "raw",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": [
+              {
+                "value": "application/json",
+                "value_type": "text"
+              }
+            ]
+          },
+          {
+            "key": "Authorization",
+            "value": [
+              {
+                "value": "Bearer <ADMIN_TOKEN>",
+                "value_type": "text"
+              }
+            ]
+          }
+        ],
+        "method": "POST",
+        "raw_body": [
+          {
+            "value": "{\n  \"direction\": \"from_quick\",\n  \"lead_record_id\": \"",
+            "value_type": "text"
+          },
+          {
+            "value": "$.trigger.recordId",
+            "value_type": "ref"
+          },
+          {
+            "value": "\"\n}",
+            "value_type": "text"
+          }
+        ],
+        "response_type": "json",
+        "response_value": "{\"ok\":true}",
+        "url": [
+          {
+            "value": "https://webhook.soundboxbooth.com/sync-quick-followup",
+            "value_type": "text"
+          }
+        ]
+      },
+      "id": "http_sync",
+      "title": "调用同步引擎",
+      "type": "HTTPClientAction"
+    }
+  ]
+}

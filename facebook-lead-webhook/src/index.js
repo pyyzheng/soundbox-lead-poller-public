@@ -900,15 +900,577 @@ async function findFacebookContactDuplicate(token, email, phone, env, windowMs =
   return null;
 }
 __name(findFacebookContactDuplicate, "findFacebookContactDuplicate");
-var FOLLOWUP_TABLE_ID = "tblbrI87BmcvFC5L";
+var FOLLOWUP_TABLE_ID = "tbl3n8TTJYXHG12q";
 var FIELD_ENTRY_TIME = "Entry Time\uFF08\u5F55\u5165\u65F6\u95F4\uFF09";
 var FIELD_PHONE = "Telephone Number";
+var QUICK_FOLLOWUP_FIELD = "Quick Follow-up / \u5FEB\u6377\u8DDF\u8FDB";
+var FOLLOWUP_DETAILS_FIELD = "Follow-up Details";
+var FOLLOWUP_TIME_FIELD = "Follow-up Time";
+var FOLLOWUP_RELATED_FIELD = "Related Lead";
+var FOLLOWUP_DELETED_FIELD = "\u5DF2\u5220\u9664";
+var FOLLOWUP_SOURCE_FIELD = "Entry Source";
+var SYNC_LOCK_PREFIX = "quick-fu-sync:";
+function followupTableUrl(env, suffix = "") {
+  return `${FEISHU_BASE}/bitable/v1/apps/${env.FEISHU_APP_TOKEN}/tables/${FOLLOWUP_TABLE_ID}/records${suffix}`;
+}
+__name(followupTableUrl, "followupTableUrl");
+function fieldVal(fields, ...keys) {
+  if (!fields || typeof fields !== "object") return void 0;
+  for (const k of keys) {
+    if (fields[k] !== void 0 && fields[k] !== null) return fields[k];
+  }
+  return void 0;
+}
+__name(fieldVal, "fieldVal");
+function extractLinkIds(val) {
+  if (!val) return [];
+  const out = [];
+  const push = (x) => {
+    if (!x) return;
+    if (typeof x === "string") {
+      out.push(x);
+      return;
+    }
+    if (typeof x === "object") {
+      if (x.id) out.push(x.id);
+      else if (x.record_id) out.push(x.record_id);
+      else if (Array.isArray(x.record_ids)) {
+        for (const id of x.record_ids) if (id) out.push(id);
+      } else if (Array.isArray(x.link_record_ids)) {
+        for (const id of x.link_record_ids) if (id) out.push(id);
+      }
+    }
+  };
+  if (typeof val === "string") push(val);
+  else if (Array.isArray(val)) for (const x of val) push(x);
+  else if (typeof val === "object") push(val);
+  return [...new Set(out)];
+}
+__name(extractLinkIds, "extractLinkIds");
+function parseQuickLines(text) {
+  const raw = String(text || "").replace(/\r\n/g, "\n").trim();
+  if (!raw) return [];
+  return raw.split("\n").map((line) => line.trim()).filter(Boolean).filter((line) => line !== "[object Object]").map((line) => {
+    const m = line.match(/^(\d{4}\/\d{2}\/\d{2})\s*\|\s*(.*)$/);
+    if (m) {
+      return { raw: line, date: m[1], details: m[2].trim() };
+    }
+    return { raw: line, date: "", details: line };
+  });
+}
+__name(parseQuickLines, "parseQuickLines");
+function formatQuickLine(dateStr, details) {
+  const d = dateStr || formatShanghaiDate(Date.now());
+  return `${d} | ${details || ""}`.trim();
+}
+__name(formatQuickLine, "formatQuickLine");
+function formatShanghaiDate(ms) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(new Date(ms)).replace(/-/g, "/");
+  } catch {
+    const d = new Date(ms);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}/${m}/${day}`;
+  }
+}
+__name(formatShanghaiDate, "formatShanghaiDate");
+function parseFollowupTimeMs(val) {
+  if (val == null || val === "") return 0;
+  if (typeof val === "number") return val < 1e12 ? val * 1e3 : val;
+  const s = String(val).trim();
+  if (!s) return 0;
+  if (/^\d+$/.test(s)) {
+    const n = Number(s);
+    return n < 1e12 ? n * 1e3 : n;
+  }
+  const normalized = s.replace(/\//g, "-");
+  const t = Date.parse(normalized);
+  return Number.isFinite(t) ? t : 0;
+}
+__name(parseFollowupTimeMs, "parseFollowupTimeMs");
+function dateFromMs(ms) {
+  if (!ms) return formatShanghaiDate(Date.now());
+  return formatShanghaiDate(ms);
+}
+__name(dateFromMs, "dateFromMs");
+async function bitableSearch(token, env, tableId, body) {
+  const url = `${FEISHU_BASE}/bitable/v1/apps/${env.FEISHU_APP_TOKEN}/tables/${tableId}/records/search`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+__name(bitableSearch, "bitableSearch");
+async function listActiveFollowupsForLead(token, env, leadRecordId) {
+  const items = [];
+  let pageToken = void 0;
+  do {
+    const body = {
+      page_size: 100,
+      automatic_fields: false,
+      field_names: [
+        FOLLOWUP_DETAILS_FIELD,
+        FOLLOWUP_TIME_FIELD,
+        FOLLOWUP_RELATED_FIELD,
+        FOLLOWUP_DELETED_FIELD,
+        FOLLOWUP_SOURCE_FIELD,
+        "\u8DDF\u8FDB\u6458\u8981"
+      ],
+      filter: {
+        conjunction: "and",
+        conditions: [
+          {
+            field_name: FOLLOWUP_RELATED_FIELD,
+            operator: "is",
+            value: [leadRecordId]
+          }
+        ]
+      }
+    };
+    if (pageToken) body.page_token = pageToken;
+    const data = await bitableSearch(token, env, FOLLOWUP_TABLE_ID, body);
+    if (data.code !== 0) {
+      throw new Error(`list followups failed: code=${data.code} msg=${data.msg}`);
+    }
+    for (const it of data.data?.items || []) {
+      const deleted = fieldVal(it.fields, FOLLOWUP_DELETED_FIELD, "fldu6ZZ3EL");
+      if (deleted === true || deleted === "true" || deleted === 1) continue;
+      const details = extractTextFromField(fieldVal(it.fields, FOLLOWUP_DETAILS_FIELD, "fldfDC8gbR")).trim();
+      const summaryRaw = extractTextFromField(fieldVal(it.fields, "\u8DDF\u8FDB\u6458\u8981", "fldDADmTcB")).trim();
+      const timeMs = parseFollowupTimeMs(fieldVal(it.fields, FOLLOWUP_TIME_FIELD, "fldZRM9XEz"));
+      const summary = summaryRaw && summaryRaw !== "[object Object]"
+        ? summaryRaw
+        : details
+          ? formatQuickLine(dateFromMs(timeMs), details)
+          : "";
+      items.push({
+        record_id: it.record_id,
+        details,
+        summary,
+        timeMs
+      });
+    }
+    pageToken = data.data?.has_more ? data.data.page_token : void 0;
+  } while (pageToken);
+  items.sort((a, b) => (b.timeMs || 0) - (a.timeMs || 0));
+  return items;
+}
+__name(listActiveFollowupsForLead, "listActiveFollowupsForLead");
+function buildQuickTextFromFollowups(followups) {
+  return followups.map((f) => {
+    const summary = String(f.summary || "").trim();
+    if (summary && summary !== "[object Object]") return summary;
+    if (f.details) return formatQuickLine(dateFromMs(f.timeMs), f.details);
+    return "";
+  }).filter(Boolean).join("\n");
+}
+__name(buildQuickTextFromFollowups, "buildQuickTextFromFollowups");
+async function updateLeadQuick(token, env, leadRecordId, text) {
+  const res = await fetch(`${tableUrl(env)}/${leadRecordId}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify({ fields: { [QUICK_FOLLOWUP_FIELD]: text || "" } })
+  });
+  const data = await res.json();
+  if (data.code !== 0) {
+    throw new Error(`update Quick failed: code=${data.code} msg=${data.msg}`);
+  }
+}
+__name(updateLeadQuick, "updateLeadQuick");
+async function updateFollowupRecord(token, env, recordId, fields) {
+  const res = await fetch(`${followupTableUrl(env)}/${recordId}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify({ fields })
+  });
+  const data = await res.json();
+  if (data.code !== 0) {
+    throw new Error(`update followup ${recordId} failed: code=${data.code} msg=${data.msg}`);
+  }
+}
+__name(updateFollowupRecord, "updateFollowupRecord");
+async function deleteFollowupRecord(token, env, recordId) {
+  const res = await fetch(`${followupTableUrl(env)}/batch_delete`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ records: [recordId] })
+  });
+  const data = await res.json();
+  if (data.code !== 0) {
+    throw new Error(`delete followup ${recordId} failed: code=${data.code} msg=${data.msg}`);
+  }
+}
+__name(deleteFollowupRecord, "deleteFollowupRecord");
+async function createFollowupRecord(token, env, leadRecordId, details, timeMs) {
+  const fields = {
+    // Duplex link requires string[] of record ids (not [{id}])
+    [FOLLOWUP_RELATED_FIELD]: [leadRecordId],
+    [FOLLOWUP_DETAILS_FIELD]: details,
+    [FOLLOWUP_TIME_FIELD]: timeMs || Date.now(),
+    [FOLLOWUP_SOURCE_FIELD]: "Quick",
+    [FOLLOWUP_DELETED_FIELD]: false
+  };
+  const res = await fetch(followupTableUrl(env), {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ fields })
+  });
+  const data = await res.json();
+  if (data.code !== 0) {
+    throw new Error(`create followup failed: code=${data.code} msg=${data.msg}`);
+  }
+  return data.data?.record?.record_id || data.data?.record_id;
+}
+__name(createFollowupRecord, "createFollowupRecord");
+function alignQuickToFollowups(lines, existing) {
+  const usedRec = /* @__PURE__ */ new Set();
+  const usedLine = /* @__PURE__ */ new Set();
+  const updates = [];
+  const creates = [];
+  const softDeletes = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (let j = 0; j < existing.length; j++) {
+      if (usedRec.has(j)) continue;
+      const rec = existing[j];
+      if (line.raw === rec.summary || line.details === rec.details || line.raw === rec.details) {
+        usedRec.add(j);
+        usedLine.add(i);
+        break;
+      }
+    }
+  }
+  const pendingLines = [];
+  const pendingRecs = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!usedLine.has(i)) pendingLines.push(i);
+  }
+  for (let j = 0; j < existing.length; j++) {
+    if (!usedRec.has(j)) pendingRecs.push(j);
+  }
+  const n = Math.min(pendingLines.length, pendingRecs.length);
+  for (let k = 0; k < n; k++) {
+    const li = pendingLines[k];
+    const rj = pendingRecs[k];
+    const line = lines[li];
+    const rec = existing[rj];
+    usedLine.add(li);
+    usedRec.add(rj);
+    if (line.details !== rec.details) {
+      const patch = { [FOLLOWUP_DETAILS_FIELD]: line.details };
+      if (line.date) {
+        const ms = Date.parse(line.date.replace(/\//g, "-") + "T12:00:00+08:00");
+        if (Number.isFinite(ms)) patch[FOLLOWUP_TIME_FIELD] = ms;
+      }
+      updates.push({ record_id: rec.record_id, fields: patch });
+    }
+  }
+  for (let i = 0; i < lines.length; i++) {
+    if (usedLine.has(i)) continue;
+    const line = lines[i];
+    let timeMs = Date.now();
+    if (line.date) {
+      const ms = Date.parse(line.date.replace(/\//g, "-") + "T12:00:00+08:00");
+      if (Number.isFinite(ms)) timeMs = ms;
+    }
+    creates.push({ details: line.details, timeMs });
+  }
+  for (let j = 0; j < existing.length; j++) {
+    if (usedRec.has(j)) continue;
+    softDeletes.push(existing[j].record_id);
+  }
+  return { updates, creates, softDeletes };
+}
+__name(alignQuickToFollowups, "alignQuickToFollowups");
+async function withSyncLock(env, leadId, fn) {
+  const key = `${SYNC_LOCK_PREFIX}${leadId}`;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const maxAttempts = 4;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let acquired = true;
+    if (env.MESSENGER_SESSIONS) {
+      const existing = await env.MESSENGER_SESSIONS.get(key);
+      if (existing) {
+        acquired = false;
+      } else {
+        await env.MESSENGER_SESSIONS.put(key, String(Date.now()), { expirationTtl: 60 });
+      }
+    }
+    if (!acquired) {
+      if (attempt === maxAttempts) {
+        return { skipped: true, reason: "locked" };
+      }
+      await sleep(800 * attempt);
+      continue;
+    }
+    try {
+      return await fn();
+    } finally {
+      if (env.MESSENGER_SESSIONS) {
+        try {
+          await env.MESSENGER_SESSIONS.delete(key);
+        } catch {
+        }
+      }
+    }
+  }
+  return { skipped: true, reason: "locked" };
+}
+__name(withSyncLock, "withSyncLock");
+async function alignQuickAsSource(token, env, leadRecordId, quickText, existing) {
+  const normalizedQuick = String(quickText || "").trim();
+  const lines = parseQuickLines(quickText);
+  if (lines.length === 0) {
+    for (const rec of existing) {
+      await deleteFollowupRecord(token, env, rec.record_id);
+    }
+    if (normalizedQuick !== "") {
+      await updateLeadQuick(token, env, leadRecordId, "");
+    }
+    return {
+      mode: "clear_all",
+      created: 0,
+      updated: 0,
+      soft_deleted: 0,
+      hard_deleted: existing.length,
+      active: 0
+    };
+  }
+  const plan = alignQuickToFollowups(lines, existing);
+  for (const u of plan.updates) {
+    await updateFollowupRecord(token, env, u.record_id, u.fields);
+  }
+  for (const id of plan.softDeletes) {
+    await deleteFollowupRecord(token, env, id);
+  }
+  for (const c of plan.creates) {
+    await createFollowupRecord(token, env, leadRecordId, c.details, c.timeMs);
+  }
+  const refreshed = await listActiveFollowupsForLead(token, env, leadRecordId);
+  const nextQuick = buildQuickTextFromFollowups(refreshed);
+  if (nextQuick.trim() !== normalizedQuick) {
+    await updateLeadQuick(token, env, leadRecordId, nextQuick);
+  }
+  return {
+    mode: "align",
+    created: plan.creates.length,
+    updated: plan.updates.length,
+    soft_deleted: 0,
+    hard_deleted: plan.softDeletes.length,
+    active: refreshed.length
+  };
+}
+__name(alignQuickAsSource, "alignQuickAsSource");
+async function syncFromQuick(env, leadRecordId) {
+  const token = await getTenantToken(env);
+  return withSyncLock(env, leadIdToLock(leadRecordId), async () => {
+    const getRes = await fetch(`${tableUrl(env)}/${leadRecordId}`, {
+      headers: authHeaders(token)
+    });
+    const getData = await getRes.json();
+    if (getData.code !== 0) {
+      throw new Error(`get lead failed: code=${getData.code} msg=${getData.msg}`);
+    }
+    const quickText = extractTextFromField(fieldVal(getData.data?.record?.fields, QUICK_FOLLOWUP_FIELD, "fldW9YcWTZ"));
+    const normalizedQuick = String(quickText || "").trim();
+    const existing = await listActiveFollowupsForLead(token, env, leadRecordId);
+
+    // Only auto-heal the known corruption marker; do NOT treat intentional empty as corruption.
+    if (normalizedQuick === "[object Object]") {
+      const nextQuick = buildQuickTextFromFollowups(existing);
+      await updateLeadQuick(token, env, leadRecordId, nextQuick);
+      return {
+        skipped: false,
+        direction: "from_quick",
+        mode: "repair_object_object",
+        lead_record_id: leadRecordId,
+        created: 0,
+        updated: 0,
+        soft_deleted: 0,
+        active: existing.length
+      };
+    }
+
+    const aligned = await alignQuickAsSource(token, env, leadRecordId, quickText, existing);
+    return {
+      skipped: false,
+      direction: "from_quick",
+      lead_record_id: leadRecordId,
+      ...aligned
+    };
+  });
+}
+__name(syncFromQuick, "syncFromQuick");
+function leadIdToLock(leadRecordId) {
+  return leadRecordId;
+}
+__name(leadIdToLock, "leadIdToLock");
+async function syncFromRecord(env, followupRecordId) {
+  const token = await getTenantToken(env);
+  const getRes = await fetch(`${followupTableUrl(env)}/${followupRecordId}`, {
+    headers: authHeaders(token)
+  });
+  const getData = await getRes.json();
+  if (getData.code !== 0) {
+    // Hard-deleted follow-up: nothing left to push into Quick.
+    if (getData.code === 1254043) {
+      return { skipped: true, reason: "followup_not_found", followup_record_id: followupRecordId };
+    }
+    throw new Error(`get followup failed: code=${getData.code} msg=${getData.msg}`);
+  }
+  const fields = getData.data?.record?.fields || {};
+  const related = fieldVal(fields, FOLLOWUP_RELATED_FIELD, "fldCwKHDoc");
+  const leadIds = extractLinkIds(related);
+  const leadId = leadIds[0] || "";
+  if (!leadId) {
+    return {
+      skipped: true,
+      reason: "no_related_lead",
+      followup_record_id: followupRecordId,
+      field_keys: Object.keys(fields)
+    };
+  }
+  const source = extractTextFromField(fieldVal(fields, FOLLOWUP_SOURCE_FIELD, "fldk18nlz3")).trim();
+  const deletedRaw = fieldVal(fields, FOLLOWUP_DELETED_FIELD, "fldu6ZZ3EL");
+  const isDeleted = deletedRaw === true || deletedRaw === "true" || deletedRaw === 1;
+  return withSyncLock(env, leadId, async () => {
+    const leadRes = await fetch(`${tableUrl(env)}/${leadId}`, { headers: authHeaders(token) });
+    const leadData = await leadRes.json();
+    if (leadData.code !== 0) {
+      throw new Error(`get lead failed: code=${leadData.code} msg=${leadData.msg}`);
+    }
+    const quickText = extractTextFromField(fieldVal(leadData.data?.record?.fields, QUICK_FOLLOWUP_FIELD, "fldW9YcWTZ"));
+    const normalizedQuick = String(quickText || "").trim();
+    const active = await listActiveFollowupsForLead(token, env, leadId);
+    const nextQuick = buildQuickTextFromFollowups(active);
+
+    // Empty Quick: honor clear (do NOT restore deleted lines), unless External fill.
+    if (!normalizedQuick) {
+      if (active.length === 0) {
+        return {
+          skipped: false,
+          direction: "from_record",
+          mode: "already_empty",
+          followup_record_id: followupRecordId,
+          lead_record_id: leadId,
+          active: 0
+        };
+      }
+      if (!isDeleted && source !== "Quick") {
+        await updateLeadQuick(token, env, leadId, nextQuick);
+        return {
+          skipped: false,
+          direction: "from_record",
+          mode: "fill_from_external",
+          followup_record_id: followupRecordId,
+          lead_record_id: leadId,
+          active: active.length
+        };
+      }
+      for (const rec of active) {
+        await deleteFollowupRecord(token, env, rec.record_id);
+      }
+      return {
+        skipped: false,
+        direction: "from_record",
+        mode: "honor_empty_quick",
+        followup_record_id: followupRecordId,
+        lead_record_id: leadId,
+        hard_deleted: active.length,
+        active: 0
+      };
+    }
+
+    // Soft-delete or External edit: Records are source of truth.
+    if (isDeleted || source !== "Quick") {
+      if (normalizedQuick !== nextQuick.trim()) {
+        await updateLeadQuick(token, env, leadId, nextQuick);
+      }
+      return {
+        skipped: false,
+        direction: "from_record",
+        mode: "records_to_quick",
+        followup_record_id: followupRecordId,
+        lead_record_id: leadId,
+        active: active.length
+      };
+    }
+
+    // Quick-sourced record event while Quick has content:
+    // Prefer Quick as SoT so concurrent Records→Quick cannot restore deleted lines.
+    if (normalizedQuick === nextQuick.trim()) {
+      return {
+        skipped: false,
+        direction: "from_record",
+        mode: "already_aligned",
+        followup_record_id: followupRecordId,
+        lead_record_id: leadId,
+        active: active.length
+      };
+    }
+    const aligned = await alignQuickAsSource(token, env, leadId, quickText, active);
+    return {
+      skipped: false,
+      direction: "from_record",
+      followup_record_id: followupRecordId,
+      lead_record_id: leadId,
+      ...aligned,
+      mode: `quick_preferred_${aligned.mode}`
+    };
+  });
+}
+__name(syncFromRecord, "syncFromRecord");
+async function handleSyncQuickFollowup(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const direction = String(body.direction || "").trim();
+  if (direction === "from_quick") {
+    const leadId = String(body.lead_record_id || body.record_id || "").trim();
+    if (!leadId) {
+      return Response.json({ ok: false, error: "lead_record_id required" }, { status: 400 });
+    }
+    const result = await syncFromQuick(env, leadId);
+    return Response.json({ ok: true, ...result });
+  }
+  if (direction === "from_record") {
+    const followupId = String(body.followup_record_id || body.record_id || "").trim();
+    if (!followupId) {
+      return Response.json({ ok: false, error: "followup_record_id required" }, { status: 400 });
+    }
+    const result = await syncFromRecord(env, followupId);
+    return Response.json({ ok: true, ...result });
+  }
+  return Response.json({
+    ok: false,
+    error: "direction must be from_quick or from_record"
+  }, { status: 400 });
+}
+__name(handleSyncQuickFollowup, "handleSyncQuickFollowup");
 function extractTextFromField(val) {
-  if (!val) return "";
-  if (typeof val === "string") return val;
-  if (typeof val === "number") return String(val);
-  if (Array.isArray(val)) return val.map((v) => v?.text || v?.name || String(v)).join("");
-  return val?.text || val?.name || String(val);
+  if (val == null || val === "") return "";
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+    return String(val);
+  }
+  if (Array.isArray(val)) {
+    return val.map((v) => extractTextFromField(v)).filter(Boolean).join("");
+  }
+  if (typeof val === "object") {
+    // formula / duplex text wrapper: { type: 1, value: [{ text, type }] }
+    if (val.value !== void 0) return extractTextFromField(val.value);
+    if (typeof val.text === "string") return val.text;
+    if (typeof val.name === "string") return val.name;
+    if (Array.isArray(val.text_arr)) return val.text_arr.map(String).join("");
+    return "";
+  }
+  return "";
 }
 __name(extractTextFromField, "extractTextFromField");
 async function fetchRecentLeads(token, env, days = 3) {
@@ -957,7 +1519,7 @@ function findDuplicateLead(email, phone, leads) {
 __name(findDuplicateLead, "findDuplicateLead");
 async function appendMessengerFollowup(token, env, leadRecordId, transcript) {
   const fields = {
-    "Related Lead": [{ id: leadRecordId }],
+    "Related Lead": [leadRecordId],
     "Follow-up Details": `Messenger \u5BF9\u8BDD\uFF08\u5408\u5E76\u81EA\u91CD\u590D\u5F55\u5165\uFF09:
 ${transcript}`,
     "Contact Result": "Contacted - No Reply \u5DF2\u8054\u7CFB\uFF0C\u6682\u65E0\u56DE\u590D",
@@ -2675,6 +3237,16 @@ var index_default = {
       const auth = await requireAuth(request, env, { allowBodyToken: true });
       if (!auth.ok) return auth.response;
       return handleRemindLead(request, env);
+    }
+    if (request.method === "POST" && url.pathname === "/sync-quick-followup") {
+      const auth = await requireAuth(request, env, { allowBodyToken: true });
+      if (!auth.ok) return auth.response;
+      try {
+        return await handleSyncQuickFollowup(request, env);
+      } catch (err) {
+        console.error(`[sync-quick-followup] ${err.message}`);
+        return Response.json({ ok: false, error: err.message }, { status: 500 });
+      }
     }
     if (request.method === "POST" && url.pathname === "/seed-kb") {
       const auth = await requireAuth(request, env);

@@ -1,0 +1,100 @@
+{
+  "client_token": "quick-followup-sync-20260720-02",
+  "title": "快捷跟进→同步Follow-up Records",
+  "steps": [
+    {
+      "id": "trigger",
+      "type": "SetRecordTrigger",
+      "title": "快捷跟进字段有内容时触发",
+      "next": "add_followup",
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "field_watch_info": [
+          {
+            "field_name": "Quick Follow-up / 快捷跟进"
+          }
+        ],
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Quick Follow-up / 快捷跟进",
+                "operator": "isNotEmpty",
+                "value": []
+              }
+            ]
+          }
+        ],
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "openAPIBatchUpdate"
+        ]
+      }
+    },
+    {
+      "id": "add_followup",
+      "type": "AddRecordAction",
+      "title": "在 Follow-up Records 新建跟进",
+      "next": "clear_input",
+      "data": {
+        "table_name": "Follow-up Records",
+        "field_values": [
+          {
+            "field_name": "Related Lead",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trigger.record"
+              }
+            ]
+          },
+          {
+            "field_name": "Follow-up Details",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trigger.fldW9YcWTZ"
+              }
+            ]
+          },
+          {
+            "field_name": "Follow-up Time",
+            "value": [
+              {
+                "value_type": "date",
+                "value": "now"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "clear_input",
+      "type": "SetRecordAction",
+      "title": "清空快捷跟进输入框",
+      "next": null,
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 15000,
+        "ref_info": {
+          "step_id": "trigger"
+        },
+        "filter_info": null,
+        "field_values": [
+          {
+            "field_name": "Quick Follow-up / 快捷跟进",
+            "value": [
+              {
+                "value_type": "text",
+                "value": ""
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

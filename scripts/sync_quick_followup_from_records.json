@@ -1,0 +1,134 @@
+{
+  "title": "Follow-up Records→同步Quick Follow-up",
+  "status": "enabled",
+  "steps": [
+    {
+      "id": "trigger",
+      "type": "AddRecordTrigger",
+      "title": "新增跟进记录时（非Quick来源）",
+      "next": "find_lead",
+      "data": {
+        "table_name": "Follow-up Records",
+        "watched_field_name": "Follow-up Details",
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Follow-up Details",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Related Lead",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Entry Source",
+                "operator": "isEmpty",
+                "value": []
+              }
+            ]
+          },
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Follow-up Details",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Related Lead",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Entry Source",
+                "operator": "is",
+                "value": [
+                  {
+                    "value_type": "option",
+                    "value": {
+                      "name": "External"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      }
+    },
+    {
+      "id": "find_lead",
+      "type": "FindRecordAction",
+      "title": "定位关联线索",
+      "next": "set_quick",
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "field_names": [
+          "Quick Follow-up / 快捷跟进",
+          "Follow-up record summary/跟进记录概览",
+          "Clue ID"
+        ],
+        "should_proceed_when_no_results": false,
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "🌟Follow-up record",
+              "operator": "containsAny",
+              "value": [
+                {
+                  "value_type": "ref",
+                  "value": "$.trigger.record"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set_quick",
+      "type": "SetRecordAction",
+      "title": "追加跟进到 Quick Follow-up",
+      "next": null,
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 10,
+        "ref_info": {
+          "step_id": "find_lead"
+        },
+        "filter_info": null,
+        "field_values": [
+          {
+            "field_name": "Quick Follow-up / 快捷跟进",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.find_lead.firstfieldsRecord.fldW9YcWTZ"
+              },
+              {
+                "value_type": "text",
+                "value": "\n"
+              },
+              {
+                "value_type": "ref",
+                "value": "$.trigger.fldDADmTcB"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
