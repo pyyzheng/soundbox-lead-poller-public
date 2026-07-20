@@ -6,6 +6,10 @@
    型号未识别但国家/产品已明确的静音舱线索。
 2. 精确型号未命中时，仅「型号为空」走待确认；「无法识别」先查全系列规则，
    再决定是否待确认（与 cloud-assignment-unblock._match_agent_rule 口径一致）。
+
+修复点（2026-07-20）：
+3. 代理规则表「国家」重建为动态选项后，FindRecord 过滤里旧 field id
+   fldqTJjAD7 失效，改为字段名「国家」（或当前 field id）。
 """
 
 from __future__ import annotations
@@ -25,6 +29,9 @@ from workflow_bilingual import (  # noqa: E402
 WORKFLOW_ID = "wkfKWPVBWT0NisJV"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
 UNRECOGNIZED_MODEL = "无法识别"
+# 历史静态选项字段 id；动态选项重建后必须替换
+STALE_COUNTRY_FIELD_IDS = ("fldqTJjAD7",)
+COUNTRY_FIELD_NAME = "国家"
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -68,6 +75,20 @@ def _option_name(value_item: dict) -> str:
     return ""
 
 
+def _fix_stale_country_field_refs(node) -> None:
+    """FindRecord 等处若仍引用已删除的国家 field id，改为字段名「国家」。"""
+    if isinstance(node, list):
+        for item in node:
+            _fix_stale_country_field_refs(item)
+        return
+    if not isinstance(node, dict):
+        return
+    if node.get("field_name") in STALE_COUNTRY_FIELD_IDS:
+        node["field_name"] = COUNTRY_FIELD_NAME
+    for child in node.values():
+        _fix_stale_country_field_refs(child)
+
+
 def patch_workflow(data: dict) -> dict:
     out = deepcopy(data)
     steps = {s["id"]: s for s in out["steps"]}
@@ -82,6 +103,7 @@ def patch_workflow(data: dict) -> dict:
             and c.get("operator") == "doesNotContainAny"
             and any(_option_name(v) == UNRECOGNIZED_MODEL for v in c.get("value", []))
         )
+        and c.get("field_name") not in ("Duplicate（重复）", "分配来源")
     ]
 
     branch = steps["branch3AHWu3mS"]
@@ -97,6 +119,7 @@ def patch_workflow(data: dict) -> dict:
         )
     ]
 
+    _fix_stale_country_field_refs(out["steps"])
     _strip_option_ids(out["steps"])
     body = migrate_workflow_document({"title": out["title"], "steps": out["steps"]})
     return fix_duplicate_formula_in_workflow(body)

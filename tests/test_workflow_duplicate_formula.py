@@ -32,6 +32,20 @@ class DuplicateFormulaFilterTest(unittest.TestCase):
         self.assertEqual(out[1]["value"][0]["value"]["name"], "查重冲突")
         self.assertEqual(out[2]["field_name"], "队列Key")
 
+    def test_strips_option_id(self):
+        conds = [
+            {
+                "field_name": "Duplicate（重复）",
+                "operator": "isNot",
+                "value": [
+                    {"value": {"id": "opt1", "name": "查重命中"}, "value_type": "option"},
+                ],
+            }
+        ]
+        out = rewrite_duplicate_option_filters(conds)
+        self.assertEqual(out[0]["value"][0]["value"], {"name": "查重命中"})
+        self.assertNotIn("id", out[0]["value"][0]["value"])
+
     def test_fix_workflow_trigger(self):
         body = {
             "title": "t",

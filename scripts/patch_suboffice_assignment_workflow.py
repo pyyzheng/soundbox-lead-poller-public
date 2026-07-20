@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""修复子办规则分配自动化工作流 wkfaNTuMd6vAE5E0。
+"""修复并恢复子办规则分配自动化工作流 wkfaNTuMd6vAE5E0。
 
-根因：
-1. （历史）跨表 ref 写入「子办规则命中负责人」会在 SetRecordAction 报字段类型不匹配。
-2. （2026-07-14）Duplicate（重复）已是公式字段，触发器用 doesNotContainAny+option 报字段类型不匹配。
-3. 飞书 UI/同步会把 option id 写回，需每次 strip。
+根因回顾：
+1. （历史）跨表 ref 写入「子办规则命中负责人」会在 option id 不一致时报字段类型不匹配。
+2. （2026-07-14）Duplicate 公式字段触发条件类型不匹配。
+3. （2026-07-20）FindRecord 用主表 Country ref 过滤「子办分配规则表.国家」：
+   两边 option id 不同（如澳大利亚 optA7G9k2W vs optNkzyCbn）。
 
-修复策略（与渠道轮转一致）：
-- 工作流仅负责：子办国家 + 命中规则时写「是否成功分配=是」。
-- Duplicate 条件改为 isNot(text)。
-- 「子办规则命中负责人」由 cloud-suboffice-assignee-fix.py 按名称回填。
+修复（2026-07-20）：
+- 先用 scripts/align_country_select_fields.py 把子办表「国家」改为引用主表 Country 动态选项。
+- 本脚本恢复：Switch(是否是子办国家) → FindRecord → Loop → 写负责人 + Allocation Status=Yes。
+- option 仅保留 name（飞书 UI 同步会回写 id，需每次 strip）。
 """
 
 from __future__ import annotations
@@ -21,7 +22,6 @@ from copy import deepcopy
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
-from assignment_fields import FIELD_ASSIGN_SOURCE  # noqa: E402
 from workflow_bilingual import (  # noqa: E402
     fix_duplicate_formula_in_workflow,
     migrate_workflow_document,
@@ -32,9 +32,19 @@ BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
 FIELD_ASSIGN_METHOD = "Allocation Method（分配方式）"
 FIELD_SUCCESS = "Allocation Status（是否成功分配）"
 FIELD_SUBOFFICE_OWNER = "子办规则命中负责人"
+FIELD_SUBOFFICE_FLAG = "是否是子办国家"
 OPT_ASSIGN_AUTO = "Automatic（自动）"
-OPT_SUCCESS_NO = "No（否）"
 OPT_SUCCESS_YES = "Yes（是）"
+OPT_SUCCESS_NO = "No（否）"
+# Lookup 目标表选项名仍是「是/否」
+OPT_YES_CN = "是"
+OPT_NO_CN = "否"
+# FindRecord 输出的负责人字段 id（子办分配规则表.负责人）
+SUBOFFICE_OWNER_FIELD_ID = "fldATnmAXs"
+# 主表 Country 字段 id（FindRecord 过滤用）
+MAIN_COUNTRY_FIELD_ID = "fldAEhwYJU"
+# 是否是子办国家 Lookup 字段 id
+SUBOFFICE_FLAG_FIELD_ID = "fld9kCu7o6"
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -92,33 +102,86 @@ def _set_record_step(
     }
 
 
-def _rule_found_switch() -> dict:
-    return {
-        "id": "actSubRuleSwitch",
+def patch_workflow(data: dict) -> dict:
+    out = deepcopy(data)
+    # 以标题为基准重建完整图，避免半残步骤残留。
+    title = out.get("title") or "子办规则分配自动化"
+
+    trigger = {
+        "id": "trigpJUkcCnQ",
+        "type": "SetRecordTrigger",
+        "title": "修改记录时",
+        "next": "actPIQDoV",
+        "children": {"links": []},
+        "data": {
+            "table_name": "线索总池 Case Database",
+            "condition_list": [
+                {
+                    "conjunction": "and",
+                    "conditions": [
+                        {"field_name": "队列Key", "operator": "isNotEmpty", "value": []},
+                        {"field_name": "Country（国家）", "operator": "isNotEmpty", "value": []},
+                        {"field_name": "Channels（渠道）", "operator": "isNotEmpty", "value": []},
+                        {
+                            "field_name": FIELD_ASSIGN_METHOD,
+                            "operator": "is",
+                            "value": [_option(OPT_ASSIGN_AUTO)],
+                        },
+                        {
+                            "field_name": FIELD_SUCCESS,
+                            "operator": "is",
+                            "value": [_option(OPT_SUCCESS_NO)],
+                        },
+                        {
+                            "field_name": FIELD_SUBOFFICE_OWNER,
+                            "operator": "isEmpty",
+                            "value": [],
+                        },
+                    ],
+                }
+            ],
+            "field_watch_info": [
+                {"field_name": "Channels（渠道）"},
+                {"field_name": "Country（国家）"},
+                {"field_name": FIELD_ASSIGN_METHOD},
+                {"field_name": FIELD_SUBOFFICE_FLAG},
+            ],
+            "trigger_control_list": [
+                "pasteUpdate",
+                "automationBatchUpdate",
+                "appendImport",
+                "openAPIBatchUpdate",
+            ],
+        },
+    }
+    live_steps = {s["id"]: s for s in out.get("steps", [])}
+    if "trigpJUkcCnQ" in live_steps:
+        live_trig = live_steps["trigpJUkcCnQ"]
+        live_data = live_trig.get("data") or {}
+        if live_data.get("trigger_control_list"):
+            trigger["data"]["trigger_control_list"] = live_data["trigger_control_list"]
+        watched = {w["field_name"] for w in trigger["data"]["field_watch_info"]}
+        for w in live_data.get("field_watch_info", []):
+            name = w.get("field_name")
+            if name and name not in watched:
+                trigger["data"]["field_watch_info"].append({"field_name": name})
+
+    country_switch = {
+        "id": "actPIQDoV",
         "type": "SwitchBranch",
         "title": "多分支（Switch）",
+        "next": None,
         "children": {
             "links": [
-                {
-                    "desc": "命中子办规则",
-                    "kind": "case",
-                    "label": "branch_1",
-                    "to": "act1jaIFY",
-                },
-                {
-                    "desc": "默认分支",
-                    "kind": "case",
-                    "label": "default",
-                    "to": "",
-                },
+                {"desc": "分支 1", "kind": "case", "label": "branch_1", "to": "actVWM1Z5"},
+                {"desc": "分支 2", "kind": "case", "label": "branch_2", "to": "acteIacr4"},
+                {"desc": "默认分支", "kind": "case", "label": "default", "to": ""},
             ]
         },
         "data": {
-            "mode": "exclusive",
-            "no_match_action": "classifyToOther",
             "child_branch_list": [
                 {
-                    "name": "命中子办规则",
+                    "name": "分支 1",
                     "condition": {
                         "conjunction": "or",
                         "conditions": [
@@ -126,124 +189,89 @@ def _rule_found_switch() -> dict:
                                 "conjunction": "and",
                                 "conditions": [
                                     {
-                                        "operator": "isGreater",
                                         "left_value": {
-                                            "value": "$.actVWM1Z5.recordNum",
+                                            "value": f"$.trigpJUkcCnQ.{SUBOFFICE_FLAG_FIELD_ID}",
                                             "value_type": "ref",
                                         },
-                                        "right_value": [
-                                            {"value": 0, "value_type": "number"}
-                                        ],
+                                        "operator": "is",
+                                        "right_value": [_option(OPT_YES_CN)],
                                     }
                                 ],
                             }
                         ],
                     },
-                }
-            ],
+                },
+                {
+                    "name": "分支 2",
+                    "condition": {
+                        "conjunction": "or",
+                        "conditions": [
+                            {
+                                "conjunction": "and",
+                                "conditions": [
+                                    {
+                                        "left_value": {
+                                            "value": f"$.trigpJUkcCnQ.{SUBOFFICE_FLAG_FIELD_ID}",
+                                            "value_type": "ref",
+                                        },
+                                        "operator": "is",
+                                        "right_value": [_option(OPT_NO_CN)],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                },
+            ]
         },
     }
 
-
-def patch_workflow(data: dict) -> dict:
-    out = deepcopy(data)
-    steps = {s["id"]: s for s in out["steps"]}
-
-    trigger = steps["trigpJUkcCnQ"]
-    trigger["next"] = "actPIQDoV"
-
-    # 触发条件：保持子办待分配口径，option 仅保留 name
-    trigger["data"]["condition_list"] = [
-        {
-            "conjunction": "and",
-            "conditions": [
-                {
-                    "field_name": FIELD_ASSIGN_SOURCE,
-                    "operator": "isNot",
-                    "value": [_option("查重命中")],
-                },
-                {
-                    "field_name": FIELD_ASSIGN_SOURCE,
-                    "operator": "isNot",
-                    "value": [_option("查重冲突")],
-                },
-                {"field_name": "队列Key", "operator": "isNotEmpty", "value": []},
-                {"field_name": "Country（国家）", "operator": "isNotEmpty", "value": []},
-                {"field_name": "Channels（渠道）", "operator": "isNotEmpty", "value": []},
-                {
-                    "field_name": FIELD_ASSIGN_METHOD,
-                    "operator": "is",
-                    "value": [_option(OPT_ASSIGN_AUTO)],
-                },
-                {
-                    "field_name": FIELD_SUCCESS,
-                    "operator": "is",
-                    "value": [_option(OPT_SUCCESS_NO)],
-                },
-                {
-                    "field_name": FIELD_SUBOFFICE_OWNER,
-                    "operator": "isEmpty",
-                    "value": [],
-                },
-            ],
-        }
-    ]
-    watched = {w["field_name"] for w in trigger["data"].get("field_watch_info", [])}
-    for field_name in ("Channels（渠道）", "Country（国家）", FIELD_ASSIGN_METHOD, "是否是子办国家"):
-        if field_name not in watched:
-            trigger["data"]["field_watch_info"].append({"field_name": field_name})
-
-    country_switch = steps["actPIQDoV"]
-    country_switch["children"] = {
-        "links": [
-            {"desc": "分支 1", "kind": "case", "label": "branch_1", "to": "actVWM1Z5"},
-            {"desc": "默认分支", "kind": "case", "label": "default", "to": ""},
-        ]
-    }
-    country_switch["data"]["child_branch_list"] = [
-        {
-            "name": "分支 1",
-            "condition": {
-                "conjunction": "or",
+    find_record = {
+        "id": "actVWM1Z5",
+        "type": "FindRecordAction",
+        "title": "查找记录",
+        "next": "actDMTfWM",
+        "children": {"links": []},
+        "data": {
+            "field_names": ["负责人"],
+            "filter_info": {
                 "conditions": [
                     {
-                        "conjunction": "and",
-                        "conditions": [
+                        "field_name": "国家",
+                        "operator": "is",
+                        "value": [
                             {
-                                "left_value": {
-                                    "value": "$.trigpJUkcCnQ.fld9kCu7o6",
-                                    "value_type": "ref",
-                                },
-                                "operator": "is",
-                                "right_value": [_option("是")],
+                                "value": f"$.trigpJUkcCnQ.{MAIN_COUNTRY_FIELD_ID}",
+                                "value_type": "ref",
                             }
                         ],
-                    }
+                    },
+                    {
+                        "field_name": "是否启用",
+                        "operator": "is",
+                        "value": [_option("启用")],
+                    },
                 ],
+                "conjunction": "and",
             },
-        }
-    ]
+            "ref_info": None,
+            "should_proceed_when_no_results": True,
+            "table_name": "子办分配规则表",
+        },
+    }
 
-    find_rules = steps["actVWM1Z5"]
-    find_rules["next"] = "actSubRuleSwitch"
-    find_rules["data"]["field_names"] = ["负责人"]
-    find_rules["data"]["should_proceed_when_no_results"] = True
-    find_rules["data"]["filter_info"] = {
-        "conjunction": "and",
-        "conditions": [
-            {
-                "field_name": "国家",
-                "operator": "is",
-                "value": [
-                    {"value": "$.trigpJUkcCnQ.fldAEhwYJU", "value_type": "ref"}
-                ],
-            },
-            {
-                "field_name": "是否启用",
-                "operator": "is",
-                "value": [_option("启用")],
-            },
-        ],
+    loop_step = {
+        "id": "actDMTfWM",
+        "type": "Loop",
+        "title": "循环",
+        "next": None,
+        "children": {"links": [{"kind": "loop_start", "to": "act1jaIFY"}]},
+        "data": {
+            "data": [{"value": "$.actVWM1Z5.fieldRecords", "value_type": "ref"}],
+            "loop_mode": "continue",
+            "loop_type": "forEach",
+            "max_loop_times": 5,
+        },
     }
 
     mark_success = _set_record_step(
@@ -251,22 +279,35 @@ def patch_workflow(data: dict) -> dict:
         next_step=None,
         field_values=[
             {
+                "field_name": FIELD_SUBOFFICE_OWNER,
+                "value": [
+                    {
+                        "value": f"$.actVWM1Z5.firstfieldsRecord.{SUBOFFICE_OWNER_FIELD_ID}",
+                        "value_type": "ref",
+                    }
+                ],
+            },
+            {
                 "field_name": FIELD_SUCCESS,
                 "value": [_option(OPT_SUCCESS_YES)],
+            },
+        ],
+    )
+
+    mark_no = _set_record_step(
+        "acteIacr4",
+        next_step=None,
+        field_values=[
+            {
+                "field_name": FIELD_SUCCESS,
+                "value": [_option(OPT_SUCCESS_NO)],
             }
         ],
     )
 
-    out["steps"] = [
-        trigger,
-        country_switch,
-        find_rules,
-        _rule_found_switch(),
-        mark_success,
-    ]
-
-    _strip_option_ids(out["steps"])
-    body = migrate_workflow_document({"title": out["title"], "steps": out["steps"]})
+    steps = [trigger, country_switch, find_record, loop_step, mark_success, mark_no]
+    _strip_option_ids(steps)
+    body = migrate_workflow_document({"title": title, "steps": steps})
     return fix_duplicate_formula_in_workflow(body)
 
 
@@ -291,7 +332,7 @@ def main() -> int:
     print(result.stdout or result.stderr)
     if result.returncode != 0:
         return result.returncode
-    print("patched suboffice assignment workflow deployed")
+    print("restored suboffice assignment workflow with FindRecord + owner write")
     return 0
 
 

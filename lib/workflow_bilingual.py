@@ -80,8 +80,10 @@ def migrate_workflow_document(body: dict) -> dict:
     return body
 
 
-# Duplicate（重复）公式字段在工作流校验里仍按单选（fieldType 3）处理：
-# 不能用多选算子 doesNotContainAny；应使用 isNot + option（仅 name，不写 id）。
+# Duplicate（重复）是公式字段，但输出类型为单选（fieldType 3）：
+# - 工作流条件必须用 isNot + option（仅 name，不写 id）
+# - 禁止 doesNotContainAny（多选算子）和 text（API 会拒：valueType text not allowed）
+# - 飞书 GET/UI 常把 option id 写回；部署前需 strip，避免 id 漂移触发运行时类型错误
 ASSIGN_SOURCE_FORMULA_FIELD = FIELD_ASSIGN_SOURCE
 ASSIGN_SOURCE_FORMULA_ALIASES = frozenset({FIELD_ASSIGN_SOURCE, "分配来源"})
 ASSIGN_SOURCE_BLOCKED_TEXT = ("查重命中", "查重冲突")
@@ -101,14 +103,16 @@ def _option_or_text_name(item: dict) -> str:
 
 
 def rewrite_duplicate_option_filters(conditions: list) -> list:
-    """把 Duplicate 上的 doesNotContainAny 改成多个 isNot(option name)。"""
+    """把 Duplicate 上的 doesNotContainAny / 带 id 的 isNot(option) 统一成 isNot(option name)。"""
     out: list = []
     for cond in conditions:
         field = cond.get("field_name")
-        if (
-            field in ASSIGN_SOURCE_FORMULA_ALIASES
-            and cond.get("operator") == "doesNotContainAny"
-        ):
+        if field not in ASSIGN_SOURCE_FORMULA_ALIASES:
+            out.append(cond)
+            continue
+
+        op = cond.get("operator")
+        if op == "doesNotContainAny":
             names = [
                 name
                 for name in (_option_or_text_name(v) for v in (cond.get("value") or []))
@@ -123,12 +127,8 @@ def rewrite_duplicate_option_filters(conditions: list) -> list:
                     }
                 )
             continue
-        # 已是 isNot 但仍带 option id 的，统一清掉 id（在 strip 之外再保一次）
-        if (
-            field in ASSIGN_SOURCE_FORMULA_ALIASES
-            and cond.get("operator") == "isNot"
-            and cond.get("value")
-        ):
+
+        if op == "isNot" and cond.get("value"):
             cleaned = []
             for v in cond["value"]:
                 name = _option_or_text_name(v)
@@ -136,7 +136,9 @@ def rewrite_duplicate_option_filters(conditions: list) -> list:
                     cleaned.append(_option_name_only(name))
                 else:
                     cleaned.append(v)
-            cond = {**cond, "value": cleaned or cond["value"]}
+            out.append({**cond, "value": cleaned or cond["value"]})
+            continue
+
         out.append(cond)
     return out
 

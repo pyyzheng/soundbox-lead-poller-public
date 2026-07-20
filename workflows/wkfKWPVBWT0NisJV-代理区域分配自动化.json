@@ -22,30 +22,6 @@
                 ]
               },
               {
-                "field_name": "Duplicate（重复）",
-                "operator": "isNot",
-                "value": [
-                  {
-                    "value": {
-                      "name": "查重命中"
-                    },
-                    "value_type": "option"
-                  }
-                ]
-              },
-              {
-                "field_name": "Duplicate（重复）",
-                "operator": "isNot",
-                "value": [
-                  {
-                    "value": {
-                      "name": "查重冲突"
-                    },
-                    "value_type": "option"
-                  }
-                ]
-              },
-              {
                 "field_name": "Channel segmentation (细分渠道)",
                 "operator": "isNotEmpty",
                 "value": []
