@@ -4,8 +4,8 @@
 修复点：
 1. 触发条件增加「渠道顺序队列匹配业务员 isEmpty」，避免重复触发
 2. 队列指针未找到时继续执行（should_proceed_when_no_results=true），走 Switch 保持「否」
-3. 成功分支不跨表 ref 写「渠道顺序队列匹配业务员」（FindRecord 单选 ref 易触发类型不匹配）
-   业务员与指针推进由 cloud-assignment-unblock.py 负责；成功分支仅写「是否成功分配=是」作标记
+3. 成功分支写回「渠道顺序队列匹配业务员」：队列表业务员已与主表共用动态选项 id，
+   可安全跨表 ref；指针推进仍由 cloud-assignment-unblock.py 兜底同步
 4. 去掉 Duplicate 公式条件；监听队列Key；strip option id
 """
 
@@ -25,11 +25,9 @@ from workflow_bilingual import (  # noqa: E402
 
 WORKFLOW_ID = "wkf2Hopgt3bWuoOH"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
-# 渠道顺序队列表.业务员（飞书 field_id）
+# 渠道顺序队列表.业务员（飞书 field_id）；与主表「渠道顺序队列匹配业务员」option id 已对齐
 CHANNEL_QUEUE_ASSIGNEE_FIELD_ID = "fldJSP0l6d"
-# FindRecord 输出没有 .name 路径；跨表直接 ref 单选易触发类型不匹配。
-# 成功分支不再写业务员，改由 assignment-unblock 按名称写入并推进指针。
-ASSIGNEE_NAME_REF = f"$.acteml359jG.fields.{CHANNEL_QUEUE_ASSIGNEE_FIELD_ID}"
+ASSIGNEE_REF = f"$.acteml359jG.firstfieldsRecord.{CHANNEL_QUEUE_ASSIGNEE_FIELD_ID}"
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -74,7 +72,7 @@ def _queue_assignee_field_value() -> dict:
         "field_name": "渠道顺序队列匹配业务员",
         "value": [
             {
-                "value": ASSIGNEE_NAME_REF,
+                "value": ASSIGNEE_REF,
                 "value_type": "ref",
             }
         ],
@@ -110,13 +108,13 @@ def patch_workflow(data: dict) -> dict:
     steps["acteml359jG"]["data"]["field_names"] = ["业务员"]
 
     success_step = steps["actnfeoNaFo"]
-    # 不跨表 ref 写「渠道顺序队列匹配业务员」：FindRecord 单选 ref 易报字段类型不匹配。
-    # 业务员 + 指针推进由 cloud-assignment-unblock.py 负责。
-    success_step["data"]["field_values"] = [
+    # 先写业务员，再写是否成功分配=是（option id 已对齐，可跨表 ref）
+    field_values = [
         fv
         for fv in success_step["data"]["field_values"]
         if fv.get("field_name") not in ("渠道顺序队列匹配业务员",)
     ]
+    success_step["data"]["field_values"] = [_queue_assignee_field_value()] + field_values
 
     _strip_option_ids(out["steps"])
 

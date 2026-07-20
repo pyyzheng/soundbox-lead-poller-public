@@ -189,6 +189,56 @@ def _match_agent_rule(rules: list[dict], country: str, category: str, model: str
     return None
 
 
+def _advance_pointer_if_stale(
+    token: str,
+    fields: dict,
+    pointers: dict,
+    queue_map: dict,
+) -> bool:
+    """工作流已写业务员但未推进指针时，若当前指针仍指向该业务员则 +1。
+
+    单人队列（max_rank=1）推进后仍是同一顺位，跳过以免空转。
+    """
+    queue_assignee = extract_text(fields.get(FIELD_QUEUE_ASSIGNEE, "")).strip()
+    queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, "")).strip()
+    if not queue_assignee or not queue_key:
+        return False
+    if not is_success_assigned(fields.get(FIELD_SUCCESS, "")):
+        return False
+
+    pick = pick_queue_assignee(queue_key, pointers, queue_map)
+    if not pick or pick.assignee != queue_assignee:
+        return False
+    if pick.next_rank == pick.used_rank:
+        return False
+
+    lead_id = extract_text(get_field(fields, FIELD_LEAD_ID, ""))
+    log.info(
+        "同步队列指针 %s queue=%s %s→%s (assignee=%s)",
+        lead_id,
+        pick.resolved_queue_key or queue_key,
+        pick.used_rank,
+        pick.next_rank,
+        pick.assignee,
+    )
+    if DRY_RUN:
+        return True
+    if not _update_record(
+        token,
+        QUEUE_POINTER_TABLE,
+        pick.pointer_record_id,
+        {"当前顺序号": pick.next_rank},
+    ):
+        return False
+    resolved_key = pick.resolved_queue_key or queue_key
+    pointers[resolved_key] = type(pointers[resolved_key])(
+        record_id=pick.pointer_record_id,
+        current=pick.next_rank,
+        max_rank=pick.max_rank,
+    )
+    return True
+
+
 def _needs_agent_product_clear(fields: dict) -> bool:
     if not is_assign_auto(fields.get(FIELD_ASSIGN_METHOD, "")):
         return False
@@ -407,6 +457,7 @@ def run() -> int:
     reset_count = 0
     agent_clear_count = 0
     queue_assign_count = 0
+    pointer_sync_count = 0
     manual_to_auto_count = 0
     messenger_fixed = _sync_messenger_duplicates(token, records, cutoff_ms)
 
@@ -477,6 +528,8 @@ def run() -> int:
                         )
             else:
                 log.warning("队列无可用业务员 %s queue=%s", lead_id or record_id, queue_key)
+        elif _advance_pointer_if_stale(token, fields, pointers, queue_map):
+            pointer_sync_count += 1
 
         channels = extract_text(fields.get(FIELD_CHANNELS, ""))
         assignee = extract_text(fields.get(FIELD_ASSIGNEE, ""))
@@ -519,10 +572,11 @@ def run() -> int:
         log.warning("已发送待确认超时告警 count=%s", len(pending_alerts))
 
     log.info(
-        "完成: reset=%s agent=%s queue=%s manual→auto=%s messenger=%s pending_alert=%s dry_run=%s",
+        "完成: reset=%s agent=%s queue=%s pointer_sync=%s manual→auto=%s messenger=%s pending_alert=%s dry_run=%s",
         reset_count,
         agent_clear_count,
         queue_assign_count,
+        pointer_sync_count,
         manual_to_auto_count,
         messenger_fixed,
         len(pending_alerts),

@@ -24,6 +24,10 @@ concurrency:
   group: facebook-lead-poller
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   facebook-poll:
     name: Poll Facebook Leads & Write to Feishu
@@ -60,11 +64,22 @@ jobs:
           ZHIPU_API_KEY:          ${{ secrets.GLM_API_KEY }}
           DRY_RUN:                ${{ github.event.inputs.dry_run || 'false' }}
           SINCE:                  ${{ github.event.inputs.since || '' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
         run: |
           ARGS=""
           [ "$DRY_RUN" = "true" ] && ARGS="$ARGS --dry-run"
           [ -n "$SINCE" ] && ARGS="$ARGS --since $SINCE"
           python facebook-lead-poller.py $ARGS
+
+      - name: Trigger assignment unblock
+        if: success() && (github.event.inputs.dry_run || 'false') != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/dispatches" \
+            -f event_type='assignment-unblock' \
+            -f 'client_payload[source]=facebook-lead-poller-workflow'
 
       - name: Upload run log (on failure)
         if: failure()

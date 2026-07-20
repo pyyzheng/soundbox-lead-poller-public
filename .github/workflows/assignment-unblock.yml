@@ -2,7 +2,7 @@ name: Assignment Unblock
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  # GitHub 最短间隔 5 分钟；*/3 不会触发
+    - cron: "*/5 * * * *"  # GitHub 常有漂移；近实时靠 repository_dispatch
   workflow_dispatch:
     inputs:
       dry_run:
@@ -26,6 +26,10 @@ concurrency:
   group: assignment-unblock-${{ github.event.client_payload.record_id || github.run_id }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   fix:
     name: Unblock Assignment
@@ -44,7 +48,7 @@ jobs:
         if: github.event_name == 'workflow_run' || github.event_name == 'repository_dispatch'
         run: |
           if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            sleep 30
+            sleep 20
           else
             sleep 45
           fi

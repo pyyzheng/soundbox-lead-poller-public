@@ -23,6 +23,10 @@ concurrency:
   group: gmail-inquiry-poller
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   poll:
     name: Poll Gmail & Write to Feishu
@@ -62,7 +66,18 @@ jobs:
           AUTO_REPLY_SAMPLE_RATE: ${{ secrets.AUTO_REPLY_SAMPLE_RATE || '1.0' }}
           FEISHU_FILTER_LOG_TABLE_ID: ${{ secrets.FEISHU_FILTER_LOG_TABLE_ID }}
           FEISHU_FOLLOWUP_TABLE:       ${{ secrets.FEISHU_FOLLOWUP_TABLE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
         run: python cloud-lead-poller.py
+
+      - name: Trigger assignment unblock
+        if: success() && (github.event.inputs.dry_run || 'false') != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/dispatches" \
+            -f event_type='assignment-unblock' \
+            -f 'client_payload[source]=gmail-lead-poller-workflow'
 
       - name: Upload run log (on failure)
         if: failure()

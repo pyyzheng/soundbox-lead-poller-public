@@ -765,6 +765,18 @@ def run(dry_run: bool = False, since_override: str | None = None):
 
     log.info(f"完成: 新增={total_new} 跳过={total_skipped} 写入={total_written} 失败={total_failed}")
 
+    if total_written > 0 and not dry_run:
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+            from github_dispatch import trigger_assignment_unblock
+
+            trigger_assignment_unblock(
+                source="facebook-lead-poller",
+                created_count=total_written,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning("触发 assignment-unblock 失败: %s", exc)
+
 
 def cmd_list_forms(config: dict):
     """列出所有 Lead Forms"""

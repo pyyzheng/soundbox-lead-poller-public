@@ -932,6 +932,24 @@ def main():
 
     _write_summary(results, ok, skipped, errors)
 
+    if ok > 0 or merged > 0:
+        try:
+            from github_dispatch import trigger_assignment_unblock
+
+            created_ids = [
+                r.get("feishu_record_id")
+                for r in results
+                if r.get("status") in ("ok", "merged") and r.get("feishu_record_id")
+            ]
+            # 一次 dispatch 即可；unblock 会扫近期异常/待分配
+            trigger_assignment_unblock(
+                record_id=created_ids[0] if created_ids else None,
+                source="gmail-lead-poller",
+                created_count=len(created_ids),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning("触发 assignment-unblock 失败: %s", exc)
+
     if errors > 0:
         log.warning("有 %d 封邮件处理失败，将在下次运行时重试（Gmail 标签未打）", errors)
         sys.exit(1)
