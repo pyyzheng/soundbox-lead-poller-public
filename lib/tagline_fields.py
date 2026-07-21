@@ -204,6 +204,9 @@ def filter_missing_fields(existing: dict, candidate: dict) -> dict:
             continue
         if field_name == FIELD_SUB_CHANNEL:
             current_text = extract_text(get_field(existing, FIELD_SUB_CHANNEL, "")).strip()
+            if current_text in INVALID_CHANNEL_VALUES:
+                missing[field_name] = value
+                continue
         elif field_name == FIELD_CHANNELS:
             current_text = extract_text(get_field(existing, FIELD_CHANNELS, "")).strip()
             if current_text in INVALID_CHANNEL_VALUES:

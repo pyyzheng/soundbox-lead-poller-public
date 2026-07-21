@@ -246,6 +246,21 @@ class TestParseHelpers(unittest.TestCase):
         self.assertEqual(pick.assignee, "Sue")
         self.assertEqual(pick.resolved_queue_key, "谷歌|欧洲区队列")
 
+    def test_pick_queue_assignee_remaps_unrecognized_prefix(self):
+        pointers = {
+            "谷歌|拉丁美洲/中南美洲区队列": QueuePointer(record_id="rec-latam", current=1, max_rank=1),
+            "Facebook|拉丁美洲/中南美洲区队列": QueuePointer(record_id="rec-fb", current=1, max_rank=1),
+        }
+        queue_map = {
+            ("谷歌|拉丁美洲/中南美洲区队列", 1): "Elaine",
+            ("Facebook|拉丁美洲/中南美洲区队列", 1): "Mike",
+        }
+        pick = pick_queue_assignee("无法识别|拉丁美洲/中南美洲区队列", pointers, queue_map)
+        self.assertIsNotNone(pick)
+        # 优先尝试 谷歌
+        self.assertEqual(pick.assignee, "Elaine")
+        self.assertEqual(pick.resolved_queue_key, "谷歌|拉丁美洲/中南美洲区队列")
+
 
 if __name__ == "__main__":
     unittest.main()

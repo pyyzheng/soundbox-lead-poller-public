@@ -20,8 +20,8 @@ from assignment_fields import (
     FIELD_ROTATION,
     FIELD_SUBOFFICE,
     FIELD_SYSTEM,
+    expand_queue_key_candidates,
     get_field,
-    normalize_queue_key,
 )
 from feishu_utils import extract_text
 from option_field_match import (
@@ -135,13 +135,12 @@ def pick_queue_assignee(
     pointers: dict[str, QueuePointer],
     queue_map: dict[tuple[str, int], str],
 ) -> QueuePickResult | None:
-    """按当前指针从队列表选出业务员，并计算推进后的顺位。"""
-    candidates = []
-    for key in (queue_key, normalize_queue_key(queue_key)):
-        if key and key not in candidates:
-            candidates.append(key)
+    """按当前指针从队列表选出业务员，并计算推进后的顺位。
 
-    for key in candidates:
+    当队列Key 前缀无效（如「无法识别|拉丁美洲/中南美洲区队列」）时，
+    按同区域后缀依次尝试 谷歌/Facebook/阿里 等已有队列。
+    """
+    for key in expand_queue_key_candidates(queue_key):
         ptr = pointers.get(key)
         if not ptr or not ptr.record_id:
             continue

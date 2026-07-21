@@ -74,6 +74,19 @@ QUEUE_KEY_CHANNEL_ALIASES: dict[str, str] = {
     "google": WRITE_CHANNEL_GOOGLE,
 }
 
+# Channels=无法识别 时，按区域后缀依次尝试这些主渠道队列（队列表里存在才命中）。
+FALLBACK_QUEUE_CHANNELS: tuple[str, ...] = (
+    WRITE_CHANNEL_GOOGLE,
+    "Facebook",
+    "阿里国际站",
+    "国内渠道",
+    "Facebook-Messenger",
+)
+
+FIELD_ENQUIRY = "Enquiry details（询盘内容）"
+FIELD_FB_LEADGEN = "Facebook Leadgen ID"
+FIELD_GMAIL_MSG = "Gmail_Msg_ID"
+
 ACOUSTIC_CATEGORY = "Acoustic products 声学产品"
 ERROR_ASSIGNEES = ("未命中规则", "匹配错误请检查", "公式计算异常")
 
@@ -154,6 +167,87 @@ def normalize_queue_key(queue_key: str) -> str:
 def resolve_channel_from_sub(sub_channel: str) -> str | None:
     """由细分渠道推导主渠道；无法识别时返回 None。"""
     sub = (sub_channel or "").strip()
-    if not sub:
+    if not sub or sub in INVALID_CHANNEL_VALUES:
         return None
     return SUB_CHANNEL_TO_CHANNEL.get(sub)
+
+
+def is_invalid_channel(channel: str) -> bool:
+    return (channel or "").strip() in INVALID_CHANNEL_VALUES
+
+
+def infer_channel_from_content(content: str) -> str | None:
+    """从询盘正文/尾行推断主渠道（用于 Channels 无效时自愈）。"""
+    text = (content or "").strip()
+    if not text:
+        return None
+
+    # 优先解析末行标签：国家-细分渠道-产品-型号
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if lines:
+        tag = lines[-1]
+        parts = [p.strip() for p in tag.replace("--", "-").split("-") if p.strip()]
+        if len(parts) >= 2:
+            healed = resolve_channel_from_sub(parts[1])
+            if healed:
+                return healed
+        # 阿里尾注：阿里1 菲律宾
+        for line in reversed(lines[-3:]):
+            for prefix in ("阿里1", "阿里2", "1688", "中文官网"):
+                if line.startswith(prefix):
+                    healed = resolve_channel_from_sub(prefix)
+                    if healed:
+                        return healed
+
+    # 正文关键词（长词优先，避免误伤）
+    for sub in sorted(SUB_CHANNEL_TO_CHANNEL.keys(), key=len, reverse=True):
+        if sub in text:
+            return SUB_CHANNEL_TO_CHANNEL[sub]
+    return None
+
+
+def infer_channel_from_source_ids(*, fb_leadgen: str = "", gmail_msg_id: str = "") -> str | None:
+    """按来源 ID 推断主渠道。"""
+    if (fb_leadgen or "").strip():
+        return "Facebook"
+    if (gmail_msg_id or "").strip():
+        return WRITE_CHANNEL_GOOGLE
+    return None
+
+
+def heal_invalid_channel(
+    channel: str,
+    *,
+    sub_channel: str = "",
+    enquiry: str = "",
+    fb_leadgen: str = "",
+    gmail_msg_id: str = "",
+) -> str | None:
+    """Channels 无效时返回应写回的主渠道；无需修复则返回 None。"""
+    if not is_invalid_channel(channel):
+        return None
+    return (
+        resolve_channel_from_sub(sub_channel)
+        or infer_channel_from_content(enquiry)
+        or infer_channel_from_source_ids(fb_leadgen=fb_leadgen, gmail_msg_id=gmail_msg_id)
+    )
+
+
+def expand_queue_key_candidates(queue_key: str) -> list[str]:
+    """生成队列Key 候选：原值、归一化、以及无效前缀时的区域兜底渠道。"""
+    key = (queue_key or "").strip()
+    out: list[str] = []
+    for cand in (key, normalize_queue_key(key)):
+        if cand and cand not in out:
+            out.append(cand)
+    if "|" not in key:
+        return out
+    channel, region = key.split("|", 1)
+    region = region.strip()
+    if not region or not is_invalid_channel(channel):
+        return out
+    for fb_channel in FALLBACK_QUEUE_CHANNELS:
+        cand = f"{fb_channel}|{region}"
+        if cand not in out:
+            out.append(cand)
+    return out

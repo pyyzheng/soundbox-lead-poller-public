@@ -37,7 +37,10 @@ from assignment_fields import (  # noqa: E402
     FIELD_COUNTRY,
     FIELD_DUP_READY,
     FIELD_EMAIL,
+    FIELD_ENQUIRY,
     FIELD_ENTRY_TIME,
+    FIELD_FB_LEADGEN,
+    FIELD_GMAIL_MSG,
     FIELD_PRODUCT_CAT,
     FIELD_PRODUCT_MODEL,
     FIELD_QUEUE_ASSIGNEE,
@@ -46,6 +49,7 @@ from assignment_fields import (  # noqa: E402
     FIELD_STATUS,
     FIELD_SUBOFFICE,
     FIELD_SUBOFFICE_OWNER,
+    FIELD_SUB_CHANNEL,
     FIELD_SUCCESS,
     FIELD_SYSTEM,
     FIELD_LEAD_ID,
@@ -54,6 +58,8 @@ from assignment_fields import (  # noqa: E402
     WRITE_SUCCESS_YES,
     QUEUE_POINTER_TABLE,
     get_field,
+    heal_invalid_channel,
+    is_invalid_channel,
 )
 from channel_queue_assign import (  # noqa: E402
     eligible_for_channel_queue,
@@ -306,6 +312,7 @@ def _record_field_names() -> list[str]:
         FIELD_LEAD_ID,
         FIELD_ASSIGN_METHOD,
         FIELD_CHANNELS,
+        FIELD_SUB_CHANNEL,
         FIELD_COUNTRY,
         FIELD_SUBOFFICE,
         FIELD_ROTATION,
@@ -325,7 +332,32 @@ def _record_field_names() -> list[str]:
         FIELD_PRODUCT_CAT,
         FIELD_PRODUCT_MODEL,
         FIELD_PENDING_ALERT_AT,
+        FIELD_ENQUIRY,
+        FIELD_FB_LEADGEN,
+        FIELD_GMAIL_MSG,
     ]
+
+
+def _heal_invalid_channels(token: str, fields: dict, record_id: str, lead_id: str) -> bool:
+    """Channels 无效时写回推断主渠道；成功返回 True（调用方可继续分配）。"""
+    channel = extract_text(get_field(fields, FIELD_CHANNELS, "")).strip()
+    healed = heal_invalid_channel(
+        channel,
+        sub_channel=extract_text(get_field(fields, FIELD_SUB_CHANNEL, "")),
+        enquiry=extract_text(get_field(fields, FIELD_ENQUIRY, "")),
+        fb_leadgen=extract_text(get_field(fields, FIELD_FB_LEADGEN, "")),
+        gmail_msg_id=extract_text(get_field(fields, FIELD_GMAIL_MSG, "")),
+    )
+    if not healed:
+        return False
+    log.info("自愈渠道 %s: %r → %s", lead_id or record_id, channel, healed)
+    if DRY_RUN:
+        fields[FIELD_CHANNELS] = healed
+        return True
+    if _update_record(token, FEISHU_TABLE_ID, record_id, {FIELD_CHANNELS: healed}):
+        fields[FIELD_CHANNELS] = healed
+        return True
+    return False
 
 
 def _fetch_exception_records(token: str) -> list[dict]:
@@ -500,21 +532,28 @@ def run() -> int:
                 fields.update(patch)
                 agent_clear_count += 1
 
+        # Channels=无法识别 时先自愈；即使写回失败，后续仍可用区域队列兜底选人。
+        if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))):
+            _heal_invalid_channels(token, fields, record_id, lead_id)
+
         if eligible_for_channel_queue(fields):
             queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, ""))
             pick = pick_queue_assignee(queue_key, pointers, queue_map)
             if pick:
-                log.info("渠道轮转分配 %s queue=%s -> %s", lead_id or record_id, pick.resolved_queue_key or queue_key, pick.assignee)
+                resolved_key = pick.resolved_queue_key or queue_key
+                log.info(
+                    "渠道轮转分配 %s queue=%s -> %s",
+                    lead_id or record_id,
+                    resolved_key,
+                    pick.assignee,
+                )
+                patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
+                if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
+                    patch[FIELD_CHANNELS] = resolved_key.split("|", 1)[0]
                 if DRY_RUN:
                     queue_assign_count += 1
-                elif _update_record(
-                    token,
-                    FEISHU_TABLE_ID,
-                    record_id,
-                    {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES},
-                ):
+                elif _update_record(token, FEISHU_TABLE_ID, record_id, patch):
                     queue_assign_count += 1
-                    resolved_key = pick.resolved_queue_key or queue_key
                     if _update_record(
                         token,
                         QUEUE_POINTER_TABLE,

@@ -20,6 +20,9 @@ from assignment_fields import (
     FIELD_ASSIGN_SOURCE,
     FIELD_CHANNELS,
     FIELD_DUP_READY,
+    FIELD_ENQUIRY,
+    FIELD_FB_LEADGEN,
+    FIELD_GMAIL_MSG,
     FIELD_LEAD_ID,
     FIELD_QUEUE_ASSIGNEE,
     FIELD_QUEUE_KEY,
@@ -28,12 +31,12 @@ from assignment_fields import (
     FIELD_SUBOFFICE,
     FIELD_SUCCESS,
     FIELD_SYSTEM,
-    INVALID_CHANNEL_VALUES,
     QUEUE_POINTER_TABLE,
     WRITE_ASSIGN_AUTO,
     WRITE_SUCCESS_YES,
     get_field,
-    resolve_channel_from_sub,
+    heal_invalid_channel,
+    is_invalid_channel,
 )
 from channel_queue_assign import (
     eligible_for_channel_queue,
@@ -111,6 +114,9 @@ def main() -> int:
                 FIELD_SYSTEM,
                 FIELD_CHANNELS,
                 FIELD_SUB_CHANNEL,
+                FIELD_ENQUIRY,
+                FIELD_FB_LEADGEN,
+                FIELD_GMAIL_MSG,
             ],
         },
     )
@@ -140,13 +146,18 @@ def main() -> int:
         fields = item.get("fields", {})
         lead_id = extract_text(get_field(fields, FIELD_LEAD_ID, ""))
 
-        # 主渠道无效（如「无可用选项」）时按细分渠道自愈，否则队列Key 前缀错误。
+        # 主渠道无效时：细分渠道 → 询盘正文 → 来源 ID 三级自愈。
         channel = extract_text(get_field(fields, FIELD_CHANNELS, "")).strip()
-        if channel in INVALID_CHANNEL_VALUES:
-            sub = extract_text(get_field(fields, FIELD_SUB_CHANNEL, "")).strip()
-            healed = resolve_channel_from_sub(sub)
+        if is_invalid_channel(channel):
+            healed = heal_invalid_channel(
+                channel,
+                sub_channel=extract_text(get_field(fields, FIELD_SUB_CHANNEL, "")),
+                enquiry=extract_text(get_field(fields, FIELD_ENQUIRY, "")),
+                fb_leadgen=extract_text(get_field(fields, FIELD_FB_LEADGEN, "")),
+                gmail_msg_id=extract_text(get_field(fields, FIELD_GMAIL_MSG, "")),
+            )
             if healed:
-                log.info("自愈渠道 %s: %r → %s (sub=%s)", lead_id, channel, healed, sub)
+                log.info("自愈渠道 %s: %r → %s", lead_id, channel, healed)
                 if os.environ.get("FIX_ANOMALY_DRY_RUN", "false").lower() != "true":
                     if _update(token, FEISHU_TABLE_ID, rid, {FIELD_CHANNELS: healed}):
                         fields[FIELD_CHANNELS] = healed
@@ -197,16 +208,15 @@ def main() -> int:
             log.warning("无队列业务员 %s queue=%s", lead_id, queue_key)
             continue
         resolved_key = pick.resolved_queue_key or queue_key
+        patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
+        # 若靠区域兜底命中，顺带写回主渠道，避免公式继续产出「无法识别|…」
+        if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
+            patch[FIELD_CHANNELS] = resolved_key.split("|", 1)[0]
         log.info("修复 %s → %s (queue=%s)", lead_id, pick.assignee, resolved_key)
         if os.environ.get("FIX_ANOMALY_DRY_RUN", "false").lower() == "true":
             fixed += 1
             continue
-        if _update(
-            token,
-            FEISHU_TABLE_ID,
-            rid,
-            {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES},
-        ):
+        if _update(token, FEISHU_TABLE_ID, rid, patch):
             time.sleep(0.5)
             _update(token, QUEUE_POINTER_TABLE, pick.pointer_record_id, {"当前顺序号": pick.next_rank})
             time.sleep(0.5)
