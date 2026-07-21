@@ -181,6 +181,27 @@ def is_invalid_sub_channel(sub_channel: str) -> bool:
     return (sub_channel or "").strip() in INVALID_SUB_CHANNEL_VALUES
 
 
+def infer_sub_channel_from_email(
+    from_addr: str = "",
+    subject: str = "",
+    *,
+    rules: dict | None = None,
+) -> str | None:
+    """按 Gmail 发件人/主题推断细分渠道（与 lead-rules resolve_channel 一致）。"""
+    if not (from_addr or "").strip() and not (subject or "").strip():
+        return None
+    if rules is None:
+        import json
+        from pathlib import Path
+
+        rules_path = Path(__file__).resolve().parent.parent / "lead-rules.json"
+        rules = json.loads(rules_path.read_text(encoding="utf-8"))
+    from lead_fallback_parser import resolve_channel
+
+    _, sub_channel = resolve_channel(from_addr, rules, subject)
+    return sub_channel or None
+
+
 def infer_sub_channel_from_content(content: str) -> str | None:
     """从询盘正文推断细分渠道（无标签行或标签无效时用）。"""
     text = (content or "").strip()
@@ -196,10 +217,6 @@ def infer_sub_channel_from_content(content: str) -> str | None:
         return "谷歌1"
     if "new booking entry" in lower:
         return "谷歌2"
-    if "select your country" in lower and "inquiry:" in lower:
-        return "谷歌1"
-    if "telephone number:" in lower and "message:" in lower:
-        return "谷歌1"
     if "soundboxacoustic.com" in lower:
         return "谷歌1"
     if "soundboxbooth.com" in lower or "email@soundboxbooth.com" in lower:
@@ -233,8 +250,14 @@ def infer_sub_channel_from_signals(
     channels: str = "",
     gmail_msg_id: str = "",
     fb_leadgen: str = "",
+    email_from: str = "",
+    email_subject: str = "",
+    rules: dict | None = None,
 ) -> str | None:
-    """综合询盘正文 + 主渠道 + 来源 ID 推断细分渠道。"""
+    """综合邮件元数据、询盘正文、主渠道 + 来源 ID 推断细分渠道。"""
+    healed = infer_sub_channel_from_email(email_from, email_subject, rules=rules)
+    if healed:
+        return healed
     healed = infer_sub_channel_from_content(enquiry)
     if healed:
         return healed
@@ -242,8 +265,8 @@ def infer_sub_channel_from_signals(
         return "Facebook"
     channel = (channels or "").strip()
     if channel in CHANNEL_GOOGLE_ALIASES and (gmail_msg_id or "").strip():
-        # Gmail 表单询盘缺标签行时，国际站表单多为谷歌1
-        return "谷歌1"
+        # 与 lead-rules _default 一致：无法从正文/邮件判定时默认谷歌2
+        return "谷歌2"
     if channel == "Facebook":
         return "Facebook"
     if channel == "阿里国际站":
@@ -262,6 +285,9 @@ def heal_invalid_sub_channel(
     channels: str = "",
     gmail_msg_id: str = "",
     fb_leadgen: str = "",
+    email_from: str = "",
+    email_subject: str = "",
+    rules: dict | None = None,
 ) -> str | None:
     """细分渠道无效时返回应写回值；无需修复则返回 None。"""
     if not is_invalid_sub_channel(sub_channel):
@@ -271,6 +297,9 @@ def heal_invalid_sub_channel(
         channels=channels,
         gmail_msg_id=gmail_msg_id,
         fb_leadgen=fb_leadgen,
+        email_from=email_from,
+        email_subject=email_subject,
+        rules=rules,
     )
 
 

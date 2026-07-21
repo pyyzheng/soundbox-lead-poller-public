@@ -11,6 +11,7 @@ cloud-tagline-field-fix.py — 从 Enquiry details 标签行回填结构化字�
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -30,6 +31,7 @@ from assignment_fields import (  # noqa: E402
     FIELD_FB_LEADGEN,
     FIELD_GMAIL_MSG,
     FIELD_LEAD_ID,
+    SUB_CHANNEL_TO_CHANNEL,
     get_field,
 )
 from tagline_fields import (  # noqa: E402
@@ -59,6 +61,34 @@ RECENT_HOURS = int(os.environ.get("TAGLINE_FIX_RECENT_HOURS", "72"))
 MAX_RECORDS = int(os.environ.get("TAGLINE_FIX_MAX_RECORDS", "500"))
 DRY_RUN = os.environ.get("TAGLINE_FIX_DRY_RUN", "false").lower() == "true"
 FIELD_ENTRY_TIME = "Entry Time（录入时间）"
+RULES_PATH = Path(__file__).parent / "lead-rules.json"
+_GMAIL_HEADER_CACHE: dict[str, tuple[str, str]] = {}
+
+
+def _load_rules() -> dict:
+    return json.loads(RULES_PATH.read_text(encoding="utf-8"))
+
+
+def _gmail_headers(msg_id: str) -> tuple[str, str]:
+    """有 Gmail_Msg_ID 时读取发件人/主题（与入库时 resolve_channel 同源）。"""
+    msg_id = (msg_id or "").strip()
+    if not msg_id:
+        return "", ""
+    if msg_id in _GMAIL_HEADER_CACHE:
+        return _GMAIL_HEADER_CACHE[msg_id]
+    if not os.environ.get("GMAIL_REFRESH_TOKEN"):
+        return "", ""
+    try:
+        from gmail_client import get_gmail_service, get_header, get_message_detail
+
+        msg = get_message_detail(get_gmail_service(), msg_id)
+        headers = (get_header(msg, "From") or "", get_header(msg, "Subject") or "")
+        _GMAIL_HEADER_CACHE[msg_id] = headers
+        return headers
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Gmail 元数据读取失败 msg=%s: %s", msg_id, exc)
+        return "", ""
+
 
 SCAN_FIELDS = [
     FIELD_ENTRY_TIME,
@@ -136,6 +166,7 @@ def _copy_from_sibling(records: list[dict]) -> dict[str, dict[str, str]]:
 
 def run() -> int:
     token = get_feishu_token()
+    rules = _load_rules()
     cutoff_ms = int((datetime.now(timezone.utc) - timedelta(hours=RECENT_HOURS)).timestamp() * 1000)
 
     records = _search_records(
@@ -158,11 +189,16 @@ def run() -> int:
             continue
 
         content = extract_text(fields.get(FIELD_ENQUIRY, ""))
+        gmail_msg_id = extract_text(get_field(fields, FIELD_GMAIL_MSG, ""))
+        email_from, email_subject = _gmail_headers(gmail_msg_id)
         candidate = build_feishu_fields_from_content(
             content,
             channels=extract_text(get_field(fields, FIELD_CHANNELS, "")),
-            gmail_msg_id=extract_text(get_field(fields, FIELD_GMAIL_MSG, "")),
+            gmail_msg_id=gmail_msg_id,
             fb_leadgen=extract_text(get_field(fields, FIELD_FB_LEADGEN, "")),
+            email_from=email_from,
+            email_subject=email_subject,
+            rules=rules,
         )
         tag = extract_tag_line(content) or ""
         email = extract_text(fields.get(FIELD_EMAIL, "")).lower().strip()
@@ -178,6 +214,12 @@ def run() -> int:
             candidate = merged
 
         updates = filter_missing_fields(fields, candidate)
+        if email_from and candidate.get(FIELD_SUB_CHANNEL):
+            expected_sub = candidate[FIELD_SUB_CHANNEL]
+            current_sub = extract_text(get_field(fields, FIELD_SUB_CHANNEL, "")).strip()
+            if current_sub != expected_sub:
+                updates[FIELD_SUB_CHANNEL] = expected_sub
+                updates[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(expected_sub, expected_sub)
         if not updates:
             skipped += 1
             continue

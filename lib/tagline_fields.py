@@ -163,6 +163,9 @@ def build_feishu_fields_from_content(
     channels: str = "",
     gmail_msg_id: str = "",
     fb_leadgen: str = "",
+    email_from: str = "",
+    email_subject: str = "",
+    rules: dict | None = None,
 ) -> dict[str, str]:
     """Build structured Feishu fields from enquiry body + trailing tag line."""
     updates: dict[str, str] = {}
@@ -223,6 +226,9 @@ def build_feishu_fields_from_content(
             channels=channels,
             gmail_msg_id=gmail_msg_id,
             fb_leadgen=fb_leadgen,
+            email_from=email_from,
+            email_subject=email_subject,
+            rules=rules,
         )
         if healed_sub:
             updates[FIELD_SUB_CHANNEL] = healed_sub
