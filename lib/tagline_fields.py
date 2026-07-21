@@ -123,7 +123,11 @@ def parse_inquiry_fields(content: str) -> dict[str, str]:
     return fields
 
 
+VALID_TAG_CATEGORIES = frozenset({"静音舱", "家居舱", "声学产品"})
+
+
 def is_valid_tag_line(tag: str) -> bool:
+    """真标签行形如 美国-谷歌1-静音舱-VRT；表单留言含 '-' 不能误判。"""
     segments = normalize_tag_segments(tag)
     if len(segments) < 3:
         return False
@@ -132,7 +136,17 @@ def is_valid_tag_line(tag: str) -> bool:
     category = segments[2] if len(segments) > 2 else ""
     if not country or country in {"Unknown", "无法识别"}:
         return False
+    # 表单末行如 "Message: Hi - I am interested ... (2-3)." 会被 '-' 拆成伪标签
+    lowered = tag.lower()
+    if ":" in country or country.lower().startswith(("message", "name", "email", "phone", "inquiry")):
+        return False
+    if any(marker in lowered for marker in ("message:", "e-mail address:", "telephone number:")):
+        return False
+    if sub_channel not in SUB_CHANNEL_TO_CHANNEL:
+        return False
     if sub_channel in {"Messenger", "Facebook-Messenger"}:
+        return False
+    if category not in VALID_TAG_CATEGORIES and category != "无法识别":
         return False
     if category in {"Messenger", "acoustic pod"}:
         return False
@@ -238,7 +252,7 @@ def filter_missing_fields(existing: dict, candidate: dict) -> dict:
             continue
         if field_name == FIELD_SUB_CHANNEL:
             current_text = extract_text(get_field(existing, FIELD_SUB_CHANNEL, "")).strip()
-            if current_text in INVALID_SUB_CHANNEL_VALUES:
+            if current_text in INVALID_SUB_CHANNEL_VALUES or current_text not in SUB_CHANNEL_TO_CHANNEL:
                 missing[field_name] = value
                 continue
         elif field_name == FIELD_CHANNELS:

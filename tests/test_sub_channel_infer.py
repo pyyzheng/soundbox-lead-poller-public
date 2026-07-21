@@ -12,7 +12,7 @@ from assignment_fields import (  # noqa: E402
     infer_sub_channel_from_content,
     infer_sub_channel_from_signals,
 )
-from tagline_fields import build_feishu_fields_from_content  # noqa: E402
+from tagline_fields import build_feishu_fields_from_content, is_valid_tag_line  # noqa: E402
 
 
 class TestInferSubChannel(unittest.TestCase):
@@ -56,6 +56,19 @@ class TestInferSubChannel(unittest.TestCase):
         )
         self.assertEqual(fields["Channel segmentation (细分渠道)"], "谷歌1")
         self.assertEqual(fields["Channels（渠道）"], "谷歌")
+
+    def test_rejects_message_line_with_dashes(self):
+        tag = "Message: Hi - I am interested in single booths for my office (2-3)."
+        self.assertFalse(is_valid_tag_line(tag))
+        fields = build_feishu_fields_from_content(
+            "Name: Layla\nEmail: a@b.com\nTelephone Number: 1\nMessage: Hi - I am interested in single booths for my office (2-3).",
+            channels="谷歌",
+            gmail_msg_id="msg-1",
+        )
+        self.assertEqual(fields["Channel segmentation (细分渠道)"], "谷歌1")
+
+    def test_valid_tag_line_still_parses(self):
+        self.assertTrue(is_valid_tag_line("美国-谷歌1-静音舱-VRT"))
 
     def test_heal_invalid_sub_channel(self):
         self.assertEqual(
