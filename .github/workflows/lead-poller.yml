@@ -1,13 +1,13 @@
 name: Gmail Lead Poller
 
 # 触发来源（优先级从高到低）：
-#   1. Google Apps Script Gmail 触发器（scripts/gmail-trigger.gs）— 有新邮件时近实时触发 Public 仓
-#   2. cron-job.org workflow_dispatch — 备用定时触发（建议降到 1 小时）
-#   3. GitHub schedule 兜底：每天 1 次全量扫未处理邮件（UTC 01:00 = 北京 09:00）
-#      实时性由 Apps Script 提供，schedule 仅作兜底防漏（实时通道挂掉时最多延迟 1 天）
+#   1. Google Apps Script Gmail 触发器（scripts/gmail-trigger.gs）— 有新邮件时近实时 workflow_dispatch
+#   2. GitHub schedule 每 30 分钟兜底全量扫未处理邮件（Apps Script 挂掉时仍可入库）
+#   3. 手动 workflow_dispatch
+# 注意：2026-07 起 Apps Script 多次因授权失效停触发；勿再把 schedule 降到每天 1 次。
 on:
   schedule:
-    - cron: "0 1 * * *"
+    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:

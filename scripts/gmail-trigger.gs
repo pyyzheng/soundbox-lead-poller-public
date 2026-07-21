@@ -7,6 +7,15 @@
  * 🧪 当前为 DRY-RUN 模式：预过滤规则会运行并记录日志，但不改变触发行为
  *    （所有目标邮件仍触发 lead-poller）。跑 3-7 天确认 0 漏检后，按文件尾说明启用。
  *
+ * ⚠️ 2026-07 故障回顾：
+ *   - GitHub PAT（脚本属性 GITHUB_TOKEN）本身可能仍有效，但 Apps Script 对 Gmail
+ *     Advanced Service 的授权失效时，会持续失败并收到
+ *     「Summary of failures for Google Apps Script: Lead-poller」邮件，近实时触发全停。
+ *   - 仓库 schedule 已改为每 30 分钟兜底；修复本脚本后仍应恢复近实时。
+ *   - 修复：打开本项目 → 运行 authorizeOAuth() → 按提示重新授权 Gmail →
+ *     再跑 initHistoryId() → 确认「触发器」里仍有每分钟 checkNewEmails。
+ *   - 仓库版 ≠ script.google.com 在线版：改本文件后必须手动粘贴同步。
+ *
  * 配置步骤：
  *   1. 打开 script.google.com，创建新项目，粘贴此文件
  *   2. 启用 Advanced Gmail Service：资源 → 高级服务 → Gmail API → 启用
@@ -193,10 +202,10 @@ function triggerWorkflow() {
   const options = {
     method: 'post',
     headers: {
-      'Authorization': `token ${token}`,
+      'Authorization': `Bearer ${token}`,
       'Accept': 'application/vnd.github+json',
       'User-Agent': 'gmail-trigger-apps-script',
-    },
+      'X-GitHub-Api-Version': '2022-11-28',
     payload: JSON.stringify({ ref: 'main' }),
     muteHttpExceptions: true,
   };

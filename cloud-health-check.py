@@ -40,6 +40,7 @@ ALERT_TYPE_MAP = {
     "github_consecutive_failures": "Actions连续失败",
     "gmail_oauth_expired": "OAuth失效",
     "cronjob_trigger_failed": "Cron触发异常",
+    "apps_script_silent": "Apps Script静默",
 }
 
 
@@ -261,19 +262,39 @@ REMEDY_MAP = {
     },
     "cronjob_trigger_failed": {
         "title": "Pipeline 触发异常",
-        "diagnose": "Lead Poller workflow 长时间未触发",
-        "normal": "Lead Poller 应持续通过 schedule 兜底或 workflow_dispatch 触发运行（间隔不超过 7 小时）",
+        "diagnose": "Lead Poller workflow 长时间未成功运行",
+        "normal": "Lead Poller 应通过 Apps Script 近实时触发，或由 schedule 每 30 分钟兜底（成功间隔不超过 2 小时）",
         "meta": {
-            "异常环节": "GitHub Actions workflow_dispatch 触发",
-            "初步判断": "Gmail Apps Script 触发器故障或 GitHub schedule 兜底失效",
-            "排查顺序": "1. 检查 Apps Script 触发器是否正常 → 2. 检查 GitHub Actions 运行历史 → 3. 手动触发 workflow_dispatch",
+            "异常环节": "Gmail Lead Poller 触发/执行",
+            "初步判断": "Gmail Apps Script 授权失效，或 schedule/Gmail OAuth 失败",
+            "排查顺序": "1. 查最近 Gmail Lead Poller 失败日志 → 2. script.google.com 重新授权 Lead-poller → 3. 手动 workflow_dispatch",
             "是否可自动修复": "否",
             "建议处理角色": "技术",
         },
         "fix": [
-            "1. 检查 Google Apps Script Gmail 触发器是否正常运行",
-            "2. 在 GitHub Actions 页面手动触发 Gmail Lead Poller workflow",
-            "3. 确认 GitHub schedule 兜底（每 4 小时）是否生效",
+            "1. 打开 script.google.com → 项目 Lead-poller → 执行记录，确认 Authorization / History API 错误",
+            "2. 手动运行 authorizeOAuth() / initHistoryId()，确认时间驱动器仍每分钟跑 checkNewEmails",
+            "3. 确认脚本属性 GITHUB_TOKEN 仍可 workflow_dispatch（仓库 Actions: write）",
+            "4. 在 GitHub Actions 手动触发 Gmail Lead Poller；确认 schedule */30 仍启用",
+            "5. 若日志为 invalid_grant → 更新 GitHub Secret GMAIL_REFRESH_TOKEN",
+        ],
+    },
+    "apps_script_silent": {
+        "title": "Gmail Apps Script 近实时触发静默",
+        "diagnose": "长时间没有 workflow_dispatch 触发 Gmail Lead Poller（仅靠 schedule）",
+        "normal": "有新询盘时应由 Apps Script 发起 workflow_dispatch（通常数小时内至少一次，视邮件量）",
+        "meta": {
+            "异常环节": "Google Apps Script gmail-trigger",
+            "初步判断": "Apps Script 授权失效、触发器被删、或 History API historyId 异常",
+            "排查顺序": "1. script.google.com 执行记录 → 2. 重新授权 → 3. 核对 GITHUB_TOKEN 脚本属性",
+            "是否可自动修复": "否",
+            "建议处理角色": "技术",
+        },
+        "fix": [
+            "1. script.google.com 打开 Lead-poller，查看「执行记录」里的失败堆栈",
+            "2. 运行 authorizeOAuth() 与 initHistoryId()，确认时间驱动器存在",
+            "3. 同步仓库 scripts/gmail-trigger.gs 到 Apps Script 后保存",
+            "4. 临时依赖 GitHub schedule */30 兜底，避免再次降为每天 1 次",
         ],
     },
 }
@@ -431,6 +452,8 @@ def send_alert(issues: list) -> bool:
         suggestion = "优先处理 OAuth 失效，否则所有邮件拉取停摆。"
     elif "cronjob_trigger_failed" in alert_keys:
         suggestion = "优先检查 Pipeline 触发是否正常，否则线索处理停摆。"
+    elif "apps_script_silent" in alert_keys:
+        suggestion = "Apps Script 近实时触发已停，请重新授权；当前依赖 schedule 兜底。"
     elif "github_consecutive_failures" in alert_keys:
         suggestion = "检查 GitHub Actions 日志，确认错误根因后修复。"
     else:
@@ -514,41 +537,76 @@ def main():
         print("[检查2] 跳过（未配置 GITHUB_TOKEN）")
 
     # ── 检查 3: Pipeline 触发频率 ──
-    # 触发来源已从 cron-job.org 改为 GitHub Actions workflow_dispatch
-    # 检查最近是否有成功的 workflow_dispatch 运行，确保 pipeline 持续运行
+    # schedule */30 + Apps Script workflow_dispatch；以「最近成功」为准，失败不算健康。
     if gh_token:
         print("[检查3] 检查 Pipeline 触发频率...")
         try:
-            MAX_GAP_HOURS = 7  # schedule 每 4h，实测间隔最长 6.4h（GitHub jitter），留余量避免误报
+            MAX_SUCCESS_GAP_HOURS = 2  # schedule 每 30min，留 GitHub jitter 余量
+            APPS_SCRIPT_SILENT_HOURS = 24  # 超过 1 天无 workflow_dispatch → Apps Script 可能挂了
             resp = requests.get(
-                f"https://api.github.com/repos/{GH_REPO}/actions/runs",
-                params={"per_page": 10},
+                f"https://api.github.com/repos/{GH_REPO}/actions/workflows/lead-poller.yml/runs",
+                params={"per_page": 30},
                 headers={"Authorization": f"token {gh_token}", "Accept": "application/vnd.github+json"},
                 timeout=15,
             )
             if resp.status_code == 200:
-                runs = resp.json().get("workflow_runs", [])
-                poller_runs = [r for r in runs if r.get("name") == "Gmail Lead Poller"]
-                if poller_runs:
-                    last_run = poller_runs[0]
+                poller_runs = resp.json().get("workflow_runs", [])
+                now = datetime.now(timezone.utc)
+                success_runs = [r for r in poller_runs if r.get("conclusion") == "success"]
+                if success_runs:
+                    last_ok = success_runs[0]
                     last_time = datetime.fromisoformat(
-                        last_run["created_at"].replace("Z", "+00:00")
+                        last_ok["created_at"].replace("Z", "+00:00")
                     )
-                    gap_hours = round(
-                        (datetime.now(timezone.utc) - last_time).total_seconds() / 3600, 1
-                    )
-                    last_conclusion = last_run.get("conclusion", "running")
-                    if gap_hours > MAX_GAP_HOURS:
-                        print(f"  ⚠️ Pipeline {gap_hours}h 未触发，超过阈值 {MAX_GAP_HOURS}h")
+                    gap_hours = round((now - last_time).total_seconds() / 3600, 1)
+                    if gap_hours > MAX_SUCCESS_GAP_HOURS:
+                        print(f"  ⚠️ Pipeline {gap_hours}h 无成功运行，超过阈值 {MAX_SUCCESS_GAP_HOURS}h")
                         issues.append({
                             **REMEDY_MAP["cronjob_trigger_failed"],
                             "alert_key": "cronjob_trigger_failed",
-                            "details": [f"最近运行距今 {gap_hours}h（阈值 {MAX_GAP_HOURS}h），结论={last_conclusion}"],
+                            "details": [
+                                f"最近成功距今 {gap_hours}h（阈值 {MAX_SUCCESS_GAP_HOURS}h）",
+                                f"最近一次: {last_ok.get('html_url', '')}",
+                            ],
                         })
                     else:
-                        print(f"  正常: 最近运行 {gap_hours}h 前，结论={last_conclusion}")
+                        print(f"  正常: 最近成功 {gap_hours}h 前")
+                elif poller_runs:
+                    last_run = poller_runs[0]
+                    print(f"  ⚠️ 有运行但无成功记录，最近结论={last_run.get('conclusion')}")
+                    issues.append({
+                        **REMEDY_MAP["cronjob_trigger_failed"],
+                        "alert_key": "cronjob_trigger_failed",
+                        "details": [
+                            f"最近结论={last_run.get('conclusion')}",
+                            f"url={last_run.get('html_url', '')}",
+                        ],
+                    })
                 else:
                     print("  无 Lead Poller 运行记录")
+
+                dispatch_runs = [r for r in poller_runs if r.get("event") == "workflow_dispatch"]
+                if dispatch_runs:
+                    last_dispatch = datetime.fromisoformat(
+                        dispatch_runs[0]["created_at"].replace("Z", "+00:00")
+                    )
+                    silent_h = round((now - last_dispatch).total_seconds() / 3600, 1)
+                    if silent_h > APPS_SCRIPT_SILENT_HOURS:
+                        print(f"  ⚠️ Apps Script 疑似静默: {silent_h}h 无 workflow_dispatch")
+                        issues.append({
+                            **REMEDY_MAP["apps_script_silent"],
+                            "alert_key": "apps_script_silent",
+                            "details": [f"最近 workflow_dispatch 距今 {silent_h}h"],
+                        })
+                    else:
+                        print(f"  Apps Script/手动 dispatch: {silent_h}h 前有触发")
+                else:
+                    print("  ⚠️ 近期无 workflow_dispatch（Apps Script 可能未触发）")
+                    issues.append({
+                        **REMEDY_MAP["apps_script_silent"],
+                        "alert_key": "apps_script_silent",
+                        "details": ["最近 30 次 Lead Poller 运行中无 workflow_dispatch"],
+                    })
             else:
                 print(f"  API 返回 {resp.status_code}，跳过", file=sys.stderr)
         except Exception as e:
