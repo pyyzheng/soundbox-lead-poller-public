@@ -11,8 +11,14 @@ import requests
 
 from assignment_fields import (
     FIELD_ASSIGN_METHOD,
+    FIELD_CHANNELS,
+    FIELD_COUNTRY,
     FIELD_LEAD_ID,
+    FIELD_PRODUCT_CAT,
+    FIELD_PRODUCT_MODEL,
+    FIELD_SUB_CHANNEL,
     FIELD_SUCCESS,
+    SUB_CHANNEL_TO_CHANNEL,
     WRITE_ASSIGN_AUTO,
     WRITE_SUCCESS_NO,
 )
@@ -253,14 +259,17 @@ def check_feishu_email_duplicate(token: str, customer_email: str,
 
 def merge_feishu_record(token: str, record_id: str, merged_content: str,
                         new_msg_id: str,
-                        app_token: str = "", table_id: str = "") -> dict:
-    """合并追加新询盘到已有飞书记录。只更新 Enquiry details 和 Gmail_Msg_ID。"""
+                        app_token: str = "", table_id: str = "",
+                        extra_fields: dict | None = None) -> dict:
+    """合并追加新询盘到已有飞书记录。默认更新 Enquiry details 和 Gmail_Msg_ID。"""
     app_token = app_token or FEISHU_APP_TOKEN
     table_id = table_id or FEISHU_TABLE_ID
     fields = {
         FEISHU_FIELD_NAME: merged_content,
         FEISHU_MSGID_FIELD: new_msg_id,
     }
+    if extra_fields:
+        fields.update(extra_fields)
     resp = requests.put(
         f"https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}"
         f"/tables/{table_id}/records/{record_id}",
@@ -274,7 +283,10 @@ def merge_feishu_record(token: str, record_id: str, merged_content: str,
 def create_feishu_record(token: str, inquiry_content: str, clue_level: str = "",
                          grading_text: str = "", attachment_tokens: list = None,
                          gmail_msg_id: str = "", keyword: str = "",
-                         app_token: str = "", table_id: str = "") -> dict:
+                         app_token: str = "", table_id: str = "",
+                         channels: str = "", sub_channel: str = "",
+                         country: str = "", product_category: str = "",
+                         product_model: str = "") -> dict:
     """在飞书多维表格中新建记录"""
     app_token = app_token or FEISHU_APP_TOKEN
     table_id = table_id or FEISHU_TABLE_ID
@@ -285,6 +297,18 @@ def create_feishu_record(token: str, inquiry_content: str, clue_level: str = "",
         fields[FEISHU_CLUE_LEVEL] = clue_level
     if grading_text:
         fields[FEISHU_LEAD_GRADING] = grading_text
+    if channels:
+        fields[FEISHU_CHANNELS_FIELD] = channels
+    if sub_channel:
+        fields[FIELD_SUB_CHANNEL] = sub_channel
+    elif channels and channels in SUB_CHANNEL_TO_CHANNEL:
+        fields[FIELD_SUB_CHANNEL] = channels
+    if country:
+        fields[FIELD_COUNTRY] = country
+    if product_category:
+        fields[FIELD_PRODUCT_CAT] = product_category
+    if product_model and product_model != "无法识别":
+        fields[FIELD_PRODUCT_MODEL] = product_model
     fields[FEISHU_FOLLOWUP_PRIORITY] = "Pending"
     fields[FEISHU_AUTOREPLY_STATUS] = "Pending"
     # 与 Facebook 一致：写入分配触发前置字段，避免公式就绪后工作流因缺省值不再触发

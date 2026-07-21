@@ -18,7 +18,10 @@ FIELD_CHANNELS = "Channels（渠道）"
 
 from assignment_fields import (  # noqa: E402
     INVALID_CHANNEL_VALUES,
+    INVALID_SUB_CHANNEL_VALUES,
     SUB_CHANNEL_TO_CHANNEL as _SHARED_SUB_CHANNEL_TO_CHANNEL,
+    heal_invalid_sub_channel,
+    is_invalid_sub_channel,
 )
 
 CATEGORY_TO_FEISHU = {
@@ -140,7 +143,13 @@ def feishu_product_category(category: str) -> str:
     return CATEGORY_TO_FEISHU.get(category, category)
 
 
-def build_feishu_fields_from_content(content: str) -> dict[str, str]:
+def build_feishu_fields_from_content(
+    content: str,
+    *,
+    channels: str = "",
+    gmail_msg_id: str = "",
+    fb_leadgen: str = "",
+) -> dict[str, str]:
     """Build structured Feishu fields from enquiry body + trailing tag line."""
     updates: dict[str, str] = {}
     tag = extract_tag_line(content)
@@ -161,6 +170,18 @@ def build_feishu_fields_from_content(content: str) -> dict[str, str]:
         if alibaba.get("sub_channel"):
             updates[FIELD_SUB_CHANNEL] = alibaba["sub_channel"]
             updates[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(alibaba["sub_channel"], "阿里国际站")
+        else:
+            # 标签行存在但无效：仍尝试抽取细分渠道（如 美国-谷歌1-静音舱-无法识别）
+            parsed = parse_tag_line(tag)
+            sub = (parsed.get("sub_channel") or "").strip()
+            if sub and not is_invalid_sub_channel(sub) and sub in SUB_CHANNEL_TO_CHANNEL:
+                updates[FIELD_SUB_CHANNEL] = sub
+                if parsed.get("country") and parsed["country"] not in {"Unknown", "无法识别"}:
+                    updates[FIELD_COUNTRY] = parsed["country"]
+                if parsed.get("product_category"):
+                    updates[FIELD_PRODUCT_CAT] = feishu_product_category(parsed["product_category"])
+                if parsed.get("product_model") and parsed["product_model"] != "无法识别":
+                    updates[FIELD_PRODUCT_MODEL] = parsed["product_model"]
 
     inquiry = parse_inquiry_fields(content)
     if inquiry.get("name"):
@@ -180,6 +201,19 @@ def build_feishu_fields_from_content(content: str) -> dict[str, str]:
     sub_channel = updates.get(FIELD_SUB_CHANNEL, "")
     if sub_channel and not updates.get(FIELD_CHANNELS):
         updates[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(sub_channel, sub_channel)
+
+    if is_invalid_sub_channel(updates.get(FIELD_SUB_CHANNEL, "")):
+        healed_sub = heal_invalid_sub_channel(
+            updates.get(FIELD_SUB_CHANNEL, ""),
+            enquiry=content,
+            channels=channels,
+            gmail_msg_id=gmail_msg_id,
+            fb_leadgen=fb_leadgen,
+        )
+        if healed_sub:
+            updates[FIELD_SUB_CHANNEL] = healed_sub
+            if not updates.get(FIELD_CHANNELS) or updates.get(FIELD_CHANNELS) in INVALID_CHANNEL_VALUES:
+                updates[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(healed_sub, healed_sub)
 
     # Dup Formula Ready 要求 Email/Phone/Wechat/阿里ID 四字段都非空。
     updates.setdefault(FIELD_WECHAT, "N/A")
@@ -204,7 +238,7 @@ def filter_missing_fields(existing: dict, candidate: dict) -> dict:
             continue
         if field_name == FIELD_SUB_CHANNEL:
             current_text = extract_text(get_field(existing, FIELD_SUB_CHANNEL, "")).strip()
-            if current_text in INVALID_CHANNEL_VALUES:
+            if current_text in INVALID_SUB_CHANNEL_VALUES:
                 missing[field_name] = value
                 continue
         elif field_name == FIELD_CHANNELS:

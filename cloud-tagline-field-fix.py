@@ -26,7 +26,12 @@ from feishu_utils import (  # noqa: E402
     feishu_api,
     get_feishu_token,
 )
-from assignment_fields import FIELD_LEAD_ID, get_field  # noqa: E402
+from assignment_fields import (  # noqa: E402
+    FIELD_FB_LEADGEN,
+    FIELD_GMAIL_MSG,
+    FIELD_LEAD_ID,
+    get_field,
+)
 from tagline_fields import (  # noqa: E402
     FIELD_CHANNELS,
     FIELD_COUNTRY,
@@ -65,6 +70,8 @@ SCAN_FIELDS = [
     FIELD_EMAIL,
     FIELD_PHONE,
     FIELD_CHANNELS,
+    FIELD_GMAIL_MSG,
+    FIELD_FB_LEADGEN,
     "Customer Name（客户名称）",
     "Wechat（微信）",
     "阿里ID",
@@ -151,7 +158,12 @@ def run() -> int:
             continue
 
         content = extract_text(fields.get(FIELD_ENQUIRY, ""))
-        candidate = build_feishu_fields_from_content(content)
+        candidate = build_feishu_fields_from_content(
+            content,
+            channels=extract_text(get_field(fields, FIELD_CHANNELS, "")),
+            gmail_msg_id=extract_text(get_field(fields, FIELD_GMAIL_MSG, "")),
+            fb_leadgen=extract_text(get_field(fields, FIELD_FB_LEADGEN, "")),
+        )
         tag = extract_tag_line(content) or ""
         email = extract_text(fields.get(FIELD_EMAIL, "")).lower().strip()
         if not email:

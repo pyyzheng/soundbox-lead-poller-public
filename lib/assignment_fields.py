@@ -45,6 +45,7 @@ CHANNEL_GOOGLE_ALIASES = frozenset({"谷歌", "Google", "google"})
 INVALID_CHANNEL_VALUES = frozenset(
     {"", "无可用选项", "No options available", "无法识别", "N/A"}
 )
+INVALID_SUB_CHANNEL_VALUES = INVALID_CHANNEL_VALUES
 
 # 细分渠道 → 主渠道（用于写回 / 自愈）
 SUB_CHANNEL_TO_CHANNEL: dict[str, str] = {
@@ -174,6 +175,103 @@ def resolve_channel_from_sub(sub_channel: str) -> str | None:
 
 def is_invalid_channel(channel: str) -> bool:
     return (channel or "").strip() in INVALID_CHANNEL_VALUES
+
+
+def is_invalid_sub_channel(sub_channel: str) -> bool:
+    return (sub_channel or "").strip() in INVALID_SUB_CHANNEL_VALUES
+
+
+def infer_sub_channel_from_content(content: str) -> str | None:
+    """从询盘正文推断细分渠道（无标签行或标签无效时用）。"""
+    text = (content or "").strip()
+    if not text:
+        return None
+
+    lower = text.lower()
+
+    # 表单/通知特征（长特征优先）
+    if "新官网询价通知" in text or "soundbox-sys.com" in lower:
+        return "新官网"
+    if "message from soundbox" in lower or "inquiry@soundboxacoustic.com" in lower:
+        return "谷歌1"
+    if "new booking entry" in lower:
+        return "谷歌2"
+    if "select your country" in lower and "inquiry:" in lower:
+        return "谷歌1"
+    if "telephone number:" in lower and "message:" in lower:
+        return "谷歌1"
+    if "soundboxacoustic.com" in lower:
+        return "谷歌1"
+    if "soundboxbooth.com" in lower or "email@soundboxbooth.com" in lower:
+        return "谷歌2"
+    if "加拿大舱网" in text:
+        return "加拿大舱网"
+    if "美国舱网" in text:
+        return "美国舱网"
+    if "总舱网" in text or "soundbox-pod.com" in lower:
+        return "总舱网"
+
+    # 末行标签：国家-细分渠道-…（即使国家/型号无效也尝试取细分渠道）
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if lines:
+        parts = [p.strip() for p in lines[-1].replace("--", "-").split("-") if p.strip()]
+        if len(parts) >= 2:
+            sub = parts[1]
+            if not is_invalid_sub_channel(sub) and sub in SUB_CHANNEL_TO_CHANNEL:
+                return sub
+
+    # 正文关键词（长词优先）
+    for sub in sorted(SUB_CHANNEL_TO_CHANNEL.keys(), key=len, reverse=True):
+        if sub in text:
+            return sub
+    return None
+
+
+def infer_sub_channel_from_signals(
+    *,
+    enquiry: str = "",
+    channels: str = "",
+    gmail_msg_id: str = "",
+    fb_leadgen: str = "",
+) -> str | None:
+    """综合询盘正文 + 主渠道 + 来源 ID 推断细分渠道。"""
+    healed = infer_sub_channel_from_content(enquiry)
+    if healed:
+        return healed
+    if (fb_leadgen or "").strip():
+        return "Facebook"
+    channel = (channels or "").strip()
+    if channel in CHANNEL_GOOGLE_ALIASES and (gmail_msg_id or "").strip():
+        # Gmail 表单询盘缺标签行时，国际站表单多为谷歌1
+        return "谷歌1"
+    if channel == "Facebook":
+        return "Facebook"
+    if channel == "阿里国际站":
+        return "阿里1"
+    if channel == "国内渠道":
+        return "中文官网"
+    if channel and channel in SUB_CHANNEL_TO_CHANNEL:
+        return channel
+    return None
+
+
+def heal_invalid_sub_channel(
+    sub_channel: str,
+    *,
+    enquiry: str = "",
+    channels: str = "",
+    gmail_msg_id: str = "",
+    fb_leadgen: str = "",
+) -> str | None:
+    """细分渠道无效时返回应写回值；无需修复则返回 None。"""
+    if not is_invalid_sub_channel(sub_channel):
+        return None
+    return infer_sub_channel_from_signals(
+        enquiry=enquiry,
+        channels=channels,
+        gmail_msg_id=gmail_msg_id,
+        fb_leadgen=fb_leadgen,
+    )
 
 
 def infer_channel_from_content(content: str) -> str | None:

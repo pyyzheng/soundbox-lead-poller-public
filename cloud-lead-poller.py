@@ -74,6 +74,8 @@ from feishu_writer import (
     create_feishu_record, update_feishu_autoreply,
     FEISHU_APP_TOKEN, FEISHU_TABLE_ID, FEISHU_FIELD_NAME,
 )
+from assignment_fields import FIELD_CHANNELS, FIELD_SUB_CHANNEL, SUB_CHANNEL_TO_CHANNEL  # noqa: E402
+from tagline_fields import feishu_product_category  # noqa: E402
 from llm_parser import (
     call_llm_parse, normalize_llm_output,
 )
@@ -106,6 +108,28 @@ AR_DRY_RUN = "Dry-Run"
 # ═══════════════════════════════════════════════════════════════════════════════
 # 辅助函数
 # ═══════════════════════════════════════════════════════════════════════════════
+
+def _structured_write_fields(
+    *,
+    sub_channel: str,
+    country: str = "",
+    product_category: str = "",
+    product_model: str = "",
+) -> dict[str, str]:
+    """Gmail 写入飞书时同步结构化渠道/产品字段，避免只靠询盘尾行标签。"""
+    fields: dict[str, str] = {}
+    sub = (sub_channel or "").strip()
+    if sub and sub != "无法识别":
+        fields[FIELD_SUB_CHANNEL] = sub
+        fields[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(sub, sub)
+    if country and country not in {"Unknown", "无法识别"}:
+        fields["Country（国家）"] = country
+    if product_category and product_category not in {"", "无法识别"}:
+        fields["Product Categories（产品大类）"] = feishu_product_category(product_category)
+    if product_model and product_model not in {"", "无法识别"}:
+        fields["Product model（具体型号）"] = product_model
+    return fields
+
 
 def _build_tag_line(country: str, sub_channel: str, product_category: str, product_model: str) -> str:
     return "-".join(s or "无法识别" for s in [country, sub_channel, product_category, product_model])
@@ -717,11 +741,19 @@ def process_email(service, msg_data: dict, label_id: str, feishu_token: str, rul
             append_body = inquiry_content.rsplit("\n\n", 1)[0] if "\n\n" in inquiry_content else inquiry_content
             country_note = f" [表单国家: {customer_country}]" if customer_country else ""
             merged_content = f"{old_content}\n\n--- 追加询盘 [{now_str}]{country_note} ---\n{append_body}"
+            merge_patch = _structured_write_fields(
+                sub_channel=customer_channel if isinstance(customer_channel, str) else str(customer_channel or ""),
+                country=customer_country,
+                product_category=customer_product,
+                product_model=(normalized.get("product_model", "") if llm_result and llm_result.get("status") == "parsed"
+                               else (product_model if not llm_result or llm_result.get("status") != "parsed" else "")),
+            )
             log.info("邮箱合并: email=%s | record=%s", dedup_email, existing_record_id)
             merge_result = merge_feishu_record(
                 feishu_token, existing_record_id,
                 merged_content=merged_content,
                 new_msg_id=msg_id,
+                extra_fields=merge_patch or None,
             )
             if merge_result.get("code") == 0:
                 log.info("合并写入成功: record_id=%s", existing_record_id)
@@ -743,9 +775,23 @@ def process_email(service, msg_data: dict, label_id: str, feishu_token: str, rul
 
     # ── 6. 写入飞书 ──
     url_keyword = extract_url_keyword(body)
-    create_result = create_feishu_record(feishu_token, inquiry_content, clue_level=clue_level,
-                                          grading_text=grading_text, attachment_tokens=attachment_tokens,
-                                          gmail_msg_id=msg_id, keyword=url_keyword)
+    structured = _structured_write_fields(
+        sub_channel=customer_channel if isinstance(customer_channel, str) else str(customer_channel or ""),
+        country=customer_country,
+        product_category=customer_product,
+        product_model=(normalized.get("product_model", "") if llm_result and llm_result.get("status") == "parsed"
+                       else (product_model if not llm_result or llm_result.get("status") != "parsed" else "")),
+    )
+    create_result = create_feishu_record(
+        feishu_token, inquiry_content, clue_level=clue_level,
+        grading_text=grading_text, attachment_tokens=attachment_tokens,
+        gmail_msg_id=msg_id, keyword=url_keyword,
+        channels=structured.get(FIELD_CHANNELS, ""),
+        sub_channel=structured.get(FIELD_SUB_CHANNEL, ""),
+        country=structured.get("Country（国家）", ""),
+        product_category=structured.get("Product Categories（产品大类）", ""),
+        product_model=structured.get("Product model（具体型号）", ""),
+    )
     if create_result.get("code") == 0:
         record_id = create_result.get("data", {}).get("record", {}).get("record_id")
         log.info("飞书写入成功: record_id=%s", record_id)
