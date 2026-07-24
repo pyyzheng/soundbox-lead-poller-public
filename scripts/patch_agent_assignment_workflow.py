@@ -5,22 +5,17 @@
 1. 触发条件不再排除「Product model = 无法识别」，让代理工作流能处理迪拜等
    型号未识别但国家/产品已明确的静音舱线索。
 2. 精确型号未命中时，仅「型号为空」走待确认；「无法识别」先查全系列规则，
-   再决定是否待确认（与 cloud-assignment-unblock._match_agent_rule 口径一致）。
+   再决定是否待确认（与 cloud-assignment_unblock._match_agent_rule 口径一致）。
 
 修复点（2026-07-20）：
 3. 代理规则表「国家」重建为动态选项后，FindRecord 过滤里旧 field id
    fldqTJjAD7 失效，改为字段名「国家」（或当前 field id）。
 
-修复点（2026-07-22）：
-4. 禁止跨表 ref 写「代理规则命中业务员」：与渠道轮转/子办相同，
-   FindRecord→SetRecord 单选 ref 会报字段类型不匹配。
-   业务员由 cloud-assignment-unblock.py 按规则表名称写入。
-
 修复点（2026-07-24）：
-5. 监听「是否命中代理国家」：先国家=无法识别/空，后补国家时 Lookup 可能晚于
-   Country 变更才变为「是」；若不监听该 Lookup，工作流不会重跑 → 一直分配异常。
-6. 监听「是否命中代理产品」：工作流只写了命中=是、业务员由 unblock 补写时，
-   产品字段变化也可再次进入分配链路。
+4. 监听「是否命中代理国家 / 是否命中代理产品」：后补国家后 Lookup 变「是」会重跑。
+5. **工作流必须写回「代理规则命中业务员」**（不可只写命中产品=是）：
+   规则表「业务员」已挂主表动态选项；用 FindRecord.firstfieldsRecord 跨表 ref。
+   精确命中 / 全系列命中两路都写业务员，并标 Allocation Status=Yes。
 """
 
 from __future__ import annotations
@@ -40,9 +35,13 @@ from workflow_bilingual import (  # noqa: E402
 WORKFLOW_ID = "wkfKWPVBWT0NisJV"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
 UNRECOGNIZED_MODEL = "无法识别"
-# 历史静态选项字段 id；动态选项重建后必须替换
 STALE_COUNTRY_FIELD_IDS = ("fldqTJjAD7",)
 COUNTRY_FIELD_NAME = "国家"
+# 代理优先规则表.业务员（与主表「代理规则命中业务员」动态选项同源）
+AGENT_RULE_ASSIGNEE_FIELD_ID = "fldcmDUWhH"
+FIELD_AGENT_ASSIGNEE = "代理规则命中业务员"
+FIELD_AGENT_PRODUCT = "是否命中代理产品"
+FIELD_SUCCESS = "Allocation Status（是否成功分配）"
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -79,6 +78,10 @@ def _strip_option_ids(node):
         _strip_option_ids(child)
 
 
+def _option(name: str) -> dict:
+    return {"value": {"name": name}, "value_type": "option"}
+
+
 def _option_name(value_item: dict) -> str:
     value = value_item.get("value", {})
     if isinstance(value, dict):
@@ -86,8 +89,19 @@ def _option_name(value_item: dict) -> str:
     return ""
 
 
+def _assignee_ref(find_step_id: str) -> dict:
+    return {
+        "field_name": FIELD_AGENT_ASSIGNEE,
+        "value": [
+            {
+                "value": f"$.{find_step_id}.firstfieldsRecord.{AGENT_RULE_ASSIGNEE_FIELD_ID}",
+                "value_type": "ref",
+            }
+        ],
+    }
+
+
 def _fix_stale_country_field_refs(node) -> None:
-    """FindRecord 等处若仍引用已删除的国家 field id，改为字段名「国家」。"""
     if isinstance(node, list):
         for item in node:
             _fix_stale_country_field_refs(item)
@@ -98,6 +112,15 @@ def _fix_stale_country_field_refs(node) -> None:
         node["field_name"] = COUNTRY_FIELD_NAME
     for child in node.values():
         _fix_stale_country_field_refs(child)
+
+
+def _set_success_with_assignee(step: dict, *, find_step_id: str, product: str) -> None:
+    """命中规则：写产品标记 + 业务员 + 成功分配。"""
+    step["data"]["field_values"] = [
+        {"field_name": FIELD_AGENT_PRODUCT, "value": [_option(product)]},
+        _assignee_ref(find_step_id),
+        {"field_name": FIELD_SUCCESS, "value": [_option("Yes（是）")]},
+    ]
 
 
 def patch_workflow(data: dict) -> dict:
@@ -132,18 +155,24 @@ def patch_workflow(data: dict) -> dict:
 
     _fix_stale_country_field_refs(out["steps"])
 
-    # 去掉所有跨表写「代理规则命中业务员」；保留是否命中代理产品 / Allocation Status
-    for step in out["steps"]:
-        if step.get("type") != "SetRecordAction":
-            continue
-        field_values = (step.get("data") or {}).get("field_values") or []
-        step["data"]["field_values"] = [
-            fv for fv in field_values if fv.get("field_name") != "代理规则命中业务员"
-        ]
+    # 精确型号命中（Find actlMXhJW 有结果）→ 写业务员
+    _set_success_with_assignee(steps["actfxjmzT"], find_step_id="actlMXhJW", product="是")
+    # 全系列命中（Find act3Nvoal 有结果）→ 写业务员
+    _set_success_with_assignee(steps["actBTQP7f"], find_step_id="act3Nvoal", product="是")
 
-    # 后补国家后 Lookup「是否命中代理国家」才变为「是」——必须监听，否则永不重跑
+    # FindRecord 无结果时继续往下走，才能落到全系列 / 否
+    steps["actlMXhJW"]["data"]["should_proceed_when_no_results"] = True
+    steps["act3Nvoal"]["data"]["should_proceed_when_no_results"] = True
+    steps["actlMXhJW"]["data"]["field_names"] = ["业务员"]
+    steps["act3Nvoal"]["data"]["field_names"] = ["业务员"]
+
     watch = trigger["data"].setdefault("field_watch_info", [])
-    for name in ("是否命中代理国家", "是否命中代理产品", "Allocation Method（分配方式）"):
+    for name in (
+        "是否命中代理国家",
+        "是否命中代理产品",
+        "Allocation Method（分配方式）",
+        FIELD_AGENT_ASSIGNEE,
+    ):
         if not any(w.get("field_name") == name for w in watch):
             watch.append({"field_name": name})
 
@@ -178,7 +207,7 @@ def main() -> int:
     print(result.stdout or result.stderr)
     if result.returncode != 0:
         return result.returncode
-    print("patched agent assignment workflow deployed")
+    print("patched agent workflow: FindRecord → write 代理规则命中业务员 + Success=Yes")
     return 0
 
 
