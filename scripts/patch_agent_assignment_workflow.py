@@ -10,6 +10,17 @@
 修复点（2026-07-20）：
 3. 代理规则表「国家」重建为动态选项后，FindRecord 过滤里旧 field id
    fldqTJjAD7 失效，改为字段名「国家」（或当前 field id）。
+
+修复点（2026-07-22）：
+4. 禁止跨表 ref 写「代理规则命中业务员」：与渠道轮转/子办相同，
+   FindRecord→SetRecord 单选 ref 会报字段类型不匹配。
+   业务员由 cloud-assignment-unblock.py 按规则表名称写入。
+
+修复点（2026-07-24）：
+5. 监听「是否命中代理国家」：先国家=无法识别/空，后补国家时 Lookup 可能晚于
+   Country 变更才变为「是」；若不监听该 Lookup，工作流不会重跑 → 一直分配异常。
+6. 监听「是否命中代理产品」：工作流只写了命中=是、业务员由 unblock 补写时，
+   产品字段变化也可再次进入分配链路。
 """
 
 from __future__ import annotations
@@ -120,6 +131,22 @@ def patch_workflow(data: dict) -> dict:
     ]
 
     _fix_stale_country_field_refs(out["steps"])
+
+    # 去掉所有跨表写「代理规则命中业务员」；保留是否命中代理产品 / Allocation Status
+    for step in out["steps"]:
+        if step.get("type") != "SetRecordAction":
+            continue
+        field_values = (step.get("data") or {}).get("field_values") or []
+        step["data"]["field_values"] = [
+            fv for fv in field_values if fv.get("field_name") != "代理规则命中业务员"
+        ]
+
+    # 后补国家后 Lookup「是否命中代理国家」才变为「是」——必须监听，否则永不重跑
+    watch = trigger["data"].setdefault("field_watch_info", [])
+    for name in ("是否命中代理国家", "是否命中代理产品", "Allocation Method（分配方式）"):
+        if not any(w.get("field_name") == name for w in watch):
+            watch.append({"field_name": name})
+
     _strip_option_ids(out["steps"])
     body = migrate_workflow_document({"title": out["title"], "steps": out["steps"]})
     return fix_duplicate_formula_in_workflow(body)

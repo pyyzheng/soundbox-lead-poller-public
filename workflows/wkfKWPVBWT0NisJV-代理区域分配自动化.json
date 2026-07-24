@@ -98,6 +98,15 @@
           },
           {
             "field_name": "Channel segmentation (细分渠道)"
+          },
+          {
+            "field_name": "是否命中代理国家"
+          },
+          {
+            "field_name": "是否命中代理产品"
+          },
+          {
+            "field_name": "Allocation Method（分配方式）"
           }
         ],
         "table_name": "线索总池 Case Database",
@@ -317,15 +326,6 @@
                   "name": "待确认"
                 },
                 "value_type": "option"
-              }
-            ]
-          },
-          {
-            "field_name": "代理规则命中业务员",
-            "value": [
-              {
-                "value": "$.actlMXhJW.fields.fldcmDUWhH",
-                "value_type": "ref"
               }
             ]
           },
@@ -550,15 +550,6 @@
                   "name": "是"
                 },
                 "value_type": "option"
-              }
-            ]
-          },
-          {
-            "field_name": "代理规则命中业务员",
-            "value": [
-              {
-                "value": "$.act3Nvoal.fields.fldcmDUWhH",
-                "value_type": "ref"
               }
             ]
           },

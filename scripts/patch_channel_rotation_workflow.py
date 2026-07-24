@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """从飞书拉取渠道轮转工作流，打最小补丁后写回。
 
-修复点：
+修复点（2026-07-22 再次固化）：
 1. 触发条件增加「渠道顺序队列匹配业务员 isEmpty」，避免重复触发
 2. 队列指针未找到时继续执行（should_proceed_when_no_results=true），走 Switch 保持「否」
-3. 成功分支写回「渠道顺序队列匹配业务员」：队列表业务员已与主表共用动态选项 id，
-   可安全跨表 ref；指针推进仍由 cloud-assignment-unblock.py 兜底同步
-4. 去掉 Duplicate 公式条件；监听队列Key；strip option id
+3. **禁止跨表 ref 写「渠道顺序队列匹配业务员」**：即便队列表已挂动态选项，
+   FindRecord→SetRecord 的单选 ref 仍会间歇报「字段类型不匹配」。
+   业务员 + 指针推进一律由 cloud-assignment-unblock.py 按名称写入。
+4. 去掉 Duplicate 公式条件；监听队列Key；strip option id（飞书 UI 会回写 id）
 """
 
 from __future__ import annotations
@@ -25,9 +26,6 @@ from workflow_bilingual import (  # noqa: E402
 
 WORKFLOW_ID = "wkf2Hopgt3bWuoOH"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
-# 渠道顺序队列表.业务员（飞书 field_id）；与主表「渠道顺序队列匹配业务员」option id 已对齐
-CHANNEL_QUEUE_ASSIGNEE_FIELD_ID = "fldJSP0l6d"
-ASSIGNEE_REF = f"$.acteml359jG.firstfieldsRecord.{CHANNEL_QUEUE_ASSIGNEE_FIELD_ID}"
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -67,18 +65,6 @@ def _strip_option_ids(node):
         _strip_option_ids(child)
 
 
-def _queue_assignee_field_value() -> dict:
-    return {
-        "field_name": "渠道顺序队列匹配业务员",
-        "value": [
-            {
-                "value": ASSIGNEE_REF,
-                "value_type": "ref",
-            }
-        ],
-    }
-
-
 def patch_workflow(data: dict) -> dict:
     out = deepcopy(data)
     steps = {s["id"]: s for s in out["steps"]}
@@ -108,13 +94,14 @@ def patch_workflow(data: dict) -> dict:
     steps["acteml359jG"]["data"]["field_names"] = ["业务员"]
 
     success_step = steps["actnfeoNaFo"]
-    # 先写业务员，再写是否成功分配=是（option id 已对齐，可跨表 ref）
-    field_values = [
+    # 不跨表 ref 写「渠道顺序队列匹配业务员」：FindRecord 单选 ref 易报字段类型不匹配。
+    # 业务员 + 指针推进由 cloud-assignment-unblock.py 负责。
+    # 本步仅标记 Allocation Status=Yes；若业务员仍空，unblock 的 _is_stuck_success 会重置后再分配。
+    success_step["data"]["field_values"] = [
         fv
         for fv in success_step["data"]["field_values"]
         if fv.get("field_name") not in ("渠道顺序队列匹配业务员",)
     ]
-    success_step["data"]["field_values"] = [_queue_assignee_field_value()] + field_values
 
     _strip_option_ids(out["steps"])
 
@@ -152,7 +139,7 @@ def main() -> int:
     print(result.stdout or result.stderr)
     if result.returncode != 0:
         return result.returncode
-    print("patched workflow deployed")
+    print("patched workflow deployed (no cross-table assignee write)")
     return 0
 
 

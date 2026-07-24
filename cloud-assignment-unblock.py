@@ -79,6 +79,7 @@ from option_field_match import (  # noqa: E402
     is_agent_country,
     is_agent_product_empty,
     is_agent_product_pending,
+    is_agent_product_yes,
     is_assign_auto,
     is_assign_manual,
     is_assignment_exception,
@@ -246,19 +247,31 @@ def _advance_pointer_if_stale(
 
 
 def _needs_agent_product_clear(fields: dict) -> bool:
-    if not is_assign_auto(fields.get(FIELD_ASSIGN_METHOD, "")):
+    """代理国家且业务员未写上时需要补判/回填。
+
+    覆盖两类卡死：
+    1. 是否命中代理产品 为空/待确认（历史主路径）
+    2. 是否命中代理产品=是 但「代理规则命中业务员」为空
+       （2026-07-22 起工作流不再跨表写业务员，易出现此状态 → 系统匹配=未命中规则）
+    """
+    if not is_assign_auto(get_field(fields, FIELD_ASSIGN_METHOD, "")):
         return False
-    if not is_agent_country(fields.get(FIELD_AGENT_COUNTRY, "")):
+    if not is_agent_country(get_field(fields, FIELD_AGENT_COUNTRY, "")):
         return False
-    if is_suboffice_country(fields.get(FIELD_SUBOFFICE, "")):
+    if is_suboffice_country(get_field(fields, FIELD_SUBOFFICE, "")):
         return False
-    agent_product = fields.get(FIELD_AGENT_PRODUCT, "")
-    if not (is_agent_product_empty(agent_product) or is_agent_product_pending(agent_product)):
+    if extract_text(get_field(fields, FIELD_AGENT_ASSIGNEE, "")):
         return False
-    if extract_text(fields.get(FIELD_AGENT_ASSIGNEE, "")):
+    agent_product = get_field(fields, FIELD_AGENT_PRODUCT, "")
+    product_unresolved = (
+        is_agent_product_empty(agent_product)
+        or is_agent_product_pending(agent_product)
+        or is_agent_product_yes(agent_product)
+    )
+    if not product_unresolved:
         return False
-    category = extract_text(fields.get(FIELD_PRODUCT_CAT, ""))
-    model = extract_text(fields.get(FIELD_PRODUCT_MODEL, ""))
+    category = extract_text(get_field(fields, FIELD_PRODUCT_CAT, ""))
+    model = extract_text(get_field(fields, FIELD_PRODUCT_MODEL, ""))
     return bool(category and model)
 
 

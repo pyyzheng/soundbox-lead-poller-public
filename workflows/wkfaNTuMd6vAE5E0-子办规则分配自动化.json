@@ -2,18 +2,12 @@
   "title": "子办规则分配自动化",
   "steps": [
     {
-      "id": "trigpJUkcCnQ",
-      "type": "SetRecordTrigger",
-      "title": "修改记录时",
-      "next": "actPIQDoV",
       "children": {
         "links": []
       },
       "data": {
-        "table_name": "线索总池 Case Database",
         "condition_list": [
           {
-            "conjunction": "and",
             "conditions": [
               {
                 "field_name": "队列Key",
@@ -58,8 +52,21 @@
                 "field_name": "子办规则命中负责人",
                 "operator": "isEmpty",
                 "value": []
+              },
+              {
+                "field_name": "是否是子办国家",
+                "operator": "is",
+                "value": [
+                  {
+                    "value": {
+                      "name": "是"
+                    },
+                    "value_type": "option"
+                  }
+                ]
               }
-            ]
+            ],
+            "conjunction": "and"
           }
         ],
         "field_watch_info": [
@@ -76,190 +83,25 @@
             "field_name": "是否是子办国家"
           }
         ],
+        "table_name": "线索总池 Case Database",
         "trigger_control_list": [
           "pasteUpdate",
           "automationBatchUpdate",
           "appendImport",
           "openAPIBatchUpdate"
         ]
-      }
-    },
-    {
-      "id": "actPIQDoV",
-      "type": "SwitchBranch",
-      "title": "多分支（Switch）",
-      "next": null,
-      "children": {
-        "links": [
-          {
-            "desc": "分支 1",
-            "kind": "case",
-            "label": "branch_1",
-            "to": "actVWM1Z5"
-          },
-          {
-            "desc": "分支 2",
-            "kind": "case",
-            "label": "branch_2",
-            "to": "acteIacr4"
-          },
-          {
-            "desc": "默认分支",
-            "kind": "case",
-            "label": "default",
-            "to": ""
-          }
-        ]
       },
-      "data": {
-        "child_branch_list": [
-          {
-            "name": "分支 1",
-            "condition": {
-              "conjunction": "or",
-              "conditions": [
-                {
-                  "conjunction": "and",
-                  "conditions": [
-                    {
-                      "left_value": {
-                        "value": "$.trigpJUkcCnQ.fld9kCu7o6",
-                        "value_type": "ref"
-                      },
-                      "operator": "is",
-                      "right_value": [
-                        {
-                          "value": {
-                            "name": "是"
-                          },
-                          "value_type": "option"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          },
-          {
-            "name": "分支 2",
-            "condition": {
-              "conjunction": "or",
-              "conditions": [
-                {
-                  "conjunction": "and",
-                  "conditions": [
-                    {
-                      "left_value": {
-                        "value": "$.trigpJUkcCnQ.fld9kCu7o6",
-                        "value_type": "ref"
-                      },
-                      "operator": "is",
-                      "right_value": [
-                        {
-                          "value": {
-                            "name": "否"
-                          },
-                          "value_type": "option"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        ]
-      }
+      "id": "trigpJUkcCnQ",
+      "next": "act1jaIFY",
+      "title": "修改记录时",
+      "type": "SetRecordTrigger"
     },
     {
-      "id": "actVWM1Z5",
-      "type": "FindRecordAction",
-      "title": "查找记录",
-      "next": "actDMTfWM",
-      "children": {
-        "links": []
-      },
-      "data": {
-        "field_names": [
-          "负责人"
-        ],
-        "filter_info": {
-          "conditions": [
-            {
-              "field_name": "国家",
-              "operator": "is",
-              "value": [
-                {
-                  "value": "$.trigpJUkcCnQ.fldAEhwYJU",
-                  "value_type": "ref"
-                }
-              ]
-            },
-            {
-              "field_name": "是否启用",
-              "operator": "is",
-              "value": [
-                {
-                  "value": {
-                    "name": "启用"
-                  },
-                  "value_type": "option"
-                }
-              ]
-            }
-          ],
-          "conjunction": "and"
-        },
-        "ref_info": null,
-        "should_proceed_when_no_results": true,
-        "table_name": "子办分配规则表"
-      }
-    },
-    {
-      "id": "actDMTfWM",
-      "type": "Loop",
-      "title": "循环",
-      "next": null,
-      "children": {
-        "links": [
-          {
-            "kind": "loop_start",
-            "to": "act1jaIFY"
-          }
-        ]
-      },
-      "data": {
-        "data": [
-          {
-            "value": "$.actVWM1Z5.fieldRecords",
-            "value_type": "ref"
-          }
-        ],
-        "loop_mode": "continue",
-        "loop_type": "forEach",
-        "max_loop_times": 5
-      }
-    },
-    {
-      "id": "act1jaIFY",
-      "type": "SetRecordAction",
-      "title": "修改记录",
-      "next": null,
       "children": {
         "links": []
       },
       "data": {
         "field_values": [
-          {
-            "field_name": "子办规则命中负责人",
-            "value": [
-              {
-                "value": "$.actVWM1Z5.firstfieldsRecord.fldATnmAXs",
-                "value_type": "ref"
-              }
-            ]
-          },
           {
             "field_name": "Allocation Status（是否成功分配）",
             "value": [
@@ -278,37 +120,10 @@
           "step_id": "trigpJUkcCnQ"
         },
         "table_name": "线索总池 Case Database"
-      }
-    },
-    {
-      "id": "acteIacr4",
-      "type": "SetRecordAction",
-      "title": "修改记录",
-      "next": null,
-      "children": {
-        "links": []
       },
-      "data": {
-        "field_values": [
-          {
-            "field_name": "Allocation Status（是否成功分配）",
-            "value": [
-              {
-                "value": {
-                  "name": "No（否）"
-                },
-                "value_type": "option"
-              }
-            ]
-          }
-        ],
-        "filter_info": null,
-        "max_set_record_num": 100,
-        "ref_info": {
-          "step_id": "trigpJUkcCnQ"
-        },
-        "table_name": "线索总池 Case Database"
-      }
+      "id": "act1jaIFY",
+      "title": "修改记录",
+      "type": "SetRecordAction"
     }
   ]
 }
