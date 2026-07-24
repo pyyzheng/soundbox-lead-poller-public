@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
-"""修复子办规则分配自动化工作流 wkfaNTuMd6vAE5E0。
+"""修复并恢复子办规则分配自动化工作流 wkfaNTuMd6vAE5E0。
 
-根因（2026-07-22 全面排查固化）：
-1. 跨表 FindRecord / 写「子办规则命中负责人」会报字段类型不匹配（即使动态选项已对齐）。
-2. Lookup「是否是子办国家」在条件里只允许 option/ref（不允许 text）；
-   飞书部署后会把 name-only option 回写为带 id 的 option。
-3. 真正稳定的分配由 cloud-suboffice-assignee-fix.py 完成（assignment-unblock 每 5 分钟）。
-
-固化策略：
-- 2 步：触发（含子办国家=是）→ 只写 Allocation Status=Yes。
-- 不 Switch、不 FindRecord、不写负责人。
+策略（2026-07-24）：
+- Switch(是否是子办国家) → FindRecord(子办分配规则表) → 写「子办规则命中负责人」+ Success=Yes
+- 子办表「国家」「负责人」已挂主表动态选项；用 firstfieldsRecord 跨表 ref
+- Lookup「是否是子办国家」条件用 option（飞书不允许 text）
+- unblock / cloud-suboffice-assignee-fix 仅作兜底
 """
 
 from __future__ import annotations
@@ -17,6 +13,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
@@ -34,6 +31,14 @@ FIELD_SUBOFFICE_FLAG = "是否是子办国家"
 OPT_ASSIGN_AUTO = "Automatic（自动）"
 OPT_SUCCESS_YES = "Yes（是）"
 OPT_SUCCESS_NO = "No（否）"
+OPT_YES_CN = "是"
+OPT_NO_CN = "否"
+# 子办分配规则表.负责人
+SUBOFFICE_OWNER_FIELD_ID = "fldATnmAXs"
+# 主表 Country
+MAIN_COUNTRY_FIELD_ID = "fldAEhwYJU"
+# 是否是子办国家 Lookup
+SUBOFFICE_FLAG_FIELD_ID = "fld9kCu7o6"
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -69,14 +74,37 @@ def _option(name: str) -> dict:
     return {"value": {"name": name}, "value_type": "option"}
 
 
+def _set_record_step(
+    step_id: str,
+    *,
+    next_step: str | None,
+    field_values: list[dict],
+) -> dict:
+    return {
+        "id": step_id,
+        "type": "SetRecordAction",
+        "title": "修改记录",
+        "next": next_step,
+        "children": {"links": []},
+        "data": {
+            "field_values": field_values,
+            "filter_info": None,
+            "max_set_record_num": 100,
+            "ref_info": {"step_id": "trigpJUkcCnQ"},
+            "table_name": "线索总池 Case Database",
+        },
+    }
+
+
 def patch_workflow(data: dict) -> dict:
-    title = data.get("title") or "子办规则分配自动化"
+    out = deepcopy(data)
+    title = out.get("title") or "子办规则分配自动化"
 
     trigger = {
         "id": "trigpJUkcCnQ",
         "type": "SetRecordTrigger",
         "title": "修改记录时",
-        "next": "act1jaIFY",
+        "next": "actPIQDoV",
         "children": {"links": []},
         "data": {
             "table_name": "线索总池 Case Database",
@@ -102,12 +130,6 @@ def patch_workflow(data: dict) -> dict:
                             "operator": "isEmpty",
                             "value": [],
                         },
-                        # Lookup 条件只允许 option/ref；用 name-only，部署后飞书可能回写 id
-                        {
-                            "field_name": FIELD_SUBOFFICE_FLAG,
-                            "operator": "is",
-                            "value": [_option("是")],
-                        },
                     ],
                 }
             ],
@@ -116,6 +138,7 @@ def patch_workflow(data: dict) -> dict:
                 {"field_name": "Country（国家）"},
                 {"field_name": FIELD_ASSIGN_METHOD},
                 {"field_name": FIELD_SUBOFFICE_FLAG},
+                {"field_name": FIELD_SUBOFFICE_OWNER},
             ],
             "trigger_control_list": [
                 "pasteUpdate",
@@ -125,9 +148,9 @@ def patch_workflow(data: dict) -> dict:
             ],
         },
     }
-    live_steps = {s["id"]: s for s in data.get("steps", [])}
+    live_steps = {s["id"]: s for s in out.get("steps", [])}
     if "trigpJUkcCnQ" in live_steps:
-        live_data = (live_steps["trigpJUkcCnQ"].get("data") or {})
+        live_data = live_steps["trigpJUkcCnQ"].get("data") or {}
         if live_data.get("trigger_control_list"):
             trigger["data"]["trigger_control_list"] = live_data["trigger_control_list"]
         watched = {w["field_name"] for w in trigger["data"]["field_watch_info"]}
@@ -136,27 +159,175 @@ def patch_workflow(data: dict) -> dict:
             if name and name not in watched:
                 trigger["data"]["field_watch_info"].append({"field_name": name})
 
-    mark_success = {
-        "id": "act1jaIFY",
-        "type": "SetRecordAction",
-        "title": "修改记录",
+    country_switch = {
+        "id": "actPIQDoV",
+        "type": "SwitchBranch",
+        "title": "多分支（Switch）",
         "next": None,
-        "children": {"links": []},
+        "children": {
+            "links": [
+                {"desc": "分支 1", "kind": "case", "label": "branch_1", "to": "actVWM1Z5"},
+                {"desc": "分支 2", "kind": "case", "label": "branch_2", "to": "acteIacr4"},
+                {"desc": "默认分支", "kind": "case", "label": "default", "to": ""},
+            ]
+        },
         "data": {
-            "field_values": [
+            "child_branch_list": [
                 {
-                    "field_name": FIELD_SUCCESS,
-                    "value": [_option(OPT_SUCCESS_YES)],
-                }
-            ],
-            "filter_info": None,
-            "max_set_record_num": 100,
-            "ref_info": {"step_id": "trigpJUkcCnQ"},
-            "table_name": "线索总池 Case Database",
+                    "name": "分支 1",
+                    "condition": {
+                        "conjunction": "or",
+                        "conditions": [
+                            {
+                                "conjunction": "and",
+                                "conditions": [
+                                    {
+                                        "left_value": {
+                                            "value": f"$.trigpJUkcCnQ.{SUBOFFICE_FLAG_FIELD_ID}",
+                                            "value_type": "ref",
+                                        },
+                                        "operator": "is",
+                                        "right_value": [_option(OPT_YES_CN)],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                },
+                {
+                    "name": "分支 2",
+                    "condition": {
+                        "conjunction": "or",
+                        "conditions": [
+                            {
+                                "conjunction": "and",
+                                "conditions": [
+                                    {
+                                        "left_value": {
+                                            "value": f"$.trigpJUkcCnQ.{SUBOFFICE_FLAG_FIELD_ID}",
+                                            "value_type": "ref",
+                                        },
+                                        "operator": "is",
+                                        "right_value": [_option(OPT_NO_CN)],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                },
+            ]
         },
     }
 
-    steps = [trigger, mark_success]
+    find_record = {
+        "id": "actVWM1Z5",
+        "type": "FindRecordAction",
+        "title": "查找记录",
+        "next": "actDMTfWM",
+        "children": {"links": []},
+        "data": {
+            "field_names": ["负责人"],
+            "filter_info": {
+                "conditions": [
+                    {
+                        "field_name": "国家",
+                        "operator": "is",
+                        "value": [
+                            {
+                                "value": f"$.trigpJUkcCnQ.{MAIN_COUNTRY_FIELD_ID}",
+                                "value_type": "ref",
+                            }
+                        ],
+                    },
+                    {
+                        "field_name": "是否启用",
+                        "operator": "is",
+                        "value": [_option("启用")],
+                    },
+                ],
+                "conjunction": "and",
+            },
+            "ref_info": None,
+            "should_proceed_when_no_results": True,
+            "table_name": "子办分配规则表",
+        },
+    }
+
+    # 有结果才写负责人；无结果不写 Success（避免空成功）
+    found_switch = {
+        "id": "actDMTfWM",
+        "type": "SwitchBranch",
+        "title": "多分支（Switch）",
+        "next": None,
+        "children": {
+            "links": [
+                {"desc": "未找到", "kind": "case", "label": "branch_1", "to": ""},
+                {"desc": "默认分支", "kind": "case", "label": "default", "to": "act1jaIFY"},
+            ]
+        },
+        "data": {
+            "child_branch_list": [
+                {
+                    "name": "未找到",
+                    "condition": {
+                        "conjunction": "or",
+                        "conditions": [
+                            {
+                                "conjunction": "and",
+                                "conditions": [
+                                    {
+                                        "left_value": {
+                                            "value": "$.actVWM1Z5.recordNum",
+                                            "value_type": "ref",
+                                        },
+                                        "operator": "is",
+                                        "right_value": [
+                                            {"value": 0, "value_type": "number"}
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                }
+            ],
+            "mode": "exclusive",
+            "no_match_action": "classifyToOther",
+        },
+    }
+
+    mark_success = _set_record_step(
+        "act1jaIFY",
+        next_step=None,
+        field_values=[
+            {
+                "field_name": FIELD_SUBOFFICE_OWNER,
+                "value": [
+                    {
+                        "value": f"$.actVWM1Z5.firstfieldsRecord.{SUBOFFICE_OWNER_FIELD_ID}",
+                        "value_type": "ref",
+                    }
+                ],
+            },
+            {
+                "field_name": FIELD_SUCCESS,
+                "value": [_option(OPT_SUCCESS_YES)],
+            },
+        ],
+    )
+
+    mark_no = _set_record_step(
+        "acteIacr4",
+        next_step=None,
+        field_values=[
+            {
+                "field_name": FIELD_SUCCESS,
+                "value": [_option(OPT_SUCCESS_NO)],
+            }
+        ],
+    )
+
+    steps = [trigger, country_switch, find_record, found_switch, mark_success, mark_no]
     _strip_option_ids(steps)
     body = migrate_workflow_document({"title": title, "steps": steps})
     return fix_duplicate_formula_in_workflow(body)
@@ -183,7 +354,7 @@ def main() -> int:
     print(result.stdout or result.stderr)
     if result.returncode != 0:
         return result.returncode
-    print("deployed minimal suboffice workflow: trigger → mark Yes only")
+    print("restored suboffice workflow: FindRecord → write 子办规则命中负责人 + Success=Yes")
     return 0
 
 

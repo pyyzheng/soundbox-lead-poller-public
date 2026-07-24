@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """从飞书拉取渠道轮转工作流，打最小补丁后写回。
 
-修复点（2026-07-22 再次固化）：
+修复点：
 1. 触发条件增加「渠道顺序队列匹配业务员 isEmpty」，避免重复触发
-2. 队列指针未找到时继续执行（should_proceed_when_no_results=true），走 Switch 保持「否」
-3. **禁止跨表 ref 写「渠道顺序队列匹配业务员」**：即便队列表已挂动态选项，
-   FindRecord→SetRecord 的单选 ref 仍会间歇报「字段类型不匹配」。
-   业务员 + 指针推进一律由 cloud-assignment-unblock.py 按名称写入。
-4. 去掉 Duplicate 公式条件；监听队列Key；strip option id（飞书 UI 会回写 id）
+2. 队列指针未找到时继续执行（should_proceed_when_no_results=true）
+3. **成功分支写回「渠道顺序队列匹配业务员」**：队列表业务员已挂主表动态选项，
+   用 FindRecord.firstfieldsRecord 跨表 ref；指针推进仍由 unblock 兜底同步
+4. 去掉 Duplicate 公式条件；监听队列Key；strip option id
+5. unblock 仅作兜底（写业务员失败 / 指针未推进时补齐）
 """
 
 from __future__ import annotations
@@ -26,6 +26,11 @@ from workflow_bilingual import (  # noqa: E402
 
 WORKFLOW_ID = "wkf2Hopgt3bWuoOH"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
+# 渠道顺序队列表.业务员；与主表「渠道顺序队列匹配业务员」动态选项同源
+CHANNEL_QUEUE_ASSIGNEE_FIELD_ID = "fldJSP0l6d"
+ASSIGNEE_REF = f"$.acteml359jG.firstfieldsRecord.{CHANNEL_QUEUE_ASSIGNEE_FIELD_ID}"
+FIELD_QUEUE_ASSIGNEE = "渠道顺序队列匹配业务员"
+FIELD_SUCCESS = "Allocation Status（是否成功分配）"
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -48,7 +53,6 @@ def _fetch_live(base_token: str) -> dict:
 
 
 def _strip_option_ids(node):
-    """递归移除 option value 中的 id，避免选项重建后 id 漂移导致类型错误。"""
     if isinstance(node, list):
         for item in node:
             _strip_option_ids(item)
@@ -65,46 +69,55 @@ def _strip_option_ids(node):
         _strip_option_ids(child)
 
 
+def _option(name: str) -> dict:
+    return {"value": {"name": name}, "value_type": "option"}
+
+
+def _queue_assignee_field_value() -> dict:
+    return {
+        "field_name": FIELD_QUEUE_ASSIGNEE,
+        "value": [{"value": ASSIGNEE_REF, "value_type": "ref"}],
+    }
+
+
 def patch_workflow(data: dict) -> dict:
     out = deepcopy(data)
     steps = {s["id"]: s for s in out["steps"]}
 
     trigger = steps["triggzwCHjB9"]
     conds = trigger["data"]["condition_list"][0]["conditions"]
-    # Duplicate 条件与公式「是否满足渠道轮转」重复，且公式字段条件易触发类型不匹配告警；直接去掉。
     conds = [
         c
         for c in conds
         if c.get("field_name") not in ("Duplicate（重复）", "分配来源")
     ]
-    if not any(c.get("field_name") == "渠道顺序队列匹配业务员" for c in conds):
-        conds.append({"field_name": "渠道顺序队列匹配业务员", "operator": "isEmpty", "value": []})
+    if not any(c.get("field_name") == FIELD_QUEUE_ASSIGNEE for c in conds):
+        conds.append({"field_name": FIELD_QUEUE_ASSIGNEE, "operator": "isEmpty", "value": []})
     trigger["data"]["condition_list"][0]["conditions"] = conds
 
     watch = trigger["data"]["field_watch_info"]
-    if not any(w.get("field_name") == "渠道顺序队列匹配业务员" for w in watch):
-        watch.append({"field_name": "渠道顺序队列匹配业务员"})
-    # 队列Key 由公式生成，监听以便公式就绪后再次触发
-    if not any(w.get("field_name") == "队列Key" for w in watch):
-        watch.append({"field_name": "队列Key"})
+    for name in (FIELD_QUEUE_ASSIGNEE, "队列Key", "是否命中代理国家"):
+        if not any(w.get("field_name") == name for w in watch):
+            watch.append({"field_name": name})
 
     steps["actJShk3sEn"]["data"]["should_proceed_when_no_results"] = True
     steps["acteml359jG"]["data"]["should_proceed_when_no_results"] = True
-    # 字段重建后 field_id 变更，查找步骤改回字段名
     steps["acteml359jG"]["data"]["field_names"] = ["业务员"]
 
     success_step = steps["actnfeoNaFo"]
-    # 不跨表 ref 写「渠道顺序队列匹配业务员」：FindRecord 单选 ref 易报字段类型不匹配。
-    # 业务员 + 指针推进由 cloud-assignment-unblock.py 负责。
-    # 本步仅标记 Allocation Status=Yes；若业务员仍空，unblock 的 _is_stuck_success 会重置后再分配。
-    success_step["data"]["field_values"] = [
+    # 先写业务员，再写是否成功分配=是
+    other = [
         fv
         for fv in success_step["data"]["field_values"]
-        if fv.get("field_name") not in ("渠道顺序队列匹配业务员",)
+        if fv.get("field_name") not in (FIELD_QUEUE_ASSIGNEE, FIELD_SUCCESS)
+    ]
+    success_step["data"]["field_values"] = [
+        _queue_assignee_field_value(),
+        {"field_name": FIELD_SUCCESS, "value": [_option("Yes（是）")]},
+        *other,
     ]
 
     _strip_option_ids(out["steps"])
-
     body = migrate_workflow_document({"title": out["title"], "steps": out["steps"]})
     return fix_duplicate_formula_in_workflow(body)
 
@@ -139,7 +152,7 @@ def main() -> int:
     print(result.stdout or result.stderr)
     if result.returncode != 0:
         return result.returncode
-    print("patched workflow deployed (no cross-table assignee write)")
+    print("patched channel rotation: FindRecord → write 渠道顺序队列匹配业务员 + Success=Yes")
     return 0
 
 
