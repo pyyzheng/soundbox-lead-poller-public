@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 metrics.json
+.wrangler/
+facebook-lead-webhook/package-lock.json
 
 # 敏感文件
 *.env
