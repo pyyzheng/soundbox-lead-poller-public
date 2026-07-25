@@ -421,35 +421,218 @@ def identify_product_category(message: str, rules: dict) -> str:
     return ""
 
 
-def identify_product_model(message: str, rules: dict, sub_channel: str = "") -> str:
-    """白名单机制识别具体型号"""
+# 容量人数 → 尺寸档；与 url_model_map / 官网规格大致对齐
+_PERSON_TO_SIZE = {
+    1: "S",
+    2: "M",
+    3: "M",
+    4: "L",
+    5: "L",
+    6: "XL",
+    7: "XL",
+    8: "XXL",
+}
+_WORD_PERSON_TO_N = {
+    "single": 1,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "eight": 8,
+}
+# 各系列可用尺寸后缀（超出则钳制到最大档）
+_SERIES_MAX_SIZE = {
+    "SR": "XXL",
+    "VR": "XXL",
+    "VRT": "L",
+    "ART": "XXL",
+}
+_SIZE_RANK = {"S": 1, "M": 2, "L": 3, "XL": 4, "XXL": 5}
+
+# ASCII 边界：中文旁的「型号VRT」「VRT请报价」也能命中；VRT 必须在 VR 前
+_SERIES_TOKEN_RE = re.compile(
+    r"(?<![A-Za-z0-9])(VRT|ART|SR|VR)(?:-(S|M|L|XL|XXL))?(?![A-Za-z0-9])",
+    re.IGNORECASE,
+)
+
+
+def sized_model_code(series: str, size: str) -> str:
+    """系列 + 尺寸 → 型号码；VRT 最大到 L。"""
+    series = (series or "").upper()
+    size = (size or "").upper()
+    if size == "XS":
+        size = "S"
+    if series not in _SERIES_MAX_SIZE or size not in _SIZE_RANK:
+        return series or ""
+    max_size = _SERIES_MAX_SIZE[series]
+    if _SIZE_RANK[size] > _SIZE_RANK[max_size]:
+        size = max_size
+    return f"{series}-{size}"
+
+
+def extract_series_model_keyword(message: str) -> str:
+    """从正文提取系列/型号码：VRT、SR、VR、ART 及 VRT-L 等。
+
+    使用 ASCII 边界，避免 Unicode \\b 在中文旁失效。
+    只要出现这些关键词即可识别，不依赖前后空格。
+    """
+    if not message:
+        return ""
+    sized = re.finditer(
+        r"(?<![A-Za-z0-9])(VRT|ART|SR|VR)-(S|M|L|XL|XXL)(?![A-Za-z0-9])",
+        message,
+        re.IGNORECASE,
+    )
+    for m in sized:
+        return sized_model_code(m.group(1).upper(), m.group(2).upper())
+
+    m = _SERIES_TOKEN_RE.search(message)
+    if not m:
+        return ""
+    series = m.group(1).upper()
+    size = (m.group(2) or "").upper()
+    if size:
+        return sized_model_code(series, size)
+    return series
+
+
+def _is_excluded_hit(text: str, exclude_words: list[str], matched_kw: str) -> bool:
+    """排除词用 ASCII 词边界；裸词系列（SR/VR/VRT/ART）命中时不否决。"""
+    kw = (matched_kw or "").strip()
+    if re.match(r"^(VRT|ART|SR|VR)(-(S|M|L|XL|XXL))?$", kw, re.I):
+        return False
+    if not exclude_words:
+        return False
+    lower = text.lower()
+    for ex in exclude_words:
+        ex = (ex or "").strip().lower()
+        if not ex:
+            continue
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(ex)}(?![A-Za-z0-9])", lower):
+            return True
+    return False
+
+
+def default_series_for_sub_channel(sub_channel: str) -> str:
+    """按细分渠道给出默认系列（容量兜底用）。"""
+    if sub_channel in {"谷歌1", "总舱网"}:
+        return "SR"
+    if sub_channel in {"谷歌2", "Facebook", "新官网"}:
+        return "VRT"
+    return ""
+
+
+def extract_size_token(message: str) -> str:
+    """从正文提取尺寸档：S/M/L/XL/XXL；找不到返回空串。"""
+    if not message:
+        return ""
+    text = message
+
+    # Model:/Size: 表单字段（含换行）
+    m = re.search(
+        r"(?:Model|Size)\s*[:：]\s*\n?\s*(XS|S|M|L|XL|XXL)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if m:
+        val = m.group(1).upper()
+        return "S" if val == "XS" else val
+
+    # (Size L) / size L / size: L
+    m = re.search(
+        r"(?:\(|\b)size\s*[:：]?\s*(XS|S|M|L|XL|XXL)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if m:
+        val = m.group(1).upper()
+        return "S" if val == "XS" else val
+
+    # Facebook / 多语言：4_people、4 people、1_persona
+    m = re.search(
+        r"\b(\d+)\s*_?(?:people|persons|person|personas|persona|pax)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if m:
+        n = int(m.group(1))
+        if n >= 8:
+            return "XXL"
+        return _PERSON_TO_SIZE.get(n, "L" if n >= 4 else "")
+
+    # single-person / four-person
+    m = re.search(
+        r"\b(single|one|two|three|four|five|six|eight)[- ](?:person|people|persons)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if m:
+        n = _WORD_PERSON_TO_N.get(m.group(1).lower())
+        if n:
+            return _PERSON_TO_SIZE.get(n, "")
+
+    return ""
+
+
+def identify_product_model(
+    message: str,
+    rules: dict,
+    sub_channel: str = "",
+    default_series: str = "",
+) -> str:
+    """白名单机制识别具体型号；正文出现 VRT/SR/VR/ART 即可命中。"""
+    text = (message or "") + " "
+
+    # 1) 优先：ASCII 边界裸词（含中文旁、带尺寸）
+    direct = extract_series_model_keyword(text)
+    if direct:
+        size = extract_size_token(text)
+        series = direct.split("-", 1)[0]
+        if size and "-" not in direct and series in _SERIES_MAX_SIZE:
+            return sized_model_code(series, size)
+        return direct
+
     models = rules.get("product_models", {})
-    text = message + " "  # 加空格确保词边界
+    sized_kw = re.compile(r"^(SR|VR|VRT|ART)-(S|M|L|XL|XXL)$", re.I)
 
-    for model_name, model_info in models.items():
-        code = model_info.get("code", model_name)
+    matched_series = ""
+    for _model_name, model_info in models.items():
+        code = model_info.get("code", _model_name)
         exclude_words = [w.lower() for w in model_info.get("exclude", [])]
+        keywords = sorted(model_info.get("keywords", []), key=len, reverse=True)
+        for kw in keywords:
+            # 长关键词仍用 \\b；裸词已由 extract_series_model_keyword 覆盖
+            if len(kw) <= 4 and kw.upper() in _SERIES_MAX_SIZE:
+                continue
+            if not re.search(rf"\b{re.escape(kw)}\b", text, re.IGNORECASE):
+                continue
+            if _is_excluded_hit(text, exclude_words, kw):
+                continue
+            kw_upper = kw.upper()
+            if sized_kw.match(kw_upper):
+                return kw_upper
+            matched_series = code
+            break
+        if matched_series:
+            break
 
-        for kw in model_info.get("keywords", []):
-            # 词边界匹配
-            pattern = rf'\b{re.escape(kw)}\b'
-            if re.search(pattern, text, re.IGNORECASE):
-                # 检查排除词
-                excluded = any(ex in text.lower() for ex in exclude_words)
-                if not excluded:
-                    return code
+    size = extract_size_token(text)
+    series = (
+        matched_series
+        or (default_series or "").upper()
+        or default_series_for_sub_channel(sub_channel)
+    )
 
-    # 单字母 fallback：网站表单 Model: L/M/S 等
-    # 谷歌1（总官网）只有 SR 系列，单字母默认 SR-{letter}
-    # 只从 Model/Size 字段提取，避免误匹配消息正文中的字母
-    if sub_channel == "谷歌1":
-        m = re.search(r'(?:Model|Size)\s*[:：]\s*\n?\s*(\w+)\s*(?:\n|$)', text, re.IGNORECASE)
-        if m:
-            val = m.group(1).strip().upper()
-            if val in ('S', 'M', 'L', 'XL', 'XXL', 'XS'):
-                return f"SR-{val}"
+    if size and series in _SERIES_MAX_SIZE:
+        return sized_model_code(series, size)
 
-    return "无法识别"
+    if matched_series:
+        return matched_series
+
+    if sub_channel == "谷歌1" and size:
+        return sized_model_code("SR", size)
 
     return "无法识别"
 

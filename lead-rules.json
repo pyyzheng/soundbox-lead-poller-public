@@ -290,12 +290,15 @@
       "keywords": [
         "SR series",
         "SR pod",
+        "SR pods",
         "SR-S",
         "SR-M",
         "SR-L",
         "SR-XL",
+        "SR-XXL",
         "SR-1",
-        "SR-2"
+        "SR-2",
+        "SR"
       ],
       "exclude": [
         "reasonably",
@@ -307,9 +310,13 @@
       "keywords": [
         "VR series",
         "VR pod",
+        "VR pods",
         "VR-S",
         "VR-M",
-        "VR-L"
+        "VR-L",
+        "VR-XL",
+        "VR-XXL",
+        "VR"
       ],
       "exclude": [
         "version",
@@ -321,7 +328,12 @@
       "code": "VRT",
       "keywords": [
         "VRT series",
-        "VRT pod"
+        "VRT pod",
+        "VRT pods",
+        "VRT-S",
+        "VRT-M",
+        "VRT-L",
+        "VRT"
       ],
       "exclude": []
     },
@@ -329,7 +341,14 @@
       "code": "ART",
       "keywords": [
         "ART series",
-        "ART pod"
+        "ART pod",
+        "ART pods",
+        "ART-S",
+        "ART-M",
+        "ART-L",
+        "ART-XL",
+        "ART-XXL",
+        "ART"
       ],
       "exclude": [
         "start",

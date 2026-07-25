@@ -80,14 +80,8 @@ from feishu_writer import (  # noqa: E402
     check_feishu_fb_leadgen_duplicate,
 )
 
-# ── 国家分类 ──────────────────────────────────────────────
-SR_COUNTRIES = {"阿联酋", "香港", "印尼", "日本", "韩国", "马来西亚", "菲律宾", "卡塔尔", "沙特", "越南"}
-VRT_COUNTRIES = {
-    "澳大利亚", "新西兰", "德国", "法国", "意大利", "西班牙", "英国",
-    "荷兰", "比利时", "瑞士", "奥地利", "瑞典", "挪威", "丹麦", "芬兰",
-    "波兰", "捷克", "葡萄牙", "爱尔兰", "希腊",
-    "美国", "加拿大",
-}
+# ── 国家分类 / 产品推断（共享库）────────────────────────────
+from facebook_product import refine_facebook_product  # noqa: E402
 
 # 电话区号 → 国家（中文），按长度降序排列确保最长匹配
 PHONE_PREFIX_MAP = {
@@ -155,6 +149,17 @@ COUNTRY_EN_TO_CN = {
     "qatar": "卡塔尔", "qa": "卡塔尔",
     "brazil": "巴西", "br": "巴西",
     "mexico": "墨西哥", "mx": "墨西哥",
+    "peru": "秘鲁", "pe": "秘鲁",
+    "chile": "智利", "cl": "智利",
+    "colombia": "哥伦比亚", "co": "哥伦比亚",
+    "argentina": "阿根廷", "ar": "阿根廷",
+    "uruguay": "乌拉圭", "uy": "乌拉圭",
+    "costa rica": "哥斯达黎加", "cr": "哥斯达黎加",
+    "panama": "巴拿马", "pa": "巴拿马",
+    "ecuador": "厄瓜多尔", "ec": "厄瓜多尔",
+    "bolivia": "玻利维亚", "bo": "玻利维亚",
+    "paraguay": "巴拉圭", "py": "巴拉圭",
+    "venezuela": "委内瑞拉", "ve": "委内瑞拉",
     "ghana": "加纳", "gh": "加纳",
     "nigeria": "尼日利亚", "ng": "尼日利亚",
     "egypt": "埃及", "eg": "埃及",
@@ -409,23 +414,6 @@ def normalize_country(raw: str) -> str:
     return COUNTRY_EN_TO_CN.get(raw.strip().lower(), raw.strip())
 
 
-def determine_product(country: str) -> tuple[str, str]:
-    """根据国家确定产品大类和型号
-
-    返回 (产品大类, 具体型号)，如 ("静音舱", "SR")
-    """
-    if not country:
-        return ("无法识别", "无法识别")
-
-    if country in SR_COUNTRIES:
-        return ("静音舱", "SR")
-
-    if country in VRT_COUNTRIES:
-        return ("静音舱", "VRT")
-
-    return ("无法识别", "无法识别")
-
-
 def format_custom_answers(fields: dict, form_type: str) -> str:
     """将自定义问题答案格式化为 message 文本"""
     standard_fields = {"full_name", "email", "phone_number", "phone_number_verified",
@@ -487,9 +475,6 @@ def process_lead(raw_lead: dict, config: dict) -> dict:
     else:
         country = infer_country_from_phone(fields.get("phone_number", ""))
 
-    # 产品路由
-    product_cat, product_model = determine_product(country)
-
     # Message 处理
     message = ""
     for key in ("How can I help you?", "message", "Message", "message(project_type)"):
@@ -499,6 +484,9 @@ def process_lead(raw_lead: dict, config: dict) -> dict:
 
     if not message:
         message = format_custom_answers(fields, form_type)
+
+    # 产品路由：国家默认 + booth 表单兜底 + 容量/型号关键词
+    product_cat, product_model = refine_facebook_product(country, fields, message)
 
     parsed = {
         "lead_id": raw_lead.get("id", ""),
