@@ -16,6 +16,8 @@
 5. **工作流必须写回「代理规则命中业务员」**（不可只写命中产品=是）：
    规则表「业务员」已挂主表动态选项；用 FindRecord.firstfieldsRecord 跨表 ref。
    精确命中 / 全系列命中两路都写业务员，并标 Allocation Status=Yes。
+6. 允许产品大类=无法识别触发：阿联酋/沙特/以色列非静音舱走中东非洲轮转；
+   静音舱仍靠全系列规则命中 Cathy/Jannice。
 """
 
 from __future__ import annotations
@@ -167,6 +169,28 @@ def patch_workflow(data: dict) -> dict:
     steps["act3Nvoal"]["data"]["field_names"] = ["业务员"]
 
     watch = trigger["data"].setdefault("field_watch_info", [])
+    # 允许产品大类=无法识别触发（非静音舱 → 代理未命中 → 中东非洲轮转）
+    new_watch = []
+    for w in watch:
+        if (
+            w.get("field_name") == "Product Categories（产品大类）"
+            and w.get("operator") == "doesNotContainAny"
+        ):
+            new_watch.append({"field_name": "Product Categories（产品大类）"})
+            continue
+        new_watch.append(w)
+    # 移除误加的「沙特/以色列全部→Jannice」分支
+    out["steps"] = [
+        s
+        for s in out["steps"]
+        if s.get("id") not in ("branchMEFixedCN", "actMEFixedJannice")
+    ]
+    steps = {s["id"]: s for s in out["steps"]}
+    trigger = steps["trigYl0y5W"]
+    if trigger.get("next") in ("branchMEFixedCN", None) or trigger.get("next") == "branchMEFixedCN":
+        trigger["next"] = "branchhWywIAFT"
+    watch = trigger["data"].setdefault("field_watch_info", [])
+    watch[:] = new_watch
     for name in (
         "是否命中代理国家",
         "是否命中代理产品",

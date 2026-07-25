@@ -524,6 +524,15 @@ def run() -> int:
                 fields[FIELD_SUCCESS] = WRITE_SUCCESS_NO
                 reset_count += 1
 
+        # 非子办国家却残留「子办规则命中负责人」时清空（如 003659 误写 Rita_USA）
+        dirty_sub = extract_text(get_field(fields, FIELD_SUBOFFICE_OWNER, "")).strip()
+        if dirty_sub and not is_suboffice_country(get_field(fields, FIELD_SUBOFFICE, "")):
+            log.info("清空脏子办负责人 %s owner=%s", lead_id or record_id, dirty_sub)
+            if DRY_RUN:
+                fields[FIELD_SUBOFFICE_OWNER] = None
+            elif _update_record(token, FEISHU_TABLE_ID, record_id, {FIELD_SUBOFFICE_OWNER: None}):
+                fields[FIELD_SUBOFFICE_OWNER] = None
+
         if _needs_agent_product_clear(fields):
             country = extract_text(fields.get(FIELD_COUNTRY, ""))
             category = extract_text(fields.get(FIELD_PRODUCT_CAT, ""))

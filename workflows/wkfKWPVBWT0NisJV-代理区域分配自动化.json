@@ -73,22 +73,7 @@
             ]
           },
           {
-            "field_name": "Product Categories（产品大类）",
-            "operator": "doesNotContainAny",
-            "value": [
-              {
-                "value": {
-                  "name": "无法识别"
-                },
-                "value_type": "option"
-              },
-              {
-                "value": {
-                  "name": "无可用选项"
-                },
-                "value_type": "option"
-              }
-            ]
+            "field_name": "Product Categories（产品大类）"
           },
           {
             "field_name": "Product model（具体型号）"
