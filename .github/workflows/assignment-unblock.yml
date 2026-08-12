@@ -22,8 +22,9 @@ on:
     types:
       - completed
 
+# 全局串行：禁止并行 run 对同一线索重复选人/覆盖（004242 Gigi→Cathy 事故）
 concurrency:
-  group: assignment-unblock-${{ github.event.client_payload.record_id || github.run_id }}
+  group: assignment-unblock
   cancel-in-progress: false
 
 permissions:

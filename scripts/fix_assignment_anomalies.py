@@ -202,6 +202,23 @@ def main() -> int:
         if not eligible_for_channel_queue(fields):
             log.info("跳过 %s（不满足渠道轮转条件）", lead_id or rid)
             continue
+
+        # 写前复核：避免与 unblock / 工作流并发时覆盖已有业务员
+        if os.environ.get("FIX_ANOMALY_DRY_RUN", "false").lower() != "true":
+            live_resp = feishu_api(
+                "GET",
+                f"https://open.feishu.cn/open-apis/bitable/v1/apps/{FEISHU_APP_TOKEN}"
+                f"/tables/{FEISHU_TABLE_ID}/records/{rid}",
+                token=token,
+            )
+            live_data = live_resp.json()
+            if live_data.get("code") == 0:
+                live_fields = live_data.get("data", {}).get("record", {}).get("fields", {}) or {}
+                live_assignee = extract_text(get_field(live_fields, FIELD_QUEUE_ASSIGNEE, "")).strip()
+                if live_assignee:
+                    log.info("跳过 %s（写前已有业务员 %s）", lead_id or rid, live_assignee)
+                    continue
+
         queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, ""))
         pick = pick_queue_assignee(queue_key, pointers, queue_map)
         if not pick:

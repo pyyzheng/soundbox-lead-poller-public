@@ -8,6 +8,10 @@ cloud-assignment-unblock.py — 解除分配阻塞/异常
 3. 代理国家产品未命中时，未写 是否命中代理产品=否，导致渠道轮转公式为否
 4. 渠道轮转工作流未执行时，由本脚本按队列指针表补分配
 
+防错（004242）：
+- 先同步「已分配但指针未推」的记录，再给新线索选人
+- 写回「渠道顺序队列匹配业务员」前重新拉取该字段，非空则跳过，避免并发覆盖
+
 子办国家负责人回填见 cloud-suboffice-assignee-fix.py。
 渠道轮转纯逻辑见 lib/channel_queue_assign.py。
 """
@@ -144,6 +148,30 @@ def _update_record(token: str, table_id: str, record_id: str, fields: dict) -> b
     if not ok:
         log.error("更新失败 table=%s record=%s fields=%s resp=%s", table_id, record_id, fields, resp.json())
     return ok
+
+
+def _fetch_record_fields(token: str, record_id: str) -> dict:
+    """拉取单条记录当前 fields（写前复核用）。失败返回空 dict。"""
+    resp = feishu_api(
+        "GET",
+        (
+            f"https://open.feishu.cn/open-apis/bitable/v1/apps/{FEISHU_APP_TOKEN}"
+            f"/tables/{FEISHU_TABLE_ID}/records/{record_id}"
+        ),
+        token=token,
+        max_retries=3,
+    )
+    data = resp.json()
+    if data.get("code") != 0:
+        log.warning("写前复核拉取失败 record=%s resp=%s", record_id, data)
+        return {}
+    return data.get("data", {}).get("record", {}).get("fields", {}) or {}
+
+
+def _live_queue_assignee(token: str, record_id: str) -> str:
+    """写前回读渠道顺序队列匹配业务员；已有值则禁止覆盖。"""
+    live = _fetch_record_fields(token, record_id)
+    return extract_text(get_field(live, FIELD_QUEUE_ASSIGNEE, "")).strip()
 
 
 def _assignee_fields_empty(fields: dict) -> bool:
@@ -416,6 +444,36 @@ def _merge_records(primary: list[dict], extra: list[dict]) -> list[dict]:
     return merged
 
 
+def _sync_stale_pointers_first(
+    token: str,
+    records: list[dict],
+    cutoff_ms: int,
+    pointers: dict,
+    queue_map: dict,
+) -> int:
+    """先推进「已分配但指针未动」的队列，再给新线索选人，避免误用旧顺位。"""
+    synced = 0
+    for item in records:
+        fields = item.get("fields", {})
+        entry_ms = fields.get(FIELD_ENTRY_TIME, 0) or 0
+        is_exception = is_assignment_exception(fields.get(FIELD_STATUS, ""))
+        if entry_ms and entry_ms < cutoff_ms and not is_exception:
+            continue
+        if _advance_pointer_if_stale(token, fields, pointers, queue_map):
+            synced += 1
+    return synced
+
+
+def _load_queue_pointers(token: str) -> dict:
+    return parse_queue_pointers(
+        _search_records(
+            token,
+            QUEUE_POINTER_TABLE,
+            {"field_names": ["队列Key", "当前顺序号", "最大顺序号"], "page_size": 100},
+        )
+    )
+
+
 def _collect_pending_agent_confirm_alerts(records: list[dict], now_ms: int) -> list[tuple[str, str]]:
     """收集「代理产品待确认超过阈值」且落入告警窗口的线索摘要。"""
     alert_items: list[tuple[str, str]] = []
@@ -477,13 +535,7 @@ def run() -> int:
         )
     )
 
-    pointers = parse_queue_pointers(
-        _search_records(
-            token,
-            QUEUE_POINTER_TABLE,
-            {"field_names": ["队列Key", "当前顺序号", "最大顺序号"], "page_size": 100},
-        )
-    )
+    pointers = _load_queue_pointers(token)
     queue_map = parse_channel_queue_map(
         _search_records(
             token,
@@ -529,12 +581,19 @@ def run() -> int:
                 max_rank=patch["最大顺序号"],
             )
 
+    # Pass 1：先消化历史已分配线索的指针滞后，再进入新线索选人
+    pointer_sync_count = _sync_stale_pointers_first(
+        token, records, cutoff_ms, pointers, queue_map
+    )
+    if not DRY_RUN:
+        pointers = _load_queue_pointers(token)
+
     agent_rules = _load_agent_rules(token)
 
     reset_count = 0
     agent_clear_count = 0
     queue_assign_count = 0
-    pointer_sync_count = 0
+    queue_skip_live_count = 0
     manual_to_auto_count = 0
     messenger_fixed = _sync_messenger_duplicates(token, records, cutoff_ms)
 
@@ -591,38 +650,51 @@ def run() -> int:
             _heal_invalid_channels(token, fields, record_id, lead_id)
 
         if eligible_for_channel_queue(fields):
-            queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, ""))
-            pick = pick_queue_assignee(queue_key, pointers, queue_map)
-            if pick:
-                resolved_key = pick.resolved_queue_key or queue_key
+            # 写前复核：其他 run / 工作流可能已写入业务员
+            live_assignee = ""
+            if not DRY_RUN and record_id:
+                live_assignee = _live_queue_assignee(token, record_id)
+            if live_assignee:
                 log.info(
-                    "渠道轮转分配 %s queue=%s -> %s",
+                    "跳过渠道轮转（写前已有业务员） %s -> %s",
                     lead_id or record_id,
-                    resolved_key,
-                    pick.assignee,
+                    live_assignee,
                 )
-                patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
-                if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
-                    patch[FIELD_CHANNELS] = resolved_key.split("|", 1)[0]
-                if DRY_RUN:
-                    queue_assign_count += 1
-                elif _update_record(token, FEISHU_TABLE_ID, record_id, patch):
-                    queue_assign_count += 1
-                    if _update_record(
-                        token,
-                        QUEUE_POINTER_TABLE,
-                        pick.pointer_record_id,
-                        {"当前顺序号": pick.next_rank},
-                    ):
-                        pointers[resolved_key] = type(pointers[resolved_key])(
-                            record_id=pick.pointer_record_id,
-                            current=pick.next_rank,
-                            max_rank=pick.max_rank,
-                        )
+                fields[FIELD_QUEUE_ASSIGNEE] = live_assignee
+                queue_skip_live_count += 1
             else:
-                log.warning("队列无可用业务员 %s queue=%s", lead_id or record_id, queue_key)
-        elif _advance_pointer_if_stale(token, fields, pointers, queue_map):
-            pointer_sync_count += 1
+                queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, ""))
+                pick = pick_queue_assignee(queue_key, pointers, queue_map)
+                if pick:
+                    resolved_key = pick.resolved_queue_key or queue_key
+                    log.info(
+                        "渠道轮转分配 %s queue=%s -> %s",
+                        lead_id or record_id,
+                        resolved_key,
+                        pick.assignee,
+                    )
+                    patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
+                    if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
+                        patch[FIELD_CHANNELS] = resolved_key.split("|", 1)[0]
+                    if DRY_RUN:
+                        queue_assign_count += 1
+                        fields[FIELD_QUEUE_ASSIGNEE] = pick.assignee
+                    elif _update_record(token, FEISHU_TABLE_ID, record_id, patch):
+                        queue_assign_count += 1
+                        fields[FIELD_QUEUE_ASSIGNEE] = pick.assignee
+                        if _update_record(
+                            token,
+                            QUEUE_POINTER_TABLE,
+                            pick.pointer_record_id,
+                            {"当前顺序号": pick.next_rank},
+                        ):
+                            pointers[resolved_key] = type(pointers[resolved_key])(
+                                record_id=pick.pointer_record_id,
+                                current=pick.next_rank,
+                                max_rank=pick.max_rank,
+                            )
+                else:
+                    log.warning("队列无可用业务员 %s queue=%s", lead_id or record_id, queue_key)
 
         channels = extract_text(fields.get(FIELD_CHANNELS, ""))
         assignee = extract_text(fields.get(FIELD_ASSIGNEE, ""))
@@ -665,10 +737,11 @@ def run() -> int:
         log.warning("已发送待确认超时告警 count=%s", len(pending_alerts))
 
     log.info(
-        "完成: reset=%s agent=%s queue=%s pointer_sync=%s pointer_reconcile=%s manual→auto=%s messenger=%s pending_alert=%s dry_run=%s",
+        "完成: reset=%s agent=%s queue=%s queue_skip_live=%s pointer_sync=%s pointer_reconcile=%s manual→auto=%s messenger=%s pending_alert=%s dry_run=%s",
         reset_count,
         agent_clear_count,
         queue_assign_count,
+        queue_skip_live_count,
         pointer_sync_count,
         pointer_sync_on_load,
         manual_to_auto_count,

@@ -17,6 +17,7 @@ from assignment_fields import (  # noqa: E402
     FIELD_LEAD_ID,
     FIELD_PRODUCT_CAT,
     FIELD_PRODUCT_MODEL,
+    FIELD_QUEUE_ASSIGNEE,
     FIELD_QUEUE_KEY,
     FIELD_STATUS,
     FIELD_SUBOFFICE,
@@ -148,6 +149,59 @@ class TestPendingAlertWindow(unittest.TestCase):
             now_ms,
         )
         self.assertEqual(alerts, [])
+
+
+class TestLiveQueueAssigneeGuard(unittest.TestCase):
+    def test_live_queue_assignee_reads_field(self):
+        calls = {}
+
+        def fake_fetch(token, record_id):
+            calls["record_id"] = record_id
+            return {FIELD_QUEUE_ASSIGNEE: "Cathy"}
+
+        original = unblock._fetch_record_fields
+        unblock._fetch_record_fields = fake_fetch
+        try:
+            self.assertEqual(unblock._live_queue_assignee("tok", "rec1"), "Cathy")
+            self.assertEqual(calls["record_id"], "rec1")
+        finally:
+            unblock._fetch_record_fields = original
+
+    def test_live_queue_assignee_empty(self):
+        original = unblock._fetch_record_fields
+        unblock._fetch_record_fields = lambda token, record_id: {}
+        try:
+            self.assertEqual(unblock._live_queue_assignee("tok", "rec2"), "")
+        finally:
+            unblock._fetch_record_fields = original
+
+
+class TestStalePointerPassOrder(unittest.TestCase):
+    def test_sync_stale_pointers_first_calls_advance(self):
+        advanced = []
+
+        def fake_advance(token, fields, pointers, queue_map):
+            advanced.append(fields.get(FIELD_LEAD_ID))
+            return True
+
+        original = unblock._advance_pointer_if_stale
+        unblock._advance_pointer_if_stale = fake_advance
+        try:
+            records = [
+                {
+                    "record_id": "r1",
+                    "fields": {
+                        FIELD_ENTRY_TIME: 9_999_999_999_999,
+                        FIELD_LEAD_ID: "004242",
+                        FIELD_STATUS: "⏳ Pending",
+                    },
+                }
+            ]
+            count = unblock._sync_stale_pointers_first("tok", records, 0, {}, {})
+            self.assertEqual(count, 1)
+            self.assertEqual(advanced, ["004242"])
+        finally:
+            unblock._advance_pointer_if_stale = original
 
 
 if __name__ == "__main__":
