@@ -66,6 +66,7 @@ from channel_queue_assign import (  # noqa: E402
     parse_channel_queue_map,
     parse_queue_pointers,
     pick_queue_assignee,
+    reconcile_pointer_fields,
 )
 from feishu_utils import (  # noqa: E402
     FEISHU_APP_TOKEN,
@@ -492,11 +493,42 @@ def run() -> int:
                     "conjunction": "and",
                     "conditions": [{"field_name": "是否启用", "operator": "is", "value": ["启用"]}],
                 },
-                "field_names": ["队列Key", "顺位", "业务员"],
+                "field_names": ["队列Key", "顺位", "业务员", "是否启用"],
                 "page_size": 100,
             },
         )
     )
+
+    pointer_sync_on_load = 0
+    for queue_key, ptr in list(pointers.items()):
+        patch = reconcile_pointer_fields(queue_map, ptr, queue_key)
+        if not patch:
+            continue
+        if patch["当前顺序号"] == ptr.current and patch["最大顺序号"] == ptr.max_rank:
+            continue
+        log.info(
+            "重算队列指针 %s current %s→%s max %s→%s",
+            queue_key,
+            ptr.current,
+            patch["当前顺序号"],
+            ptr.max_rank,
+            patch["最大顺序号"],
+        )
+        if DRY_RUN:
+            pointer_sync_on_load += 1
+            pointers[queue_key] = type(ptr)(
+                record_id=ptr.record_id,
+                current=patch["当前顺序号"],
+                max_rank=patch["最大顺序号"],
+            )
+        elif _update_record(token, QUEUE_POINTER_TABLE, ptr.record_id, patch):
+            pointer_sync_on_load += 1
+            pointers[queue_key] = type(ptr)(
+                record_id=ptr.record_id,
+                current=patch["当前顺序号"],
+                max_rank=patch["最大顺序号"],
+            )
+
     agent_rules = _load_agent_rules(token)
 
     reset_count = 0
@@ -633,11 +665,12 @@ def run() -> int:
         log.warning("已发送待确认超时告警 count=%s", len(pending_alerts))
 
     log.info(
-        "完成: reset=%s agent=%s queue=%s pointer_sync=%s manual→auto=%s messenger=%s pending_alert=%s dry_run=%s",
+        "完成: reset=%s agent=%s queue=%s pointer_sync=%s pointer_reconcile=%s manual→auto=%s messenger=%s pending_alert=%s dry_run=%s",
         reset_count,
         agent_clear_count,
         queue_assign_count,
         pointer_sync_count,
+        pointer_sync_on_load,
         manual_to_auto_count,
         messenger_fixed,
         len(pending_alerts),

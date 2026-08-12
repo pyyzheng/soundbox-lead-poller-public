@@ -89,6 +89,35 @@ def advance_pointer(current: int, max_rank: int) -> int:
     return 1 if current >= max_rank else current + 1
 
 
+def _is_queue_member_enabled(fields: dict[str, Any]) -> bool:
+    status = fields.get("是否启用")
+    if isinstance(status, list):
+        status = status[0] if status else ""
+    return extract_text(status).strip() == "启用"
+
+
+def _enabled_entries_for_key(
+    queue_map: dict[tuple[str, int], str],
+    queue_key: str,
+) -> list[tuple[int, str]]:
+    return sorted(
+        ((rank, assignee) for (key, rank), assignee in queue_map.items() if key == queue_key and assignee),
+        key=lambda item: item[0],
+    )
+
+
+def _start_index_for_current(ranks: list[int], current: int) -> int:
+    """当指针落在已停用/已删除顺位时，从下一个可用顺位继续轮转。"""
+    if not ranks:
+        return 0
+    if current in ranks:
+        return ranks.index(current)
+    for idx, rank in enumerate(ranks):
+        if rank >= current:
+            return idx
+    return 0
+
+
 def eligible_for_channel_queue(fields: dict[str, Any]) -> bool:
     """判断记录是否应走渠道顺序队列（对齐公式 G + 分配链路前置条件）。"""
     if not is_assign_auto(get_field(fields, FIELD_ASSIGN_METHOD, "")):
@@ -145,20 +174,28 @@ def pick_queue_assignee(
         if not ptr or not ptr.record_id:
             continue
 
-        max_rank = max(ptr.max_rank, 1)
-        start = ptr.current if ptr.current > 0 else 1
-        for offset in range(max_rank):
-            rank = ((start - 1 + offset) % max_rank) + 1
-            assignee = queue_map.get((key, rank))
-            if assignee:
-                return QueuePickResult(
-                    assignee=assignee,
-                    pointer_record_id=ptr.record_id,
-                    used_rank=rank,
-                    next_rank=advance_pointer(rank, max_rank),
-                    max_rank=max_rank,
-                    resolved_queue_key=key,
-                )
+        entries = _enabled_entries_for_key(queue_map, key)
+        if not entries:
+            continue
+
+        ranks = [rank for rank, _ in entries]
+        max_rank = max(ranks)
+        current = ptr.current if ptr.current > 0 else ranks[0]
+        start_idx = _start_index_for_current(ranks, current)
+
+        for offset in range(len(entries)):
+            idx = (start_idx + offset) % len(entries)
+            rank, assignee = entries[idx]
+            next_idx = (idx + 1) % len(entries)
+            next_rank = ranks[next_idx]
+            return QueuePickResult(
+                assignee=assignee,
+                pointer_record_id=ptr.record_id,
+                used_rank=rank,
+                next_rank=next_rank,
+                max_rank=max_rank,
+                resolved_queue_key=key,
+            )
     return None
 
 
@@ -183,6 +220,8 @@ def parse_channel_queue_map(records: list[dict]) -> dict[tuple[str, int], str]:
     mapping: dict[tuple[str, int], str] = {}
     for record in records:
         fields = record.get("fields", {})
+        if not _is_queue_member_enabled(fields):
+            continue
         queue_key = extract_text(fields.get("队列Key", "")).strip()
         rank = fields.get("顺位")
         assignee = extract_text(fields.get("业务员", "")).strip()
@@ -194,3 +233,18 @@ def parse_channel_queue_map(records: list[dict]) -> dict[tuple[str, int], str]:
             continue
         mapping[(queue_key, rank_val)] = assignee
     return mapping
+
+
+def reconcile_pointer_fields(
+    queue_map: dict[tuple[str, int], str],
+    pointer: QueuePointer,
+    queue_key: str,
+) -> dict[str, int]:
+    """根据启用顺位重算指针，避免停用后 max/current 仍指向旧顺位。"""
+    entries = _enabled_entries_for_key(queue_map, queue_key)
+    if not entries:
+        return {}
+    ranks = [rank for rank, _ in entries]
+    max_rank = max(ranks)
+    current = pointer.current if pointer.current in ranks else ranks[0]
+    return {"当前顺序号": current, "最大顺序号": max_rank}

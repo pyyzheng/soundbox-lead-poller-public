@@ -14,6 +14,7 @@ from channel_queue_assign import (  # noqa: E402
     parse_channel_queue_map,
     parse_queue_pointers,
     pick_queue_assignee,
+    reconcile_pointer_fields,
 )
 from assignment_fields import (  # noqa: E402
     FIELD_AGENT_COUNTRY,
@@ -222,11 +223,60 @@ class TestParseHelpers(unittest.TestCase):
                         "队列Key": "Facebook|欧洲区队列",
                         "顺位": 1,
                         "业务员": "Sue",
+                        "是否启用": "启用",
                     }
                 }
             ]
         )
         self.assertEqual(mapping[("Facebook|欧洲区队列", 1)], "Sue")
+
+    def test_parse_channel_queue_map_skips_disabled(self):
+        mapping = parse_channel_queue_map(
+            [
+                {
+                    "fields": {
+                        "队列Key": "英国|VRT-ART队列",
+                        "顺位": 2,
+                        "业务员": "Crystal",
+                        "是否启用": "停用",
+                    }
+                },
+                {
+                    "fields": {
+                        "队列Key": "英国|VRT-ART队列",
+                        "顺位": 2,
+                        "业务员": "James",
+                        "是否启用": "启用",
+                    }
+                },
+            ]
+        )
+        self.assertEqual(mapping[("英国|VRT-ART队列", 2)], "James")
+
+    def test_pick_skips_stale_disabled_rank(self):
+        pointers = {
+            "英国|VRT-ART队列": QueuePointer(record_id="rec-p", current=3, max_rank=3),
+        }
+        queue_map = {
+            ("英国|VRT-ART队列", 1): "Lindsey",
+            ("英国|VRT-ART队列", 2): "James",
+        }
+        pick = pick_queue_assignee("英国|VRT-ART队列", pointers, queue_map)
+        self.assertIsNotNone(pick)
+        self.assertEqual(pick.assignee, "Lindsey")
+        self.assertEqual(pick.used_rank, 1)
+
+    def test_reconcile_pointer_fields_after_disable(self):
+        queue_map = {
+            ("英国|VRT-ART队列", 1): "Lindsey",
+            ("英国|VRT-ART队列", 2): "James",
+        }
+        patch = reconcile_pointer_fields(
+            queue_map,
+            QueuePointer(record_id="rec-p", current=3, max_rank=3),
+            "英国|VRT-ART队列",
+        )
+        self.assertEqual(patch, {"当前顺序号": 1, "最大顺序号": 2})
 
     def test_normalize_queue_key_google_alias(self):
         self.assertEqual(normalize_queue_key("Google|欧洲区队列"), "谷歌|欧洲区队列")
