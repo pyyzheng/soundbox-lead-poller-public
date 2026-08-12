@@ -1,0 +1,529 @@
+{
+  "client_token": "deal-sync-main-to-deal-20260807b",
+  "title": "线索成交字段→自动同步成交数据",
+  "steps": [
+    {
+      "id": "trig",
+      "type": "ChangeRecordTrigger",
+      "title": "线索总池成交字段变更时",
+      "next": "find_deal",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "field_watch_info": [
+          {
+            "field_name": "Transaction Date / 成交时间"
+          },
+          {
+            "field_name": "Contract No. / 合同号"
+          },
+          {
+            "field_name": "Deal Amount / 成交金额"
+          },
+          {
+            "field_name": "Currency / 币种"
+          }
+        ],
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Transaction Date / 成交时间",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Contract No. / 合同号",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Deal Amount / 成交金额",
+                "operator": "isNotEmpty",
+                "value": []
+              }
+            ]
+          }
+        ],
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      }
+    },
+    {
+      "id": "find_deal",
+      "type": "FindRecordAction",
+      "title": "查找本线索已有成交记录",
+      "next": "branch_has",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "成交数据",
+        "field_names": [
+          "Deal No. / 成交编号",
+          "Case ID / 线索关联"
+        ],
+        "should_proceed_when_no_results": true,
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "Case ID / 线索关联",
+              "operator": "contains",
+              "value": [
+                {
+                  "value_type": "ref",
+                  "value": "$.trig.record"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "branch_has",
+      "type": "IfElseBranch",
+      "title": "是否已有成交记录",
+      "next": null,
+      "children": {
+        "links": [
+          {
+            "kind": "if_true",
+            "to": "branch_cny_update"
+          },
+          {
+            "kind": "if_false",
+            "to": "branch_cny_create"
+          }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conjunction": "or",
+          "conditions": [
+            {
+              "conjunction": "and",
+              "conditions": [
+                {
+                  "left_value": {
+                    "value_type": "ref",
+                    "value": "$.find_deal.recordNum"
+                  },
+                  "operator": "isGreater",
+                  "right_value": [
+                    {
+                      "value_type": "number",
+                      "value": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "branch_cny_update",
+      "type": "IfElseBranch",
+      "title": "更新时币种是否CNY",
+      "next": null,
+      "children": {
+        "links": [
+          {
+            "kind": "if_true",
+            "to": "set_cny"
+          },
+          {
+            "kind": "if_false",
+            "to": "set_other"
+          }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conjunction": "or",
+          "conditions": [
+            {
+              "conjunction": "and",
+              "conditions": [
+                {
+                  "left_value": {
+                    "value_type": "ref",
+                    "value": "$.trig.fldNP7pJ9B"
+                  },
+                  "operator": "is",
+                  "right_value": [
+                    {
+                      "value_type": "option",
+                      "value": {
+                        "name": "CNY"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "branch_cny_create",
+      "type": "IfElseBranch",
+      "title": "新建时币种是否CNY",
+      "next": null,
+      "children": {
+        "links": [
+          {
+            "kind": "if_true",
+            "to": "add_cny"
+          },
+          {
+            "kind": "if_false",
+            "to": "add_other"
+          }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conjunction": "or",
+          "conditions": [
+            {
+              "conjunction": "and",
+              "conditions": [
+                {
+                  "left_value": {
+                    "value_type": "ref",
+                    "value": "$.trig.fldNP7pJ9B"
+                  },
+                  "operator": "is",
+                  "right_value": [
+                    {
+                      "value_type": "option",
+                      "value": {
+                        "name": "CNY"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "set_cny",
+      "type": "SetRecordAction",
+      "title": "更新成交数据(CNY)",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "成交数据",
+        "max_set_record_num": 5,
+        "ref_info": {
+          "step_id": "find_deal"
+        },
+        "field_values": [
+          {
+            "field_name": "Transaction Date / 成交日期",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldIeO2hv7"
+              }
+            ]
+          },
+          {
+            "field_name": "Contract No. / 合同号",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldMcMYnqF"
+              }
+            ]
+          },
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldNP7pJ9B"
+              }
+            ]
+          },
+          {
+            "field_name": "Deal Amount (CNY) / 成交金额（人民币）",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fld07nElqv"
+              }
+            ]
+          },
+          {
+            "field_name": "Deal Amount (Local Currency) / 成交金额（当地货币）",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fld07nElqv"
+              },
+              {
+                "value_type": "text",
+                "value": " CNY"
+              }
+            ]
+          },
+          {
+            "field_name": "Salesperson / 业务员",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.recordModifiedUser"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_other",
+      "type": "SetRecordAction",
+      "title": "更新成交数据(非CNY)",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "成交数据",
+        "max_set_record_num": 5,
+        "ref_info": {
+          "step_id": "find_deal"
+        },
+        "field_values": [
+          {
+            "field_name": "Transaction Date / 成交日期",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldIeO2hv7"
+              }
+            ]
+          },
+          {
+            "field_name": "Contract No. / 合同号",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldMcMYnqF"
+              }
+            ]
+          },
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldNP7pJ9B"
+              }
+            ]
+          },
+          {
+            "field_name": "Deal Amount (Local Currency) / 成交金额（当地货币）",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fld07nElqv"
+              },
+              {
+                "value_type": "text",
+                "value": " "
+              },
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldNP7pJ9B"
+              }
+            ]
+          },
+          {
+            "field_name": "Salesperson / 业务员",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.recordModifiedUser"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "add_cny",
+      "type": "AddRecordAction",
+      "title": "新建成交数据(CNY)",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "成交数据",
+        "field_values": [
+          {
+            "field_name": "Case ID / 线索关联",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.record"
+              }
+            ]
+          },
+          {
+            "field_name": "Transaction Date / 成交日期",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldIeO2hv7"
+              }
+            ]
+          },
+          {
+            "field_name": "Contract No. / 合同号",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldMcMYnqF"
+              }
+            ]
+          },
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldNP7pJ9B"
+              }
+            ]
+          },
+          {
+            "field_name": "Deal Amount (CNY) / 成交金额（人民币）",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fld07nElqv"
+              }
+            ]
+          },
+          {
+            "field_name": "Deal Amount (Local Currency) / 成交金额（当地货币）",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fld07nElqv"
+              },
+              {
+                "value_type": "text",
+                "value": " CNY"
+              }
+            ]
+          },
+          {
+            "field_name": "Salesperson / 业务员",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.recordModifiedUser"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "add_other",
+      "type": "AddRecordAction",
+      "title": "新建成交数据(非CNY)",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "成交数据",
+        "field_values": [
+          {
+            "field_name": "Case ID / 线索关联",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.record"
+              }
+            ]
+          },
+          {
+            "field_name": "Transaction Date / 成交日期",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldIeO2hv7"
+              }
+            ]
+          },
+          {
+            "field_name": "Contract No. / 合同号",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldMcMYnqF"
+              }
+            ]
+          },
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldNP7pJ9B"
+              }
+            ]
+          },
+          {
+            "field_name": "Deal Amount (Local Currency) / 成交金额（当地货币）",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.fld07nElqv"
+              },
+              {
+                "value_type": "text",
+                "value": " "
+              },
+              {
+                "value_type": "ref",
+                "value": "$.trig.fldNP7pJ9B"
+              }
+            ]
+          },
+          {
+            "field_name": "Salesperson / 业务员",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trig.recordModifiedUser"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
