@@ -615,14 +615,31 @@ def run() -> int:
                 fields[FIELD_SUCCESS] = WRITE_SUCCESS_NO
                 reset_count += 1
 
-        # 非子办国家却残留「子办规则命中负责人」时清空（如 003659 误写 Rita_USA）
+        # 非子办国家却残留「子办规则命中负责人」时：先落盘到渠道队列业务员（避免历史跟进人丢失），再清空子办字段。
+        # 背景：俄白从「子办固定 Wendy」迁到双人轮循后，若直接清空子办负责人，渠道轮转会把旧线索重分成 Mia。
         dirty_sub = extract_text(get_field(fields, FIELD_SUBOFFICE_OWNER, "")).strip()
         if dirty_sub and not is_suboffice_country(get_field(fields, FIELD_SUBOFFICE, "")):
-            log.info("清空脏子办负责人 %s owner=%s", lead_id or record_id, dirty_sub)
+            queue_now = extract_text(get_field(fields, FIELD_QUEUE_ASSIGNEE, "")).strip()
+            patch_clear: dict = {FIELD_SUBOFFICE_OWNER: None}
+            if not queue_now:
+                patch_clear[FIELD_QUEUE_ASSIGNEE] = dirty_sub
+                patch_clear[FIELD_SUCCESS] = WRITE_SUCCESS_YES
+                log.info(
+                    "迁移脏子办负责人→队列业务员 %s owner=%s（保留历史跟进人）",
+                    lead_id or record_id,
+                    dirty_sub,
+                )
+            else:
+                log.info("清空脏子办负责人 %s owner=%s（已有队列业务员=%s）", lead_id or record_id, dirty_sub, queue_now)
             if DRY_RUN:
                 fields[FIELD_SUBOFFICE_OWNER] = None
-            elif _update_record(token, FEISHU_TABLE_ID, record_id, {FIELD_SUBOFFICE_OWNER: None}):
+                if FIELD_QUEUE_ASSIGNEE in patch_clear:
+                    fields[FIELD_QUEUE_ASSIGNEE] = dirty_sub
+            elif _update_record(token, FEISHU_TABLE_ID, record_id, patch_clear):
                 fields[FIELD_SUBOFFICE_OWNER] = None
+                if FIELD_QUEUE_ASSIGNEE in patch_clear:
+                    fields[FIELD_QUEUE_ASSIGNEE] = dirty_sub
+                    fields[FIELD_SUCCESS] = WRITE_SUCCESS_YES
 
         if _needs_agent_product_clear(fields):
             country = extract_text(fields.get(FIELD_COUNTRY, ""))
