@@ -217,12 +217,12 @@ export async function uploadImFile(client, localPath, fileName) {
   return fileKey;
 }
 
-export async function sendFileMessage(client, chatId, fileKey) {
+export async function sendFileMessage(client, chatId, fileKey, { msgType = 'file' } = {}) {
   const res = await client.im.v1.message.create({
     params: { receive_id_type: 'chat_id' },
     data: {
       receive_id: chatId,
-      msg_type: 'file',
+      msg_type: msgType,
       content: JSON.stringify({ file_key: fileKey }),
     },
   });
@@ -234,6 +234,12 @@ export async function sendFileMessage(client, chatId, fileKey) {
     throw new Error(`发送文件消息失败: ${JSON.stringify(res).slice(0, 300)}`);
   }
   return res.data || res;
+}
+
+export function guessImMsgType(fileName) {
+  const ext = path.extname(fileName).toLowerCase();
+  if (ext === '.mp4') return 'media';
+  return 'file';
 }
 
 export async function replyMessage(client, messageId, msgType, contentObj, { inThread = true } = {}) {

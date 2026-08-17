@@ -9,6 +9,7 @@ import {
   sendTextMessage,
   subscribeResource,
   uploadImFile,
+  guessImMsgType,
 } from './feishu.js';
 import { compressAnyUnderLimit, createZipArchive } from './compress-any.js';
 
@@ -65,7 +66,7 @@ export async function notifyFileAttachment(client, config, {
     ]);
     const sent = await sendTextMessage(client, config.chatId, caption);
     const fileKey = await uploadImFile(client, localPath, sendName);
-    await sendFileMessage(client, config.chatId, fileKey);
+    await sendFileMessage(client, config.chatId, fileKey, { msgType: guessImMsgType(sendName) });
     console.log(`[sent-file] ${sendName} ${formatBytes(size)}`);
 
     return {
@@ -132,7 +133,7 @@ export async function notifyFilesAsZip(client, config, {
       });
       const sent = await sendTextMessage(client, config.chatId, caption);
       const fileKey = await uploadImFile(client, pack.localPath, pack.fileName);
-      await sendFileMessage(client, config.chatId, fileKey);
+      await sendFileMessage(client, config.chatId, fileKey, { msgType: guessImMsgType(pack.fileName) });
       lastMessageId = sent?.message_id;
       console.log(`[sent-zip] ${pack.fileName} ${formatBytes(pack.size)} (${pack.names.length} files)`);
     }
