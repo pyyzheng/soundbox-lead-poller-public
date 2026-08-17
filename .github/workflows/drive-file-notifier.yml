@@ -1,29 +1,30 @@
 name: Drive File Notifier
 
-# GitHub 的 schedule 在本仓库既不准时也常被丢弃，5 分钟又是它的下限。
-# 改为一个长跑 job 内部短间隔轮询，结束前接力启动下一个 job。
+# 长跑 job 内 30s 轮询；代码更新后应立刻用新 job 替换旧 job，而不是排队等 2 小时。
 on:
+  push:
+    branches: [main]
+    paths:
+      - "drive-file-notifier/**"
+      - ".github/workflows/drive-file-notifier.yml"
   workflow_dispatch:
     inputs:
       duration_minutes:
         description: "本轮轮询时长（分钟）"
         required: false
-        default: "120"
+        default: "60"
       chain:
-        description: "结束后是否接力下一轮"
+        description: "正常结束后是否接力下一轮"
         required: false
         default: "true"
-  # 看门狗：接力断掉时把链条重新拉起来（concurrency 保证不会重复跑）
+  # 看门狗：链条断了时每半小时尝试拉起来一次
   schedule:
     - cron: "7,37 * * * *"
-  workflow_run:
-    workflows: ["Assignment Unblock", "Lead Notify Backup", "Messenger Dedup"]
-    types: [completed]
 
-# 同一时间只允许一个轮询 job；后来的排队，等前一个连同缓存写回一起结束
+# 新 run 启动时取消还在跑的旧 run，避免一直卡在旧代码上
 concurrency:
   group: drive-file-notifier
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -32,7 +33,7 @@ jobs:
   notify:
     name: Watch Drive & Notify Chat
     runs-on: ubuntu-latest
-    timeout-minutes: 140
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: drive-file-notifier
@@ -58,7 +59,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: drive-file-notifier/.drive-notifier-state.json
-          # 每次 run_id 不同 → 结束时写入新缓存；restore-keys 取最近一次
           key: drive-notifier-state-${{ github.run_id }}
           restore-keys: |
             drive-notifier-state-
@@ -70,12 +70,12 @@ jobs:
           CHAT_ID: ${{ secrets.DRIVE_NOTIFIER_CHAT_ID }}
           STATE_PATH: ${{ github.workspace }}/drive-file-notifier/.drive-notifier-state.json
           POLL_INTERVAL_MS: "30000"
-          DURATION_MINUTES: ${{ inputs.duration_minutes || '120' }}
+          DURATION_MINUTES: ${{ inputs.duration_minutes || '60' }}
         run: MAX_RUN_MS=$(( DURATION_MINUTES * 60 * 1000 )) npm run loop
 
       - name: Chain next watcher
-        # 即使轮询异常退出也要接力，否则链条就断了
-        if: always() && (inputs.chain != 'false')
+        # 只有正常跑完才接力；被取消/被新 push 顶掉时不再排队旧代码
+        if: success() && (inputs.chain != 'false')
         env:
           GH_TOKEN: ${{ secrets.GHA_PAT }}
         run: gh workflow run drive-file-notifier.yml --ref ${{ github.ref_name }}
