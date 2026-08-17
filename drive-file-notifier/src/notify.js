@@ -131,11 +131,11 @@ async function sendTextOnly(client, config, { reason, title, size, detail }) {
 }
 
 function buildCaption(config, { reason, sendName, size, note = '' }) {
-  const lines = [
-    `${config.captionPrefix}${reason}`,
-    `文件：${sendName}`,
-    `大小：${formatBytes(size)}${note || ''}`,
-  ];
+  const prefix = config.captionPrefix || '【云盘更新】';
+  const action = config.captionAction || '请安排超级图册更新。';
+  // 例：【云盘更新】xxx.pdf，请安排超级图册更新。
+  const lines = [`${prefix}${sendName}，${action}`];
+  if (note) lines.push(note.replace(/^\n/, '').trim());
   const mentionLine = formatMentions(config.mentions);
   if (mentionLine) lines.push(mentionLine);
   return lines.join('\n');
