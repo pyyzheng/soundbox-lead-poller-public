@@ -100,10 +100,19 @@ non_inquiry 与 inquiry 主题对比：
 - "quiet pods enquiry" + 询问报价/目录 → inquiry
 - "Message from SoundBox" + "We put your banner at the top of search results" → non_inquiry（SEO 服务推销）
 
-## 渠道识别（只看发件人邮箱）
+## 渠道识别（channel + sub_channel）
+优先发件人邮箱；仅当邮件本身来自该平台（不是官网表单里随口提到）才改渠道。只输出选项名。
+
+邮箱：
 - email@soundboxbooth.com → 谷歌, 谷歌2
-- inquiry@soundboxacoustic.com → 谷歌, 谷歌1
-- 其他 → 谷歌, 谷歌2
+- inquiry@soundboxacoustic.com / hello@soundboxacoustic.com → 谷歌, 谷歌1
+- 其他邮箱默认 → 谷歌, 谷歌2
+
+平台来源（覆盖邮箱默认）：
+- 发件人/主题/正文含 linkedin.com、InMail、LinkedIn Lead Gen、领英询盘通知 → LinkedIn, LinkedIn
+- Facebook Messenger / facebook.com/messages → Facebook, Facebook
+- Facebook Lead Form / facebook.com 表单通知 → Facebook, Facebook
+- 官网/谷歌表单正文仅写 "found you on LinkedIn" → 仍按上面邮箱规则，不要改成 LinkedIn
 
 ## 产品识别
 - pod/booth/soundbox/sam box/sound box → 静音舱

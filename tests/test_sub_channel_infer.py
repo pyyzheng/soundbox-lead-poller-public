@@ -114,6 +114,21 @@ class TestInferSubChannel(unittest.TestCase):
             "谷歌2",
         )
 
+    def test_linkedin_platform_origin(self):
+        content = (
+            "You have a new InMail on LinkedIn\n"
+            "https://www.linkedin.com/messaging/thread/abc\n"
+            "Name: Alex\nMessage: Need a quote for office pods"
+        )
+        self.assertEqual(infer_sub_channel_from_content(content), "LinkedIn")
+
+    def test_linkedin_mention_in_google_form_stays_unset(self):
+        content = (
+            "Name: Alex\nEmail: alex@co.com\n"
+            "Message: I found you on LinkedIn and need a soundproof booth"
+        )
+        self.assertIsNone(infer_sub_channel_from_content(content))
+
 
 if __name__ == "__main__":
     unittest.main()

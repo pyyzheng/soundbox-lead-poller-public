@@ -194,7 +194,8 @@ def batch_create(table_id: str, fields: list[str], rows: list[list[Any]]) -> Non
 def step_options() -> None:
     print("\n== 1. select options ==")
     ensure_select_options(T_MAIN, "Channels（渠道）", [NEW_CHANNEL])
-    ensure_select_options(T_MAIN, "Channel segmentation (细分渠道)", [NEW_CHANNEL, "领英"])
+    # 细分渠道统一用 LinkedIn（不再另加「领英」避免双选项）
+    ensure_select_options(T_MAIN, "Channel segmentation (细分渠道)", [NEW_CHANNEL])
     ensure_select_options(T_QUEUE, "渠道", [NEW_CHANNEL])
 
 

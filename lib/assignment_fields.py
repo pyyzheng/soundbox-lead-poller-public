@@ -232,6 +232,13 @@ def infer_sub_channel_from_content(content: str) -> str | None:
         return "美国舱网"
     if "总舱网" in text or "soundbox-pod.com" in lower:
         return "总舱网"
+    if (
+        "linkedin.com" in lower
+        or "inmail" in lower
+        or "linkedin lead gen" in lower
+        or "领英询盘" in text
+    ):
+        return "LinkedIn"
 
     # 末行标签：国家-细分渠道-…（即使国家/型号无效也尝试取细分渠道）
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
@@ -242,8 +249,11 @@ def infer_sub_channel_from_content(content: str) -> str | None:
             if not is_invalid_sub_channel(sub) and sub in SUB_CHANNEL_TO_CHANNEL:
                 return sub
 
-    # 正文关键词（长词优先）
+    # 正文关键词（长词优先）。LinkedIn/领英只走上面的平台来源特征，避免官网表单随口提到被改渠道。
+    skip_generic = {"LinkedIn", "Linkedln", "领英", "linkedin"}
     for sub in sorted(SUB_CHANNEL_TO_CHANNEL.keys(), key=len, reverse=True):
+        if sub in skip_generic:
+            continue
         if sub in text:
             return sub
     return None
