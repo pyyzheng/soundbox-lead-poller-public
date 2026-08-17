@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "once": "node src/run-once.js",
+    "loop": "node src/watch-loop.js",
     "subscribe": "node src/subscribe.js",
     "send-once": "node src/send-once.js"
   },
