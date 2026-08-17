@@ -16,7 +16,8 @@ const ONLINE_TYPES = new Set(['doc', 'docx', 'sheet', 'bitable', 'slides']);
 
 /**
  * Notify with IM attachment.
- * Files are packed into a zip before upload (caption + zip as two messages).
+ * Single files under the limit are sent directly; oversized files fall back
+ * to compression/zip, while multi-file batches are packed into zip files.
  */
 export async function notifyFileAttachment(client, config, {
   fileToken,
@@ -24,10 +25,59 @@ export async function notifyFileAttachment(client, config, {
   reason,
   titleHint,
 }) {
-  return notifyFilesAsZip(client, config, {
-    reason,
-    files: [{ token: fileToken, type: fileType, name: titleHint }],
-  });
+  fs.mkdirSync(config.tmpDir, { recursive: true });
+  const maxBytes = config.maxFileBytes || 30 * 1024 * 1024;
+  const temps = [];
+
+  try {
+    const prepared = await prepareLocalFile(
+      client,
+      config,
+      { token: fileToken, type: fileType, name: titleHint },
+      temps,
+    );
+    if (!prepared) {
+      return { skipped: true, reason: 'empty' };
+    }
+
+    let localPath = prepared.localPath;
+    let sendName = prepared.sendName;
+    let size = prepared.size;
+    let note = '';
+
+    if (size > maxBytes) {
+      console.log(`[compress] ${sendName} ${formatBytes(size)} > limit, trying all methods`);
+      const compressed = await compressAnyUnderLimit(localPath, sendName, maxBytes, config.tmpDir);
+      if (!compressed) {
+        throw new Error(`${sendName} 压缩后仍超过 ${formatBytes(maxBytes)}`);
+      }
+      temps.push(compressed.localPath);
+      localPath = compressed.localPath;
+      sendName = compressed.fileName;
+      note = `已自动压缩（${compressed.method}）：${formatBytes(size)} → ${formatBytes(compressed.size)}`;
+      size = compressed.size;
+    }
+
+    const caption = composeMessage(config, resolveEventLabel(reason), [
+      `文件：${sendName}`,
+      `大小：${formatBytes(size)}`,
+      ...(note ? [note] : []),
+    ]);
+    const sent = await sendTextMessage(client, config.chatId, caption);
+    const fileKey = await uploadImFile(client, localPath, sendName);
+    await sendFileMessage(client, config.chatId, fileKey);
+    console.log(`[sent-file] ${sendName} ${formatBytes(size)}`);
+
+    return {
+      skipped: false,
+      messageId: sent?.message_id,
+      fileName: sendName,
+      size,
+      mode: 'attachment',
+    };
+  } finally {
+    for (const f of temps) cleanup(f);
+  }
 }
 
 /**
