@@ -128,16 +128,40 @@ async function sendTextOnly(client, config, { reason, title, size, detail }) {
   };
 }
 
+/** A new folder has no downloadable body, so it only gets a text notice. */
+export async function notifyFolderCreated(client, config, { folderName, parentName }) {
+  const detail = [`文件夹：${folderName}`];
+  if (parentName) detail.push(`位置：${parentName}`);
+  const text = composeMessage(config, '文件夹有新上传/新建', detail);
+  const sent = await sendTextMessage(client, config.chatId, text);
+  console.log(`[sent-folder] ${folderName}`);
+  return { messageId: sent?.message_id, mode: 'text' };
+}
+
+/** Used when one batch brings more files than we're willing to push one by one. */
+export async function notifyRemainingFiles(client, config, { names, folderName }) {
+  const detail = [
+    `${folderName ? `${folderName} ` : ''}还有 ${names.length} 个文件未逐个发送：`,
+    ...names.map((n) => `· ${n}`),
+  ];
+  const text = composeMessage(config, '文件夹有新上传/新建', detail);
+  const sent = await sendTextMessage(client, config.chatId, text);
+  console.log(`[sent-summary] ${names.length} remaining`);
+  return { messageId: sent?.message_id, mode: 'text' };
+}
+
 function buildCaption(config, { reason, sendName, size, note = '' }) {
-  const prefix = config.captionPrefix || '【云盘更新】';
-  const action = config.captionAction || '麻烦安排超级图册更新。';
-  const eventLine = resolveEventLabel(reason);
-  // 例：【云盘更新】文件内容已更新，麻烦安排超级图册更新。
-  const lines = [
-    `${prefix}${eventLine}，${action}`,
+  return composeMessage(config, resolveEventLabel(reason), [
     `文件：${sendName}`,
     `大小：${formatBytes(size)}${note || ''}`,
-  ];
+  ]);
+}
+
+// 例：【云盘更新】文件内容已更新，麻烦安排超级图册更新。
+function composeMessage(config, eventLabel, detailLines) {
+  const prefix = config.captionPrefix || '【云盘更新】';
+  const action = config.captionAction || '麻烦安排超级图册更新。';
+  const lines = [`${prefix}${eventLabel}，${action}`, ...detailLines];
   const mentionLine = formatMentions(config.mentions);
   if (mentionLine) lines.push(mentionLine);
   return lines.join('\n');
