@@ -18,7 +18,7 @@
   "maxFileBytes": 31457280,
   "autoSubscribeNewFiles": true,
   "captionPrefix": "【云盘更新】",
-  "captionAction": "请安排超级图册更新。",
+  "captionAction": "麻烦安排超级图册更新。",
   "notifyMode": "attachment",
   "mentions": [
     {

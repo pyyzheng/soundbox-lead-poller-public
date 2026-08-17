@@ -132,13 +132,24 @@ async function sendTextOnly(client, config, { reason, title, size, detail }) {
 
 function buildCaption(config, { reason, sendName, size, note = '' }) {
   const prefix = config.captionPrefix || '【云盘更新】';
-  const action = config.captionAction || '请安排超级图册更新。';
-  // 例：【云盘更新】xxx.pdf，请安排超级图册更新。
-  const lines = [`${prefix}${sendName}，${action}`];
-  if (note) lines.push(note.replace(/^\n/, '').trim());
+  const action = config.captionAction || '麻烦安排超级图册更新。';
+  const eventLine = resolveEventLabel(reason);
+  // 例：【云盘更新】文件内容已更新，麻烦安排超级图册更新。
+  const lines = [
+    `${prefix}${eventLine}，${action}`,
+    `文件：${sendName}`,
+    `大小：${formatBytes(size)}${note || ''}`,
+  ];
   const mentionLine = formatMentions(config.mentions);
   if (mentionLine) lines.push(mentionLine);
   return lines.join('\n');
+}
+
+function resolveEventLabel(reason = '') {
+  if (/新上传|新建|new/i.test(reason)) return '文件夹有新上传/新建';
+  if (/更新|changed|内容/i.test(reason)) return '文件内容已更新';
+  // 手动测试等兜底：按「内容更新」表述
+  return reason || '文件内容已更新';
 }
 
 function formatMentions(mentions) {
