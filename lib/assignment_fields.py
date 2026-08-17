@@ -274,6 +274,8 @@ def infer_sub_channel_from_signals(
         return "谷歌2"
     if channel == "Facebook":
         return "Facebook"
+    if channel == "LinkedIn":
+        return "LinkedIn"
     if channel == "阿里国际站":
         return "阿里1"
     if channel == "国内渠道":
