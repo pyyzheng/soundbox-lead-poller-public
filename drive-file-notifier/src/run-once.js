@@ -22,38 +22,57 @@ async function main() {
   const isFirstRun = !state.initialized;
   let notified = 0;
 
-  // 1) Watched files
-  const watchDocs = (config.watchFiles || []).map((f) => ({
-    token: f.token,
-    type: f.type || 'file',
-  }));
+  // 1) Content changes: explicit watchFiles + any previously seen folder children
+  const watchDocs = [];
+  const seen = new Set();
+  for (const f of config.watchFiles || []) {
+    if (!f?.token || seen.has(f.token)) continue;
+    seen.add(f.token);
+    watchDocs.push({ token: f.token, type: f.type || 'file' });
+  }
+  for (const [token, info] of Object.entries(state.files || {})) {
+    if (!token || seen.has(token)) continue;
+    if (!info?.type || info.type === 'folder' || info.type === 'shortcut') continue;
+    seen.add(token);
+    watchDocs.push({ token, type: info.type });
+  }
   if (watchDocs.length) {
-    const metas = await getFileMetas(client, watchDocs);
-    for (const meta of metas) {
-      const token = meta.doc_token;
-      const type = meta.doc_type || 'file';
-      const modify = Number(meta.latest_modify_time) || 0;
-      const prev = state.files[token];
-
-      if (!prev) {
-        state.files[token] = { type, lastModify: modify, title: meta.title };
-        console.log(`[once] seed file ${meta.title}`);
+    // batch metas in chunks of 50 (Drive API limit)
+    for (let i = 0; i < watchDocs.length; i += 50) {
+      const chunk = watchDocs.slice(i, i + 50);
+      let metas;
+      try {
+        metas = await getFileMetas(client, chunk);
+      } catch (err) {
+        console.warn(`[once] getFileMetas failed: ${err.message}`);
         continue;
       }
+      for (const meta of metas) {
+        const token = meta.doc_token;
+        const type = meta.doc_type || state.files[token]?.type || 'file';
+        const modify = Number(meta.latest_modify_time) || 0;
+        const prev = state.files[token];
 
-      if (modify > (prev.lastModify || 0)) {
-        state.files[token] = { type, lastModify: modify, title: meta.title };
-        if (!isFirstRun) {
-          console.log(`[once] changed ${meta.title}`);
-          await notifyFileAttachment(client, config, {
-            fileToken: token,
-            fileType: type,
-            reason: '文件内容已更新',
-            titleHint: meta.title,
-          });
-          notified += 1;
-        } else {
-          console.log(`[once] baseline update ${meta.title} (no notify on first run)`);
+        if (!prev) {
+          state.files[token] = { type, lastModify: modify, title: meta.title };
+          console.log(`[once] seed file ${meta.title}`);
+          continue;
+        }
+
+        if (modify > (prev.lastModify || 0)) {
+          state.files[token] = { type, lastModify: modify, title: meta.title };
+          if (!isFirstRun) {
+            console.log(`[once] changed ${meta.title}`);
+            await notifyFileAttachment(client, config, {
+              fileToken: token,
+              fileType: type,
+              reason: '文件内容已更新',
+              titleHint: meta.title,
+            });
+            notified += 1;
+          } else {
+            console.log(`[once] baseline update ${meta.title} (no notify on first run)`);
+          }
         }
       }
     }

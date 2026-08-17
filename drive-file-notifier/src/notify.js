@@ -4,8 +4,8 @@ import {
   downloadDriveFile,
   exportOnlineDoc,
   getFileMeta,
+  replyFileMessage,
   safeFileName,
-  sendFileMessage,
   sendTextMessage,
   subscribeResource,
   uploadImFile,
@@ -15,10 +15,10 @@ import { compressAnyUnderLimit } from './compress-any.js';
 const ONLINE_TYPES = new Set(['doc', 'docx', 'sheet', 'bitable', 'slides']);
 
 /**
- * Notify with IM attachment:
- * - ≤30MB: send original as attachment
- * - >30MB: compress any type (PDF/image quality, else zip); if still >30MB → text only
- * Always @ configured mentions.
+ * Notify with IM attachment.
+ * Open API cannot put binary file + text in one bubble, so we:
+ * 1) send caption text (@mentions last)
+ * 2) reply in the same thread with the file (one conversation unit)
  */
 export async function notifyFileAttachment(client, config, {
   fileToken,
@@ -86,18 +86,18 @@ export async function notifyFileAttachment(client, config, {
       size = compressed.size;
     }
 
-    const mentionLine = formatMentions(config.mentions);
-    const caption = [
-      mentionLine,
-      `${config.captionPrefix}${reason}`,
-      `文件：${sendName}`,
-      `大小：${formatBytes(size)}${note}`,
-    ].filter(Boolean).join('\n');
+    const caption = buildCaption(config, {
+      reason,
+      sendName,
+      size,
+      note,
+    });
 
-    await sendTextMessage(client, config.chatId, caption);
     const fileKey = await uploadImFile(client, localPath, sendName);
-    const sent = await sendFileMessage(client, config.chatId, fileKey);
-    console.log(`[sent-file] ${sendName} ${formatBytes(size)}`);
+    // 先发通知（@ 在末尾），文件作为同一话题的回复，合成一组
+    const sent = await sendTextMessage(client, config.chatId, caption);
+    await replyFileMessage(client, sent.message_id, fileKey, { inThread: true });
+    console.log(`[sent-caption+file] ${sendName} ${formatBytes(size)}`);
 
     return {
       skipped: false,
@@ -112,13 +112,12 @@ export async function notifyFileAttachment(client, config, {
 }
 
 async function sendTextOnly(client, config, { reason, title, size, detail }) {
-  const mentionLine = formatMentions(config.mentions);
-  const text = [
-    mentionLine,
-    `${config.captionPrefix}${reason}`,
-    `文件：${title}`,
-    detail,
-  ].filter(Boolean).join('\n');
+  const text = buildCaption(config, {
+    reason,
+    sendName: title,
+    size,
+    note: `\n${detail}`,
+  });
   const sent = await sendTextMessage(client, config.chatId, text);
   console.log(`[sent-text-only] ${title} ${formatBytes(size)}`);
   return {
@@ -129,6 +128,17 @@ async function sendTextOnly(client, config, { reason, title, size, detail }) {
     size,
     mode: 'text',
   };
+}
+
+function buildCaption(config, { reason, sendName, size, note = '' }) {
+  const lines = [
+    `${config.captionPrefix}${reason}`,
+    `文件：${sendName}`,
+    `大小：${formatBytes(size)}${note || ''}`,
+  ];
+  const mentionLine = formatMentions(config.mentions);
+  if (mentionLine) lines.push(mentionLine);
+  return lines.join('\n');
 }
 
 function formatMentions(mentions) {

@@ -236,6 +236,33 @@ export async function sendFileMessage(client, chatId, fileKey) {
   return res.data || res;
 }
 
+export async function replyMessage(client, messageId, msgType, contentObj, { inThread = true } = {}) {
+  const res = await client.im.v1.message.reply({
+    path: { message_id: messageId },
+    data: {
+      content: JSON.stringify(contentObj),
+      msg_type: msgType,
+      reply_in_thread: inThread,
+    },
+  });
+  const replyId = res?.data?.message_id || res?.message_id;
+  if (!replyId && res?.code && res.code !== 0) {
+    throw new Error(`回复消息失败: code=${res.code} msg=${res.msg}`);
+  }
+  if (!replyId) {
+    throw new Error(`回复消息失败: ${JSON.stringify(res).slice(0, 300)}`);
+  }
+  return res.data || res;
+}
+
+export async function replyTextMessage(client, messageId, text, opts) {
+  return replyMessage(client, messageId, 'text', { text }, opts);
+}
+
+export async function replyFileMessage(client, messageId, fileKey, opts) {
+  return replyMessage(client, messageId, 'file', { file_key: fileKey }, opts);
+}
+
 export async function sendTextMessage(client, chatId, text) {
   const res = await client.im.v1.message.create({
     params: { receive_id_type: 'chat_id' },

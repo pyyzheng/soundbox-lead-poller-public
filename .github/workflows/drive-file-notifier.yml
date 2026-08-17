@@ -1,9 +1,10 @@
 name: Drive File Notifier
 
 # GitHub Actions 不能常驻 WebSocket；用定时轮询代替本机 npm start
+# 注意：新建 workflow 的 schedule 常会延迟/漏跑，需在 Actions 页确认曾出现 event=schedule
 on:
   schedule:
-    # 每 5 分钟；GitHub cron 可能有几分钟漂移
+    # 每 5 分钟（UTC）；高负载时 GitHub 可能漂移十几分钟
     - cron: "*/5 * * * *"
   workflow_dispatch:
 
