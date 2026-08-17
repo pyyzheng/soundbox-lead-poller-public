@@ -212,8 +212,20 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, bootstra
     }
   }
 
-  // 同一文件夹本轮新增的文件打成一个 zip 发送
-  if (newFiles.length) {
+  // 同一文件夹本轮新增：单文件直发，多文件打 zip
+  if (newFiles.length === 1) {
+    const child = newFiles[0];
+    log(`notify ${child.name} in ${folder.name}`);
+    await maybeAutoSubscribe(client, config, child.token, child.type);
+    await notifyFileAttachment(client, config, {
+      fileToken: child.token,
+      fileType: child.type,
+      reason: '文件夹有新上传/新建',
+      titleHint: child.name,
+    });
+    await trackNewChild({ client, state, child });
+    notified += 1;
+  } else if (newFiles.length > 1) {
     log(`zip ${newFiles.length} new file(s) in ${folder.name}`);
     for (const child of newFiles) {
       await maybeAutoSubscribe(client, config, child.token, child.type);
