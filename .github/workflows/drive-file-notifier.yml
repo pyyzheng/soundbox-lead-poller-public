@@ -1,11 +1,14 @@
 name: Drive File Notifier
 
 # GitHub Actions 不能常驻 WebSocket；用定时轮询代替本机 npm start
-# 注意：新建 workflow 的 schedule 常会延迟/漏跑，需在 Actions 页确认曾出现 event=schedule
 on:
   schedule:
-    # 每 5 分钟（UTC）；高负载时 GitHub 可能漂移十几分钟
-    - cron: "*/5 * * * *"
+    # 错开整点：*/5 落在全球最拥挤的时刻，容易被 GitHub 丢弃
+    - cron: "3,8,13,18,23,28,33,38,43,48,53,58 * * * *"
+  # 兜底：cron 被丢弃时，借仓库内稳定运行的定时任务捎带触发
+  workflow_run:
+    workflows: ["Assignment Unblock", "Lead Notify Backup"]
+    types: [completed]
   workflow_dispatch:
 
 concurrency:
