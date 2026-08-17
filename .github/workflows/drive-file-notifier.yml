@@ -1,0 +1,58 @@
+name: Drive File Notifier
+
+# GitHub Actions 不能常驻 WebSocket；用定时轮询代替本机 npm start
+on:
+  schedule:
+    # 每 5 分钟；GitHub cron 可能有几分钟漂移
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: drive-file-notifier
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Poll Drive & Notify Chat
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: drive-file-notifier
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: drive-file-notifier/package-lock.json
+
+      - name: Install system deps (PDF/image compress)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick ghostscript zip
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Restore poll state
+        uses: actions/cache@v4
+        with:
+          path: drive-file-notifier/.drive-notifier-state.json
+          # 每次 run_id 不同 → 结束时写入新缓存；restore-keys 取最近一次
+          key: drive-notifier-state-${{ github.run_id }}
+          restore-keys: |
+            drive-notifier-state-
+
+      - name: Run one-shot poll
+        env:
+          APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          CHAT_ID: ${{ secrets.DRIVE_NOTIFIER_CHAT_ID }}
+          STATE_PATH: ${{ github.workspace }}/drive-file-notifier/.drive-notifier-state.json
+        run: npm run once

@@ -1,0 +1,28 @@
+{
+  "chatId": "oc_f931f4c688a7da9c14e87e7a1e12e322",
+  "watchFolders": [
+    {
+      "token": "RsXZfdPMtlN6tjdCLI0c12munfc",
+      "name": "测试文件更新通知"
+    }
+  ],
+  "watchFiles": [
+    {
+      "token": "HubRbexqdo5VRqxh220c1TUpn0f",
+      "type": "file",
+      "name": "公司简介及产品及解决方案.md"
+    }
+  ],
+  "editDebounceMs": 15000,
+  "pollIntervalMs": 30000,
+  "maxFileBytes": 31457280,
+  "autoSubscribeNewFiles": true,
+  "captionPrefix": "【云盘更新】",
+  "notifyMode": "attachment",
+  "mentions": [
+    {
+      "name": "Darren",
+      "openId": "ou_b54d8a652ccee8972173137f93253cd7"
+    }
+  ]
+}

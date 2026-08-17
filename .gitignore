@@ -19,3 +19,6 @@ facebook-tasks.json
 facebook-pending.jsonl
 *.pem
 *.key
+drive-file-notifier/.drive-notifier-state.json
+drive-file-notifier/tmp/
+drive-file-notifier/.env
