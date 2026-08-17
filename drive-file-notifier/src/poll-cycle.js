@@ -125,8 +125,8 @@ async function checkFolderAdditions(ctx) {
     }
 
     const known = state.folderChildren[folder.token];
-    // 全局首次运行只建基线；新加入监听的文件夹/子目录则按修改时间判断是否要通知
     const seedOnly = isFirstRun;
+    // 新监听根目录、以及首次见到的子文件夹，都按「最近上传」补发，避免静默跳过
     const bootstrapNewWatch = !known && !isFirstRun;
     const prevSet = new Set(known || []);
 
@@ -168,6 +168,7 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, bootstra
     const isNew = !prevSet.has(child.token);
 
     if (child.type === 'folder') {
+      // 已在监听树里的父目录新出现子文件夹才发「新建文件夹」通知
       if (isNew && !seedOnly && !bootstrapNewWatch) {
         log(`new folder: ${child.name}`);
         await notifyFolderCreated(client, config, {
