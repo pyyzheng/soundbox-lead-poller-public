@@ -4,8 +4,8 @@ import {
   downloadDriveFile,
   exportOnlineDoc,
   getFileMeta,
-  replyFileMessage,
   safeFileName,
+  sendFileMessage,
   sendTextMessage,
   subscribeResource,
   uploadImFile,
@@ -16,9 +16,7 @@ const ONLINE_TYPES = new Set(['doc', 'docx', 'sheet', 'bitable', 'slides']);
 
 /**
  * Notify with IM attachment.
- * Open API cannot put binary file + text in one bubble, so we:
- * 1) send caption text (@mentions last)
- * 2) reply in the same thread with the file (one conversation unit)
+ * Send caption and file as two independent messages (@mentions last in caption).
  */
 export async function notifyFileAttachment(client, config, {
   fileToken,
@@ -94,9 +92,9 @@ export async function notifyFileAttachment(client, config, {
     });
 
     const fileKey = await uploadImFile(client, localPath, sendName);
-    // 先发通知（@ 在末尾），文件作为同一话题的回复，合成一组
+    // 文案与附件分开发送；@ 在文案末尾
     const sent = await sendTextMessage(client, config.chatId, caption);
-    await replyFileMessage(client, sent.message_id, fileKey, { inThread: true });
+    await sendFileMessage(client, config.chatId, fileKey);
     console.log(`[sent-caption+file] ${sendName} ${formatBytes(size)}`);
 
     return {
