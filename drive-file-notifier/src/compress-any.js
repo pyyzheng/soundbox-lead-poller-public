@@ -77,29 +77,18 @@ async function zipUnderLimit(localPath, baseName, maxBytes, tmpDir) {
   const entryName = path.basename(baseName) || path.basename(localPath);
 
   try {
-    // -j: junk paths; -9: max compression
-    await runCmd('zip', ['-j', '-9', outPath, localPath], {
-      // Ensure zip stores the preferred filename when possible
-      cwd: path.dirname(localPath),
-    });
-
-    // Re-pack with desired entry name if needed
-    if (path.basename(localPath) !== entryName && fs.existsSync(outPath)) {
-      fs.unlinkSync(outPath);
-      const alias = path.join(tmpDir, entryName);
-      fs.copyFileSync(localPath, alias);
-      await runCmd('zip', ['-j', '-9', outPath, alias]);
-      fs.unlinkSync(alias);
-    }
-
-    if (!fs.existsSync(outPath)) return null;
-    const size = fs.statSync(outPath).size;
-    console.log(`[compress] zip -> ${formatBytes(size)}`);
-    if (size > 0 && size <= maxBytes) {
+    const packed = await createZipArchive(
+      [{ localPath, entryName }],
+      outPath,
+      tmpDir,
+    );
+    if (!packed) return null;
+    console.log(`[compress] zip -> ${formatBytes(packed.size)}`);
+    if (packed.size > 0 && packed.size <= maxBytes) {
       return {
-        localPath: outPath,
+        localPath: packed.localPath,
         fileName: `${stem}.zip`,
-        size,
+        size: packed.size,
       };
     }
     fs.unlinkSync(outPath);
@@ -112,6 +101,59 @@ async function zipUnderLimit(localPath, baseName, maxBytes, tmpDir) {
       // ignore
     }
     return null;
+  }
+}
+
+/**
+ * Pack one or more local files into a zip.
+ * Entries: [{ localPath, entryName }]
+ * Returns { localPath, size } or null.
+ */
+export async function createZipArchive(entries, outPath, tmpDir) {
+  if (!entries?.length) return null;
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
+
+  // zip -j needs real filenames on disk; stage unique copies when names collide
+  const stageDir = path.join(tmpDir, `zip-stage-${Date.now()}`);
+  fs.mkdirSync(stageDir, { recursive: true });
+  const staged = [];
+  const usedNames = new Set();
+
+  try {
+    for (const entry of entries) {
+      if (!entry?.localPath || !fs.existsSync(entry.localPath)) continue;
+      let name = path.basename(entry.entryName || entry.localPath) || 'file';
+      if (usedNames.has(name)) {
+        const ext = path.extname(name);
+        const stem = path.basename(name, ext) || 'file';
+        let i = 2;
+        while (usedNames.has(`${stem}_${i}${ext}`)) i += 1;
+        name = `${stem}_${i}${ext}`;
+      }
+      usedNames.add(name);
+      const alias = path.join(stageDir, name);
+      fs.copyFileSync(entry.localPath, alias);
+      staged.push(alias);
+    }
+    if (!staged.length) return null;
+
+    await runCmd('zip', ['-j', '-9', outPath, ...staged]);
+    if (!fs.existsSync(outPath)) return null;
+    return { localPath: outPath, size: fs.statSync(outPath).size };
+  } finally {
+    for (const f of staged) {
+      try {
+        fs.unlinkSync(f);
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      fs.rmdirSync(stageDir);
+    } catch {
+      // ignore
+    }
   }
 }
 

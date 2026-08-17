@@ -2,14 +2,13 @@ import { getFileMetas, listFolderChildren } from './feishu.js';
 import {
   maybeAutoSubscribe,
   notifyFileAttachment,
+  notifyFilesAsZip,
   notifyFolderCreated,
-  notifyRemainingFiles,
 } from './notify.js';
 
 // Drive meta API accepts at most 50 tokens per request.
 const META_BATCH_SIZE = 50;
 const DEFAULT_MAX_DEPTH = 5;
-const DEFAULT_NOTIFY_BUDGET = 15;
 
 /**
  * One detection pass over watched files and folders.
@@ -32,7 +31,8 @@ export async function pollCycle({ client, config, state, tag = 'once' }) {
  * Plain Drive files emit no edit events, so compare `latest_modify_time`
  * for explicitly watched files plus every folder child we've seen before.
  */
-async function checkContentChanges({ client, config, state, isFirstRun, log, warn }) {
+async function checkContentChanges(ctx) {
+  const { client, config, state, isFirstRun, log, warn } = ctx;
   const docs = collectTrackedDocs(config, state);
   if (!docs.length) return 0;
 
@@ -100,7 +100,6 @@ function collectTrackedDocs(config, state) {
 async function checkFolderAdditions(ctx) {
   const { config, state, isFirstRun, warn } = ctx;
   const maxDepth = config.maxFolderDepth ?? DEFAULT_MAX_DEPTH;
-  const budget = { left: config.maxNotifyPerCycle ?? DEFAULT_NOTIFY_BUDGET, deferred: [] };
 
   let notified = 0;
   const visited = new Set();
@@ -134,7 +133,6 @@ async function checkFolderAdditions(ctx) {
       children,
       prevSet,
       seedOnly,
-      budget,
     });
     notified += result.notified;
     state.folderChildren[folder.token] = result.tokens;
@@ -148,17 +146,14 @@ async function checkFolderAdditions(ctx) {
     }
   }
 
-  if (budget.deferred.length) {
-    await notifyRemainingFiles(ctx.client, config, { names: budget.deferred });
-    notified += 1;
-  }
   return notified;
 }
 
-async function scanChildren(ctx, { folder, children, prevSet, seedOnly, budget }) {
+async function scanChildren(ctx, { folder, children, prevSet, seedOnly }) {
   const { client, config, state, log } = ctx;
   const tokens = [];
   const subfolders = [];
+  const newFiles = [];
   let notified = 0;
 
   for (const child of children) {
@@ -184,23 +179,23 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, budget }
       log(`seed folder child ${child.name}`);
       continue;
     }
-    // 一次上传大量文件时只逐个发前几个，其余汇总成一条，避免刷屏
-    if (budget.left <= 0) {
-      budget.deferred.push(child.name);
-      await trackNewChild({ client, state, child });
-      continue;
-    }
 
-    log(`new in folder: ${child.name} (${child.type})`);
-    await maybeAutoSubscribe(client, config, child.token, child.type);
-    await notifyFileAttachment(client, config, {
-      fileToken: child.token,
-      fileType: child.type,
+    newFiles.push(child);
+  }
+
+  // 同一文件夹本轮新增的文件打成一个 zip 发送
+  if (newFiles.length) {
+    log(`zip ${newFiles.length} new file(s) in ${folder.name}`);
+    for (const child of newFiles) {
+      await maybeAutoSubscribe(client, config, child.token, child.type);
+      await trackNewChild({ client, state, child });
+    }
+    await notifyFilesAsZip(client, config, {
       reason: '文件夹有新上传/新建',
-      titleHint: child.name,
+      folderName: folder.name,
+      zipNameHint: folder.name,
+      files: newFiles.map((c) => ({ token: c.token, type: c.type, name: c.name })),
     });
-    await trackNewChild({ client, state, child });
-    budget.left -= 1;
     notified += 1;
   }
 
