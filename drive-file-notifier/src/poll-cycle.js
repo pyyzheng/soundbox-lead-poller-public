@@ -9,6 +9,7 @@ import {
 // Drive meta API accepts at most 50 tokens per request.
 const META_BATCH_SIZE = 50;
 const DEFAULT_MAX_DEPTH = 5;
+const DEFAULT_RECENT_UPLOAD_SEC = 6 * 60 * 60;
 
 /**
  * One detection pass over watched files and folders.
@@ -124,8 +125,9 @@ async function checkFolderAdditions(ctx) {
     }
 
     const known = state.folderChildren[folder.token];
-    // 监听根目录首次见到时只建基线；子文件夹没有记录就说明是新内容，要通知
-    const seedOnly = isFirstRun || (folder.isRoot && !known);
+    // 全局首次运行只建基线；新加入监听的文件夹/子目录则按修改时间判断是否要通知
+    const seedOnly = isFirstRun;
+    const bootstrapNewWatch = !known && !isFirstRun;
     const prevSet = new Set(known || []);
 
     const result = await scanChildren(ctx, {
@@ -133,6 +135,7 @@ async function checkFolderAdditions(ctx) {
       children,
       prevSet,
       seedOnly,
+      bootstrapNewWatch,
     });
     notified += result.notified;
     state.folderChildren[folder.token] = result.tokens;
@@ -149,12 +152,15 @@ async function checkFolderAdditions(ctx) {
   return notified;
 }
 
-async function scanChildren(ctx, { folder, children, prevSet, seedOnly }) {
+async function scanChildren(ctx, { folder, children, prevSet, seedOnly, bootstrapNewWatch }) {
   const { client, config, state, log } = ctx;
   const tokens = [];
   const subfolders = [];
   const newFiles = [];
+  const bootstrapCandidates = [];
   let notified = 0;
+  const recentWindowSec = config.recentUploadWindowSec ?? DEFAULT_RECENT_UPLOAD_SEC;
+  const nowSec = Math.floor(Date.now() / 1000);
 
   for (const child of children) {
     tokens.push(child.token);
@@ -162,7 +168,7 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly }) {
     const isNew = !prevSet.has(child.token);
 
     if (child.type === 'folder') {
-      if (isNew && !seedOnly) {
+      if (isNew && !seedOnly && !bootstrapNewWatch) {
         log(`new folder: ${child.name}`);
         await notifyFolderCreated(client, config, {
           folderName: child.name,
@@ -179,8 +185,31 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly }) {
       log(`seed folder child ${child.name}`);
       continue;
     }
+    if (bootstrapNewWatch) {
+      bootstrapCandidates.push(child);
+      continue;
+    }
 
     newFiles.push(child);
+  }
+
+  if (bootstrapCandidates.length) {
+    const metaByToken = await loadModifyTimes(client, bootstrapCandidates);
+    for (const child of bootstrapCandidates) {
+      const modify = metaByToken.get(child.token) || 0;
+      if (modify >= nowSec - recentWindowSec) {
+        log(`bootstrap notify recent ${child.name}`);
+        newFiles.push(child);
+      } else {
+        log(`bootstrap seed old ${child.name}`);
+        await trackNewChild({
+          client,
+          state,
+          child,
+          metaModify: metaByToken.get(child.token),
+        });
+      }
+    }
   }
 
   // 同一文件夹本轮新增的文件打成一个 zip 发送
@@ -202,16 +231,37 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly }) {
   return { tokens, subfolders, notified };
 }
 
+async function loadModifyTimes(client, children) {
+  const map = new Map();
+  for (let i = 0; i < children.length; i += META_BATCH_SIZE) {
+    const chunk = children.slice(i, i + META_BATCH_SIZE);
+    try {
+      const metas = await getFileMetas(
+        client,
+        chunk.map((c) => ({ token: c.token, type: c.type })),
+      );
+      for (const meta of metas) {
+        map.set(meta.doc_token, Number(meta.latest_modify_time) || 0);
+      }
+    } catch {
+      // leave missing entries at 0
+    }
+  }
+  return map;
+}
+
 /** Record the new file so later passes can detect edits to it. */
-async function trackNewChild({ client, state, child }) {
-  let lastModify = 0;
-  let title = child.name;
-  try {
-    const [meta] = await getFileMetas(client, [{ token: child.token, type: child.type }]);
-    lastModify = Number(meta?.latest_modify_time) || 0;
-    title = meta?.title || child.name;
-  } catch {
-    // keep defaults; next pass will seed the real modify time
+async function trackNewChild({ client, state, child, metaModify, metaTitle }) {
+  let lastModify = metaModify || 0;
+  let title = metaTitle || child.name;
+  if (!metaModify) {
+    try {
+      const [meta] = await getFileMetas(client, [{ token: child.token, type: child.type }]);
+      lastModify = Number(meta?.latest_modify_time) || 0;
+      title = meta?.title || child.name;
+    } catch {
+      // keep defaults; next pass will seed the real modify time
+    }
   }
   state.files[child.token] = { type: child.type, lastModify, title };
 }

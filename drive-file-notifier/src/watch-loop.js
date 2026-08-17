@@ -13,11 +13,11 @@ const DEFAULT_DURATION_MS = 5 * 60 * 60 * 1000;
  * single job polls on a short interval and the workflow starts the next one.
  */
 async function main() {
-  const config = loadConfig();
-  const client = createClient(config.appId, config.appSecret);
-  const statePath = resolveStatePath(config);
+  const statePath = resolveStatePath(loadConfig());
   const state = loadState(statePath);
 
+  let config = loadConfig();
+  let client = createClient(config.appId, config.appSecret);
   const intervalMs = Number(process.env.POLL_INTERVAL_MS) || config.pollIntervalMs || DEFAULT_INTERVAL_MS;
   const durationMs = Number(process.env.MAX_RUN_MS) || DEFAULT_DURATION_MS;
   const deadline = Date.now() + durationMs;
@@ -39,11 +39,13 @@ async function main() {
   while (!stopping && Date.now() < deadline) {
     cycles += 1;
     try {
+      // Pick up watchFolders / config edits without waiting for job restart.
+      config = loadConfig();
+      client = createClient(config.appId, config.appSecret);
       const { notified } = await pollCycle({ client, config, state, tag: 'loop' });
       totalNotified += notified;
       saveState(statePath, state);
     } catch (err) {
-      // A transient API failure must not kill the loop.
       console.error(`[loop] cycle ${cycles} failed: ${err.message}`);
     }
     if (stopping || Date.now() >= deadline) break;
