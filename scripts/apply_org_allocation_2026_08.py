@@ -21,7 +21,7 @@ T_SUB = "tblYQpLxEBYjFN0T"
 T_EMP = "tbl1VLoTjKb3YIu8"
 T_MAIN = "tbluuuXn9WexH8LV"
 
-CHANNELS = ["Facebook", "谷歌", "阿里国际站", "国内渠道", "Outbound渠道"]
+CHANNELS = ["Facebook", "谷歌", "阿里国际站", "国内渠道", "Outbound渠道", "LinkedIn"]
 
 NEW_QUEUES: dict[str, list[str]] = {
     "中东区队列": ["Gigi", "Sue", "Cathy"],

@@ -31,7 +31,7 @@ T_MAIN = "tbluuuXn9WexH8LV"
 
 QUEUE_NAME = "俄罗斯子办队列"
 PEOPLE = ["Wendy", "Mia"]  # 顺位 1→2
-CHANNELS = ["Facebook", "谷歌", "阿里国际站", "国内渠道", "Outbound渠道"]
+CHANNELS = ["Facebook", "谷歌", "阿里国际站", "国内渠道", "Outbound渠道", "LinkedIn"]
 COUNTRIES = ["俄罗斯", "白俄罗斯"]
 
 ROLE_SP = "rol0oxX294m"  # 俄白子办业务员

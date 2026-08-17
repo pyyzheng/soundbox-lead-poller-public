@@ -53,6 +53,10 @@ SUB_CHANNEL_TO_CHANNEL: dict[str, str] = {
     "Instagram": "Facebook",
     "Facebook messager": "Facebook",
     "Facebook-Messenger": "Facebook-Messenger",
+    "LinkedIn": "LinkedIn",
+    "Linkedln": "LinkedIn",  # 常见拼写
+    "领英": "LinkedIn",
+    "linkedin": "LinkedIn",
     "谷歌1": WRITE_CHANNEL_GOOGLE,
     "谷歌2": WRITE_CHANNEL_GOOGLE,
     "新官网": WRITE_CHANNEL_GOOGLE,
@@ -79,6 +83,7 @@ QUEUE_KEY_CHANNEL_ALIASES: dict[str, str] = {
 FALLBACK_QUEUE_CHANNELS: tuple[str, ...] = (
     WRITE_CHANNEL_GOOGLE,
     "Facebook",
+    "LinkedIn",
     "阿里国际站",
     "国内渠道",
     "Facebook-Messenger",
