@@ -448,7 +448,12 @@ async function markNotified(ctx, token, nowSec) {
   if (!state.notified) state.notified = {};
   if (Number(state.notified[token]) > 0) return false;
 
-  const claimed = await ctx.claimRemoteNotified(token, nowSec);
+  let claimed = true;
+  try {
+    claimed = await ctx.claimRemoteNotified(token, nowSec);
+  } catch (err) {
+    warn(`remote claim failed (proceeding anyway): ${err.message}`);
+  }
   if (!claimed) {
     state.notified[token] = state.notified[token] || nowSec;
     log(`skip duplicate notify (remote) ${token.slice(0, 8)}`);
