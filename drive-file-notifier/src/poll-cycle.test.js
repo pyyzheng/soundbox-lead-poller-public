@@ -245,3 +245,63 @@ test('remote claim failure skips duplicate notify across job restarts', async ()
   assert.equal(notified, 0);
   assert.equal(sent.length, 0);
 });
+
+test('does not notify empty folder immediately within grace window', async () => {
+  const NEW_FOLDER = 'new-empty-folder';
+  const client = {
+    listed: [],
+    folders: {
+      [ROOT]: [{ token: NEW_FOLDER, type: 'folder', name: 'new-empty' }],
+      [NEW_FOLDER]: [],
+    },
+    metas: {
+      [NEW_FOLDER]: { modify: now, title: 'new-empty' },
+    },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+    emptyFolderPending: {},
+  };
+  const { sent, deps } = makeDeps(client);
+  const cfg = { ...config, emptyFolderNotifyGraceSec: 600 };
+  const result = await pollCycle({ client, config: cfg, state, tag: 't', deps });
+  assert.equal(result.notified, 0);
+  assert.equal(sent.some((s) => s.kind === 'folder'), false);
+  assert.ok(state.emptyFolderPending[NEW_FOLDER]);
+});
+
+test('does not notify empty folder when it has subfolders', async () => {
+  const NEW_FOLDER = 'new-parent';
+  const SUB_FOLDER = 'new-child';
+  const client = {
+    listed: [],
+    folders: {
+      [ROOT]: [{ token: NEW_FOLDER, type: 'folder', name: 'new-parent' }],
+      [NEW_FOLDER]: [{ token: SUB_FOLDER, type: 'folder', name: 'new-child' }],
+      [SUB_FOLDER]: [],
+    },
+    metas: {
+      [NEW_FOLDER]: { modify: now, title: 'new-parent' },
+      [SUB_FOLDER]: { modify: now, title: 'new-child' },
+    },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+    emptyFolderPending: {},
+  };
+  const { sent, deps } = makeDeps(client);
+  const cfg = { ...config, emptyFolderNotifyGraceSec: 0 };
+  const result = await pollCycle({ client, config: cfg, state, tag: 't', deps });
+  assert.equal(result.notified, 0);
+  assert.equal(sent.some((s) => s.kind === 'folder'), false);
+});

@@ -24,6 +24,10 @@ export function loadConfig() {
     appId,
     appSecret,
     chatId: process.env.CHAT_ID || raw.chatId,
+    // For new folders: wait before "empty folder" notification.
+    emptyFolderNotifyGraceSec: Number(raw.emptyFolderNotifyGraceSec) || 10 * 60,
+    // Re-scan more folders per cycle to reduce misses in deep trees.
+    staleRescanBudget: Number(raw.staleRescanBudget) || 300,
     root,
     tmpDir: path.join(root, 'tmp'),
   };
