@@ -51,6 +51,7 @@ async function main() {
       saveState(statePath, state);
     } catch (err) {
       console.error(`[loop] cycle ${cycles} failed: ${err.message}`);
+      saveState(statePath, state);
     }
 
     const elapsed = Date.now() - cycleStart;

@@ -30,6 +30,7 @@
   "maxFolderDepth": 8,
   "folderScanBudget": 120,
   "staleRescanSec": 180,
+  "staleRescanBudget": 50,
   "recentUploadWindowSec": 21600,
   "notifyDedupSec": 86400,
   "maxFileBytes": 31457280,

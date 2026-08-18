@@ -48,6 +48,9 @@ export async function pollCycle({
   let notified = 0;
   notified += await checkContentChanges(ctx);
   notified += await checkFolderAdditions(ctx);
+  if (!isFirstRun) {
+    notified += await backfillUnnotifiedRecent(ctx);
+  }
   return { notified, isFirstRun };
 }
 
@@ -136,6 +139,7 @@ async function checkFolderAdditions(ctx) {
   const { config, state, isFirstRun, log, warn } = ctx;
   const maxDepth = config.maxFolderDepth ?? DEFAULT_MAX_DEPTH;
   const budget = { left: config.folderScanBudget ?? DEFAULT_FOLDER_BUDGET };
+  const staleBudget = { left: config.staleRescanBudget ?? 50 };
   const nowSec = Math.floor(Date.now() / 1000);
   ensureFolderMeta(state);
 
@@ -160,7 +164,8 @@ async function checkFolderAdditions(ctx) {
     if (listed && !folder.force) {
       needsRescan = await folderNeedsRescan(ctx, folder.token, listed);
     }
-    const stale = listed && folderIsStale(state, folder.token, config, nowSec);
+    const stale = listed && staleBudget.left > 0 && folderIsStale(state, folder.token, config, nowSec);
+    if (stale) staleBudget.left -= 1;
     const shouldList = folder.force || !listed || needsRescan || stale;
     if (!shouldList) {
       enqueueKnownChildren(state, folder, maxDepth, queue);
@@ -299,12 +304,7 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
     }
 
     if (!isNew) continue;
-    if (seedOnly) {
-      log(`seed folder child ${child.name}`);
-      await trackNewChild(ctx, { child });
-      continue;
-    }
-    if (firstSeen) {
+    if (seedOnly || firstSeen) {
       bootstrapCandidates.push(child);
       continue;
     }
@@ -316,10 +316,10 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
     for (const child of bootstrapCandidates) {
       const modify = Number(metaByToken.get(child.token)) || 0;
       if (modify >= nowSec - recentWindowSec) {
-        log(`bootstrap notify recent ${child.name}`);
+        log(`${seedOnly ? 'baseline' : 'bootstrap'} notify recent ${child.name}`);
         newFiles.push(child);
       } else {
-        log(`bootstrap seed old ${child.name}`);
+        log(`${seedOnly ? 'baseline' : 'bootstrap'} seed old ${child.name}`);
         await trackNewChild(ctx, { child, metaModify: modify });
       }
     }

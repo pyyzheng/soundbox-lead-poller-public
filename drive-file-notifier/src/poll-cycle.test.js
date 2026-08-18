@@ -53,22 +53,28 @@ const FILE_NEW = 'new';
 const now = Math.floor(Date.now() / 1000);
 const config = { watchFolders: [{ token: ROOT, name: 'root' }], watchFiles: [] };
 
-test('first run seeds nested files without notifying', async () => {
+test('first run notifies recent uploads but seeds old files', async () => {
   const client = {
     listed: [],
     folders: {
       [ROOT]: [{ token: SUB, type: 'folder', name: 'nested' }],
-      [SUB]: [{ token: FILE_OLD, type: 'file', name: 'old.pdf' }],
+      [SUB]: [
+        { token: FILE_OLD, type: 'file', name: 'old.pdf' },
+        { token: FILE_NEW, type: 'file', name: 'new.pdf' },
+      ],
     },
-    metas: { [FILE_OLD]: { modify: now - 86400, title: 'old.pdf' } },
+    metas: {
+      [FILE_OLD]: { modify: now - 86400, title: 'old.pdf' },
+      [FILE_NEW]: { modify: now - 60, title: 'new.pdf' },
+    },
   };
   const { sent, deps } = makeDeps(client);
   const state = emptyState();
   const { notified, isFirstRun } = await pollCycle({ client, config, state, tag: 't', deps });
   assert.equal(isFirstRun, true);
-  assert.equal(notified, 0);
-  assert.equal(sent.length, 0);
-  assert.deepEqual(state.folderChildren[SUB], [FILE_OLD]);
+  assert.equal(notified, 1);
+  assert.equal(sent[0].fileToken, FILE_NEW);
+  assert.deepEqual(state.folderChildren[SUB].sort(), [FILE_OLD, FILE_NEW].sort());
 });
 
 test('upload into a never-listed subfolder notifies the recent file', async () => {
