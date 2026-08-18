@@ -370,6 +370,7 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
       reason: '文件夹有新上传/新建',
       titleHint: child.name,
       folderPath: folder.path,
+      folderToken: folder.token,
     });
     await trackNewChild(ctx, { child });
     markNotified(state, child.token, nowSec);
@@ -385,6 +386,7 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
   await ctx.notifyFilesAsZip(client, config, {
     reason: '文件夹有新上传/新建',
     folderName: folder.path,
+    folderToken: folder.token,
     zipNameHint: folder.name,
     files: toNotify.map((c) => ({ token: c.token, type: c.type, name: c.name })),
   });

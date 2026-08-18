@@ -27,6 +27,7 @@ export async function notifyFileAttachment(client, config, {
   reason,
   titleHint,
   folderPath,
+  folderToken,
 }) {
   fs.mkdirSync(config.tmpDir, { recursive: true });
   const maxBytes = config.maxFileBytes || 30 * 1024 * 1024;
@@ -70,11 +71,13 @@ export async function notifyFileAttachment(client, config, {
       size = compressed.size;
     }
 
+    const folderUrl = await resolveFolderUrl(client, folderToken);
     const caption = composeMessage(config, resolveEventLabel(reason), [
       ...(folderPath ? [`文件夹：${folderPath}`] : []),
       `文件：${sendName}`,
       `大小：${formatBytes(size)}`,
       ...(note ? [note] : []),
+      ...(folderUrl ? [`链接：${folderUrl}`] : []),
     ]);
     const sent = await sendTextMessage(client, config.chatId, caption);
     const fileKey = await uploadImFile(client, localPath, sendName);
@@ -102,6 +105,7 @@ export async function notifyFilesAsZip(client, config, {
   files,
   zipNameHint,
   folderName,
+  folderToken,
 }) {
   if (!files?.length) return { skipped: true, reason: 'empty' };
 
@@ -136,6 +140,7 @@ export async function notifyFilesAsZip(client, config, {
 
     let lastMessageId;
     let totalSize = 0;
+    const folderUrl = await resolveFolderUrl(client, folderToken);
 
     for (const item of linkOnly) {
       const sent = await notifyOversizedLink(client, config, {
@@ -160,6 +165,7 @@ export async function notifyFilesAsZip(client, config, {
         packCount: packs.length,
         folderName,
         folderPath: folderName,
+        folderUrl,
       });
       const sent = await sendTextMessage(client, config.chatId, caption);
       const fileKey = await uploadImFile(client, pack.localPath, pack.fileName);
@@ -334,7 +340,7 @@ function sanitizeZipStem(name) {
   return (raw || 'cloud-update').slice(0, 80);
 }
 
-function buildZipCaption(config, { reason, pack, packIndex, packCount, folderName, folderPath }) {
+function buildZipCaption(config, { reason, pack, packIndex, packCount, folderName, folderPath, folderUrl }) {
   const detail = [];
   if (folderPath || folderName) detail.push(`文件夹：${folderPath || folderName}`);
   detail.push(`压缩包：${pack.fileName}`);
@@ -347,7 +353,14 @@ function buildZipCaption(config, { reason, pack, packIndex, packCount, folderNam
   }
   if (packCount > 1) detail.push(`（分卷 ${packIndex + 1}/${packCount}）`);
   if (pack.note) detail.push(pack.note);
+  if (folderUrl) detail.push(`链接：${folderUrl}`);
   return composeMessage(config, resolveEventLabel(reason), detail);
+}
+
+async function resolveFolderUrl(client, folderToken) {
+  if (!folderToken) return null;
+  const meta = await getFileMeta(client, folderToken, 'folder').catch(() => null);
+  return resolveDriveFileUrl(meta, folderToken, 'folder');
 }
 
 /** Text notice for an empty newly created folder — same caption layout as file notices. */
