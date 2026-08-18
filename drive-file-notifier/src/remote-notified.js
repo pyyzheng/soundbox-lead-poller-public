@@ -8,7 +8,7 @@ const API = 'https://api.github.com';
 
 function repoSpec() {
   const repo = process.env.GITHUB_REPOSITORY;
-  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   if (!repo || !token) return null;
   const [owner, name] = repo.split('/');
   if (!owner || !name) return null;

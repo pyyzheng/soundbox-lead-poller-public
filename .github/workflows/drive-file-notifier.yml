@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "drive-file-notifier/**"
+      - "!drive-file-notifier/.remote-notified.json"
       - ".github/workflows/drive-file-notifier.yml"
   workflow_dispatch:
     inputs:
