@@ -14,6 +14,7 @@ const META_BATCH_SIZE = 50;
 const DEFAULT_MAX_DEPTH = 8;
 const DEFAULT_RECENT_UPLOAD_SEC = 6 * 60 * 60;
 const DEFAULT_FOLDER_BUDGET = 80;
+const DEFAULT_EMPTY_FOLDER_NOTIFY_GRACE_SEC = 10 * 60;
 
 /**
  * One detection pass over watched files and folders.
@@ -149,7 +150,7 @@ async function checkFolderAdditions(ctx) {
   const { client, config, state, isFirstRun, log, warn } = ctx;
   const maxDepth = config.maxFolderDepth ?? DEFAULT_MAX_DEPTH;
   const budget = { left: config.folderScanBudget ?? DEFAULT_FOLDER_BUDGET };
-  const staleBudget = { left: config.staleRescanBudget ?? 50 };
+  const staleBudget = { left: config.staleRescanBudget ?? 300 };
   const nowSec = Math.floor(Date.now() / 1000);
   ensureFolderMeta(state);
 
@@ -210,16 +211,31 @@ async function checkFolderAdditions(ctx) {
     });
     notified += result.notified;
 
-    if (folder.isNewFolder && !seedOnly && result.fileCount === 0) {
-      if (!wasEverNotified(state, folder.token)) {
-        if (await markNotified(ctx, folder.token, nowSec)) {
-          log(`notify empty new folder ${folder.path} token=${folder.token.slice(0, 8)}`);
-          await ctx.notifyFolderCreated(client, config, {
-            folderToken: folder.token,
-            folderPath: folder.path,
-          });
-          notified += 1;
+    if (folder.isNewFolder && !seedOnly) {
+      const hasDirectFile = result.fileCount > 0;
+      const hasSubfolder = result.subfolders.length > 0;
+      const pending = state.emptyFolderPending?.[folder.token];
+      const graceSec = config.emptyFolderNotifyGraceSec ?? DEFAULT_EMPTY_FOLDER_NOTIFY_GRACE_SEC;
+      if (hasDirectFile || hasSubfolder) {
+        if (pending) {
+          delete state.emptyFolderPending[folder.token];
+          log(`clear empty-folder pending ${folder.path} token=${folder.token.slice(0, 8)} (children detected)`);
         }
+      } else if (!pending) {
+        state.emptyFolderPending[folder.token] = { firstSeenAt: nowSec, path: folder.path };
+        log(`defer empty-folder notify ${folder.path} token=${folder.token.slice(0, 8)} grace=${graceSec}s`);
+      } else if ((nowSec - Number(pending.firstSeenAt || nowSec)) >= graceSec) {
+        if (!wasEverNotified(state, folder.token)) {
+          if (await markNotified(ctx, folder.token, nowSec)) {
+            log(`notify empty new folder ${folder.path} token=${folder.token.slice(0, 8)} graceElapsed=${nowSec - pending.firstSeenAt}s`);
+            await ctx.notifyFolderCreated(client, config, {
+              folderToken: folder.token,
+              folderPath: folder.path,
+            });
+            notified += 1;
+          }
+        }
+        delete state.emptyFolderPending[folder.token];
       }
     }
 
@@ -291,6 +307,7 @@ function ensureFolderMeta(state) {
   if (!state.subfolders) state.subfolders = {};
   if (!state.notified) state.notified = {};
   if (!state.folderListedAt) state.folderListedAt = {};
+  if (!state.emptyFolderPending) state.emptyFolderPending = {};
 }
 
 function folderIsStale(state, token, config, nowSec) {
