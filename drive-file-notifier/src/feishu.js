@@ -360,3 +360,18 @@ export function safeFileName(name, fallback) {
   const base = (name || fallback || 'file').replace(/[\\/:*?"<>|]/g, '_').trim();
   return base || 'file';
 }
+
+/** Drive meta URL from batchQuery(with_url=true), with a best-effort fallback. */
+export function resolveDriveFileUrl(meta, fileToken, fileType = 'file') {
+  if (meta?.url) return meta.url;
+  const t = fileType || meta?.doc_type || 'file';
+  const seg = {
+    doc: 'docx',
+    docx: 'docx',
+    sheet: 'sheets',
+    bitable: 'base',
+    slides: 'slides',
+    file: 'file',
+  }[t] || 'file';
+  return `https://www.feishu.cn/${seg}/${fileToken}`;
+}

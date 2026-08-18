@@ -4,6 +4,7 @@ import {
   downloadDriveFile,
   exportOnlineDoc,
   getFileMeta,
+  resolveDriveFileUrl,
   safeFileName,
   sendFileMessage,
   sendTextMessage,
@@ -51,12 +52,21 @@ export async function notifyFileAttachment(client, config, {
       console.log(`[compress] ${sendName} ${formatBytes(size)} > limit, trying all methods`);
       const compressed = await compressAnyUnderLimit(localPath, sendName, maxBytes, config.tmpDir);
       if (!compressed) {
-        throw new Error(`${sendName} 压缩后仍超过 ${formatBytes(maxBytes)}`);
+        console.log(`[oversized] ${sendName} still over limit after compress, sending link only`);
+        return notifyOversizedLink(client, config, {
+          fileToken,
+          fileType,
+          reason,
+          titleHint: prepared.sendName,
+          folderPath,
+          sizeBytes: prepared.size,
+          meta: prepared.meta,
+        });
       }
       temps.push(compressed.localPath);
       localPath = compressed.localPath;
       sendName = compressed.fileName;
-      note = `已自动压缩（${compressed.method}）：${formatBytes(size)} → ${formatBytes(compressed.size)}`;
+      note = `已自动压缩（${compressed.method}）：${formatBytes(prepared.size)} → ${formatBytes(compressed.size)}`;
       size = compressed.size;
     }
 
@@ -105,16 +115,19 @@ export async function notifyFilesAsZip(client, config, {
       const prepared = await prepareLocalFile(client, config, item, temps);
       if (!prepared) continue;
       entries.push({
+        token: item.token,
+        type: item.type || 'file',
         localPath: prepared.localPath,
         entryName: prepared.sendName,
         originalSize: prepared.size,
+        meta: prepared.meta,
       });
     }
     if (!entries.length) {
       throw new Error('没有可打包的文件');
     }
 
-    const packs = await packEntriesIntoZips(entries, {
+    const { packs, linkOnly } = await packEntriesIntoZips(entries, {
       maxBytes,
       tmpDir: config.tmpDir,
       zipNameHint: zipNameHint || folderName || entries[0].entryName,
@@ -123,6 +136,20 @@ export async function notifyFilesAsZip(client, config, {
 
     let lastMessageId;
     let totalSize = 0;
+
+    for (const item of linkOnly) {
+      const sent = await notifyOversizedLink(client, config, {
+        fileToken: item.token,
+        fileType: item.type,
+        reason,
+        titleHint: item.entryName,
+        folderPath: folderName,
+        sizeBytes: item.originalSize,
+        meta: item.meta,
+      });
+      lastMessageId = sent?.messageId || lastMessageId;
+    }
+
     for (let i = 0; i < packs.length; i += 1) {
       const pack = packs[i];
       totalSize += pack.size;
@@ -144,11 +171,15 @@ export async function notifyFilesAsZip(client, config, {
     return {
       skipped: false,
       messageId: lastMessageId,
-      fileName: packs.map((p) => p.fileName).join(', '),
+      fileName: [
+        ...linkOnly.map((e) => e.entryName),
+        ...packs.map((p) => p.fileName),
+      ].join(', '),
       size: totalSize,
-      mode: 'zip',
+      mode: linkOnly.length && !packs.length ? 'link-only' : 'zip',
       fileCount: entries.length,
       packCount: packs.length,
+      linkOnlyCount: linkOnly.length,
     };
   } finally {
     for (const f of temps) cleanup(f);
@@ -189,12 +220,45 @@ async function prepareLocalFile(client, config, item, temps) {
     console.warn(`[zip] skip empty file ${sendName}`);
     return null;
   }
-  return { localPath, sendName, size };
+  return { localPath, sendName, size, meta };
+}
+
+/** Text-only notice when attachment cannot be sent within the IM size limit. */
+export async function notifyOversizedLink(client, config, {
+  fileToken,
+  fileType,
+  reason,
+  titleHint,
+  folderPath,
+  sizeBytes,
+  meta: metaIn,
+}) {
+  const meta = metaIn || await getFileMeta(client, fileToken, fileType).catch(() => null);
+  const fileName = safeFileName(titleHint || meta?.title, fileToken);
+  const driveUrl = resolveDriveFileUrl(meta, fileToken, fileType);
+  const caption = composeMessage(config, resolveEventLabel(reason), [
+    ...(folderPath ? [`文件夹：${folderPath}`] : []),
+    `文件：${fileName}`,
+    ...(sizeBytes ? [`大小：${formatBytes(sizeBytes)}`] : []),
+    '说明：文件过大请去云盘查看',
+    `链接：${driveUrl}`,
+  ]);
+  const sent = await sendTextMessage(client, config.chatId, caption);
+  console.log(`[sent-link] ${fileName} ${sizeBytes ? formatBytes(sizeBytes) : ''}`);
+  return {
+    skipped: false,
+    messageId: sent?.message_id,
+    fileName,
+    size: sizeBytes || 0,
+    mode: 'link-only',
+    driveUrl,
+  };
 }
 
 async function packEntriesIntoZips(entries, { maxBytes, tmpDir, zipNameHint, temps }) {
   const stem = sanitizeZipStem(zipNameHint);
   const packs = [];
+  const linkOnly = [];
   let part = 1;
 
   const makeZip = async (batch) => {
@@ -226,7 +290,8 @@ async function packEntriesIntoZips(entries, { maxBytes, tmpDir, zipNameHint, tem
         tmpDir,
       );
       if (!compressed) {
-        throw new Error(`${one.entryName} 压缩后仍超过 ${formatBytes(maxBytes)}`);
+        linkOnly.push(one);
+        return;
       }
       temps.push(compressed.localPath);
       packs.push({
@@ -258,7 +323,7 @@ async function packEntriesIntoZips(entries, { maxBytes, tmpDir, zipNameHint, tem
     batchBytes += entry.originalSize || 0;
   }
   await makeZip(batch);
-  return packs;
+  return { packs, linkOnly };
 }
 
 function sanitizeZipStem(name) {

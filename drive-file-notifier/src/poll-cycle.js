@@ -417,3 +417,27 @@ function markNotified(state, token, nowSec) {
   if (!state.notified) state.notified = {};
   state.notified[token] = nowSec;
 }
+
+/** Recover files that were silently seeded during an earlier baseline pass. */
+async function backfillUnnotifiedRecent(ctx) {
+  const { client, config, state, log } = ctx;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const window = config.recentUploadWindowSec ?? DEFAULT_RECENT_UPLOAD_SEC;
+  let notified = 0;
+  for (const [token, info] of Object.entries(state.files || {})) {
+    if (!info?.type || info.type === 'folder' || info.type === 'shortcut') continue;
+    if (wasRecentlyNotified(state, token, config, nowSec)) continue;
+    const modify = Number(info.lastModify) || 0;
+    if (modify < nowSec - window) continue;
+    log(`backfill notify ${info.title || token}`);
+    await ctx.notifyFileAttachment(client, config, {
+      fileToken: token,
+      fileType: info.type,
+      reason: '文件夹有新上传/新建',
+      titleHint: info.title || token,
+    });
+    markNotified(state, token, nowSec);
+    notified += 1;
+  }
+  return notified;
+}
