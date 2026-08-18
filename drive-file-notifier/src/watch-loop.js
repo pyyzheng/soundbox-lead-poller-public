@@ -1,6 +1,7 @@
 import { loadConfig } from './config.js';
 import { createClient } from './feishu.js';
 import { pollCycle } from './poll-cycle.js';
+import { mergeRemoteNotifiedInto, remoteNotifiedEnabled } from './remote-notified.js';
 import { loadState, resolveStatePath, saveState } from './state.js';
 
 const DEFAULT_INTERVAL_MS = 30_000;
@@ -12,6 +13,10 @@ const DEFAULT_DURATION_MS = 5 * 60 * 60 * 1000;
 async function main() {
   const statePath = resolveStatePath(loadConfig());
   const state = loadState(statePath);
+  if (remoteNotifiedEnabled()) {
+    await mergeRemoteNotifiedInto(state);
+    saveState(statePath, state);
+  }
 
   let config = loadConfig();
   let client = createClient(config.appId, config.appSecret);

@@ -8,6 +8,7 @@ import {
   notifyFilesAsZip as defaultNotifyFilesAsZip,
   notifyFolderCreated as defaultNotifyFolderCreated,
 } from './notify.js';
+import { claimRemoteNotified } from './remote-notified.js';
 
 const META_BATCH_SIZE = 50;
 const DEFAULT_MAX_DEPTH = 8;
@@ -43,6 +44,7 @@ export async function pollCycle({
     notifyFolderCreated: deps.notifyFolderCreated || defaultNotifyFolderCreated,
     maybeAutoSubscribe: deps.maybeAutoSubscribe || defaultMaybeAutoSubscribe,
     persistState: deps.persistState,
+    claimRemoteNotified: deps.claimRemoteNotified || claimRemoteNotified,
   };
 
   let notified = 0;
@@ -96,7 +98,7 @@ async function checkContentChanges(ctx) {
       }
 
       log(`changed ${meta.title}`);
-      markNotified(ctx, token, nowSec);
+      if (!(await markNotified(ctx, token, nowSec))) continue;
       await ctx.notifyFileAttachment(client, config, {
         fileToken: token,
         fileType: type,
@@ -202,12 +204,13 @@ async function checkFolderAdditions(ctx) {
 
     if (folder.isNewFolder && !seedOnly && result.fileCount === 0) {
       if (!wasEverNotified(state, folder.token)) {
-        markNotified(ctx, folder.token, nowSec);
-        await ctx.notifyFolderCreated(client, config, {
-          folderToken: folder.token,
-          folderPath: folder.path,
-        });
-        notified += 1;
+        if (await markNotified(ctx, folder.token, nowSec)) {
+          await ctx.notifyFolderCreated(client, config, {
+            folderToken: folder.token,
+            folderPath: folder.path,
+          });
+          notified += 1;
+        }
       }
     }
 
@@ -325,6 +328,11 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
     for (const child of bootstrapCandidates) {
       const modify = Number(metaByToken.get(child.token)) || 0;
       if (modify >= nowSec - recentWindowSec) {
+        if (wasEverNotified(state, child.token)) {
+          log(`bootstrap skip duplicate ${child.name}`);
+          await trackNewChild(ctx, { child, metaModify: modify });
+          continue;
+        }
         log(`${seedOnly ? 'baseline' : 'bootstrap'} notify recent ${child.name}`);
         newFiles.push(child);
       } else {
@@ -362,7 +370,7 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
   if (toNotify.length === 1) {
     const child = toNotify[0];
     log(`notify ${child.name} in ${folder.name}`);
-    markNotified(ctx, child.token, nowSec);
+    if (!(await markNotified(ctx, child.token, nowSec))) return 0;
     await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
     await trackNewChild(ctx, { child });
     await ctx.notifyFileAttachment(client, config, {
@@ -378,17 +386,21 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
   }
 
   log(`zip ${toNotify.length} new file(s) in ${folder.name}`);
+  const zipBatch = [];
   for (const child of toNotify) {
-    markNotified(ctx, child.token, nowSec);
-    await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
-    await trackNewChild(ctx, { child });
+    if (await markNotified(ctx, child.token, nowSec)) {
+      zipBatch.push(child);
+      await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
+      await trackNewChild(ctx, { child });
+    }
   }
+  if (!zipBatch.length) return 0;
   await ctx.notifyFilesAsZip(client, config, {
     reason: '文件夹有新上传/新建',
     folderName: folder.path,
     folderToken: folder.token,
     zipNameHint: folder.name,
-    files: toNotify.map((c) => ({ token: c.token, type: c.type, name: c.name })),
+    files: zipBatch.map((c) => ({ token: c.token, type: c.type, name: c.name })),
   });
   return 1;
 }
@@ -431,13 +443,28 @@ function wasEverNotified(state, token) {
   return Number(state.notified?.[token]) > 0;
 }
 
-function markNotified(ctx, token, nowSec) {
-  const { state } = ctx;
+async function markNotified(ctx, token, nowSec) {
+  const { state, log, warn } = ctx;
   if (!state.notified) state.notified = {};
+  if (Number(state.notified[token]) > 0) return false;
+
+  const claimed = await ctx.claimRemoteNotified(token, nowSec);
+  if (!claimed) {
+    state.notified[token] = state.notified[token] || nowSec;
+    log(`skip duplicate notify (remote) ${token.slice(0, 8)}`);
+    try {
+      ctx.persistState?.();
+    } catch (err) {
+      warn(`persist state failed: ${err.message}`);
+    }
+    return false;
+  }
+
   state.notified[token] = nowSec;
   try {
     ctx.persistState?.();
   } catch (err) {
-    ctx.warn?.(`persist state failed: ${err.message}`);
+    warn(`persist state failed: ${err.message}`);
   }
+  return true;
 }

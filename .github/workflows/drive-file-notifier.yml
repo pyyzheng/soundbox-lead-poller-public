@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   notify:
@@ -70,6 +70,8 @@ jobs:
           STATE_PATH: ${{ github.workspace }}/drive-file-notifier/.drive-notifier-state.json
           POLL_INTERVAL_MS: "60000"
           DURATION_MINUTES: ${{ inputs.duration_minutes || '60' }}
+          GH_TOKEN: ${{ secrets.GHA_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: MAX_RUN_MS=$(( DURATION_MINUTES * 60 * 1000 )) npm run loop
 
       - name: Save poll state

@@ -207,12 +207,41 @@ test('second poll does not resend a file notified in the previous cycle', async 
     folderMeta: {},
     subfolders: {},
   };
+  const claimRemote = async (token, at) => {
+    if (state.notified[token]) return false;
+    state.notified[token] = at;
+    return true;
+  };
   const first = makeDeps(client);
+  first.deps.claimRemoteNotified = claimRemote;
   const { notified } = await pollCycle({ client, config, state, tag: 't', deps: first.deps });
   assert.equal(notified, 1);
   client.listed = [];
   const second = makeDeps(client);
+  second.deps.claimRemoteNotified = claimRemote;
   const again = await pollCycle({ client, config, state, tag: 't', deps: second.deps });
   assert.equal(again.notified, 0);
   assert.equal(second.sent.length, 0);
+});
+
+test('remote claim failure skips duplicate notify across job restarts', async () => {
+  const client = {
+    listed: [],
+    folders: { [ROOT]: [{ token: FILE_NEW, type: 'file', name: 'huge.pdf' }] },
+    metas: { [FILE_NEW]: { modify: now, title: 'huge.pdf' } },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+  };
+  const remote = { [FILE_NEW]: now - 100 };
+  const { sent, deps } = makeDeps(client);
+  deps.claimRemoteNotified = async (token) => !remote[token];
+  const { notified } = await pollCycle({ client, config, state, tag: 't', deps });
+  assert.equal(notified, 0);
+  assert.equal(sent.length, 0);
 });
