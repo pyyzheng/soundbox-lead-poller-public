@@ -173,17 +173,17 @@ test('newly uploaded folder notifies all contained files regardless of modify ti
   assert.equal(notified, 1);
 });
 
-test('does not resend a file already notified within the dedup window', async () => {
+test('never resends a new-file notice for a token already in notified', async () => {
   const client = {
     listed: [],
-    folders: { [ROOT]: [{ token: FILE_NEW, type: 'file', name: 'new.pdf' }] },
-    metas: { [FILE_NEW]: { modify: now, title: 'new.pdf' } },
+    folders: { [ROOT]: [{ token: FILE_NEW, type: 'file', name: 'huge.pdf' }] },
+    metas: { [FILE_NEW]: { modify: now, title: 'huge.pdf' } },
   };
   const state = {
     initialized: true,
     files: {},
     folderChildren: { [ROOT]: [] },
-    notified: { [FILE_NEW]: now - 60 },
+    notified: { [FILE_NEW]: now - 3 * 86400 },
     folderMeta: {},
     subfolders: {},
   };

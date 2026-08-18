@@ -12,7 +12,6 @@ import {
 const META_BATCH_SIZE = 50;
 const DEFAULT_MAX_DEPTH = 8;
 const DEFAULT_RECENT_UPLOAD_SEC = 6 * 60 * 60;
-const DEFAULT_NOTIFY_DEDUP_SEC = 24 * 60 * 60;
 const DEFAULT_FOLDER_BUDGET = 80;
 
 /**
@@ -85,12 +84,13 @@ async function checkContentChanges(ctx) {
       }
       if (modify <= (prev.lastModify || 0)) continue;
 
+      const filledModify = !(prev.lastModify);
       state.files[token] = { type, lastModify: modify, title: meta.title };
-      if (isFirstRun) {
-        log(`baseline update ${meta.title} (no notify on first run)`);
+      if (isFirstRun || filledModify) {
+        log(`baseline update ${meta.title} (no notify)`);
         continue;
       }
-      if (wasRecentlyNotified(state, token, config, nowSec)) {
+      if (wasEverNotified(state, token)) {
         log(`skip duplicate notify ${meta.title}`);
         continue;
       }
@@ -201,7 +201,7 @@ async function checkFolderAdditions(ctx) {
     notified += result.notified;
 
     if (folder.isNewFolder && !seedOnly && result.fileCount === 0) {
-      if (!wasRecentlyNotified(state, folder.token, config, nowSec)) {
+      if (!wasEverNotified(state, folder.token)) {
         markNotified(ctx, folder.token, nowSec);
         await ctx.notifyFolderCreated(client, config, {
           folderToken: folder.token,
@@ -350,7 +350,7 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
   const { client, config, state, log } = ctx;
   const toNotify = [];
   for (const child of newFiles) {
-    if (wasRecentlyNotified(state, child.token, config, nowSec)) {
+    if (wasEverNotified(state, child.token)) {
       log(`skip duplicate notify ${child.name}`);
       await trackNewChild(ctx, { child });
       continue;
@@ -427,10 +427,8 @@ async function trackNewChild(ctx, { child, metaModify, metaTitle }) {
   ctx.state.files[child.token] = { type: child.type, lastModify, title };
 }
 
-function wasRecentlyNotified(state, token, config, nowSec) {
-  const dedupSec = config.notifyDedupSec ?? DEFAULT_NOTIFY_DEDUP_SEC;
-  const at = Number(state.notified?.[token]) || 0;
-  return at > 0 && nowSec - at < dedupSec;
+function wasEverNotified(state, token) {
+  return Number(state.notified?.[token]) > 0;
 }
 
 function markNotified(ctx, token, nowSec) {
