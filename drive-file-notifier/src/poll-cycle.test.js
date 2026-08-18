@@ -305,3 +305,56 @@ test('does not notify empty folder when it has subfolders', async () => {
   assert.equal(result.notified, 0);
   assert.equal(sent.some((s) => s.kind === 'folder'), false);
 });
+
+test('eventually notifies deep uploaded file after transient subfolder scan failure', async () => {
+  const L1 = 'level1';
+  const L2 = 'level2';
+  const IMG = 'img1';
+  let l2FailedOnce = false;
+  const client = {
+    listed: [],
+    folders: {
+      [ROOT]: [{ token: L1, type: 'folder', name: 'level1' }],
+      [L1]: [{ token: L2, type: 'folder', name: 'level2' }],
+      [L2]: [{ token: IMG, type: 'file', name: 'photo.png' }],
+    },
+    metas: {
+      [L1]: { modify: now, title: 'level1' },
+      [L2]: { modify: now, title: 'level2' },
+      [IMG]: { modify: now, title: 'photo.png' },
+    },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+    emptyFolderPending: {},
+  };
+  const { sent, deps } = makeDeps(client);
+  deps.listFolderChildren = async (_c, token) => {
+    client.listed.push(token);
+    if (token === L2 && !l2FailedOnce) {
+      l2FailedOnce = true;
+      throw new Error('transient 502');
+    }
+    return client.folders[token] || [];
+  };
+  const claimRemote = async (token, at) => {
+    if (state.notified[token]) return false;
+    state.notified[token] = at;
+    return true;
+  };
+  deps.claimRemoteNotified = claimRemote;
+
+  const first = await pollCycle({ client, config, state, tag: 't', deps });
+  assert.equal(first.notified, 0);
+  assert.equal(sent.length, 0);
+
+  const second = await pollCycle({ client, config, state, tag: 't', deps });
+  assert.equal(second.notified, 1);
+  assert.equal(sent.filter((s) => s.kind === 'file').length, 1);
+  assert.equal(sent.find((s) => s.kind === 'file').fileToken, IMG);
+});
