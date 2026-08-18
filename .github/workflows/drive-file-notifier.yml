@@ -57,13 +57,16 @@ jobs:
 
       - name: Restore poll state
         uses: actions/cache@v4
+        id: state-cache
         with:
           path: drive-file-notifier/.drive-notifier-state.json
-          key: drive-notifier-state-${{ github.run_id }}
+          # 固定 key：避免 job 被取消时 per-run 缓存写不回，下一轮又把同一文件当新上传
+          key: drive-notifier-state
           restore-keys: |
-            drive-notifier-state-
+            drive-notifier-state
 
       - name: Watch Drive
+        id: watch
         env:
           APP_ID: ${{ secrets.FEISHU_APP_ID }}
           APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
@@ -72,6 +75,13 @@ jobs:
           POLL_INTERVAL_MS: "30000"
           DURATION_MINUTES: ${{ inputs.duration_minutes || '60' }}
         run: MAX_RUN_MS=$(( DURATION_MINUTES * 60 * 1000 )) npm run loop
+
+      - name: Save poll state
+        if: always() && steps.watch.outcome != 'skipped'
+        uses: actions/cache/save@v4
+        with:
+          path: drive-file-notifier/.drive-notifier-state.json
+          key: drive-notifier-state
 
       - name: Chain next watcher
         # 只有正常跑完才接力；被取消/被新 push 顶掉时不再排队旧代码

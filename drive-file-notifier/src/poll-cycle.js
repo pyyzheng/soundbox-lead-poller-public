@@ -10,6 +10,8 @@ import {
 const META_BATCH_SIZE = 50;
 const DEFAULT_MAX_DEPTH = 5;
 const DEFAULT_RECENT_UPLOAD_SEC = 6 * 60 * 60;
+// 即使状态文件回退，同一文件在此时间内也不重复通知
+const DEFAULT_NOTIFY_DEDUP_SEC = 24 * 60 * 60;
 
 /**
  * One detection pass over watched files and folders.
@@ -67,12 +69,17 @@ async function checkContentChanges(ctx) {
       }
 
       log(`changed ${meta.title}`);
+      if (wasRecentlyNotified(state, token, config, Math.floor(Date.now() / 1000))) {
+        log(`skip duplicate notify ${meta.title}`);
+        continue;
+      }
       await notifyFileAttachment(client, config, {
         fileToken: token,
         fileType: type,
         reason: '文件内容已更新',
         titleHint: meta.title,
       });
+      markNotified(state, token, Math.floor(Date.now() / 1000));
       notified += 1;
     }
   }
@@ -214,8 +221,18 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, bootstra
   }
 
   // 同一文件夹本轮新增：单文件直发，多文件打 zip
-  if (newFiles.length === 1) {
-    const child = newFiles[0];
+  const toNotify = [];
+  for (const child of newFiles) {
+    if (wasRecentlyNotified(state, child.token, config, nowSec)) {
+      log(`skip duplicate notify ${child.name}`);
+      await trackNewChild({ client, state, child });
+      continue;
+    }
+    toNotify.push(child);
+  }
+
+  if (toNotify.length === 1) {
+    const child = toNotify[0];
     log(`notify ${child.name} in ${folder.name}`);
     await maybeAutoSubscribe(client, config, child.token, child.type);
     await notifyFileAttachment(client, config, {
@@ -225,18 +242,20 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, bootstra
       titleHint: child.name,
     });
     await trackNewChild({ client, state, child });
+    markNotified(state, child.token, nowSec);
     notified += 1;
-  } else if (newFiles.length > 1) {
-    log(`zip ${newFiles.length} new file(s) in ${folder.name}`);
-    for (const child of newFiles) {
+  } else if (toNotify.length > 1) {
+    log(`zip ${toNotify.length} new file(s) in ${folder.name}`);
+    for (const child of toNotify) {
       await maybeAutoSubscribe(client, config, child.token, child.type);
       await trackNewChild({ client, state, child });
+      markNotified(state, child.token, nowSec);
     }
     await notifyFilesAsZip(client, config, {
       reason: '文件夹有新上传/新建',
       folderName: folder.name,
       zipNameHint: folder.name,
-      files: newFiles.map((c) => ({ token: c.token, type: c.type, name: c.name })),
+      files: toNotify.map((c) => ({ token: c.token, type: c.type, name: c.name })),
     });
     notified += 1;
   }
@@ -277,4 +296,15 @@ async function trackNewChild({ client, state, child, metaModify, metaTitle }) {
     }
   }
   state.files[child.token] = { type: child.type, lastModify, title };
+}
+
+function wasRecentlyNotified(state, token, config, nowSec) {
+  const dedupSec = config.notifyDedupSec ?? DEFAULT_NOTIFY_DEDUP_SEC;
+  const at = Number(state.notified?.[token]) || 0;
+  return at > 0 && nowSec - at < dedupSec;
+}
+
+function markNotified(state, token, nowSec) {
+  if (!state.notified) state.notified = {};
+  state.notified[token] = nowSec;
 }
