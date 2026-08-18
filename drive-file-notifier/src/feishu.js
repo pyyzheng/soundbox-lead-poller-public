@@ -371,6 +371,7 @@ export function resolveDriveFileUrl(meta, fileToken, fileType = 'file') {
     sheet: 'sheets',
     bitable: 'base',
     slides: 'slides',
+    folder: 'drive/folder',
     file: 'file',
   }[t] || 'file';
   return `https://www.feishu.cn/${seg}/${fileToken}`;

@@ -138,6 +138,41 @@ test('already-listed subfolder notifies a brand new child', async () => {
   assert.equal(sent[0].fileToken, FILE_NEW);
 });
 
+test('newly uploaded folder notifies all contained files regardless of modify time', async () => {
+  const NEW_FOLDER = 'newfolder';
+  const FILE1 = 'f1';
+  const FILE2 = 'f2';
+  const client = {
+    listed: [],
+    folders: {
+      [ROOT]: [{ token: NEW_FOLDER, type: 'folder', name: 'uploaded' }],
+      [NEW_FOLDER]: [
+        { token: FILE1, type: 'file', name: 'old1.pdf' },
+        { token: FILE2, type: 'file', name: 'old2.pdf' },
+      ],
+    },
+    metas: {
+      [NEW_FOLDER]: { modify: now, title: 'uploaded' },
+      [FILE1]: { modify: now - 86400 * 90, title: 'old1.pdf' },
+      [FILE2]: { modify: now - 86400 * 60, title: 'old2.pdf' },
+    },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+  };
+  const { sent, deps } = makeDeps(client);
+  const { notified } = await pollCycle({ client, config, state, tag: 't', deps });
+  assert.ok(sent.some((s) => s.kind === 'zip'));
+  assert.ok(sent.some((s) => s.kind === 'folder'));
+  assert.equal(sent.find((s) => s.kind === 'zip').files.length, 2);
+  assert.ok(notified >= 2);
+});
+
 test('does not resend a file already notified within the dedup window', async () => {
   const client = {
     listed: [],

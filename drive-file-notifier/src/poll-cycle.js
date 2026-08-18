@@ -136,7 +136,7 @@ const DEFAULT_STALE_RESCAN_SEC = 180;
  * re-listed on a timer so uploads are not missed when modify_time is unchanged.
  */
 async function checkFolderAdditions(ctx) {
-  const { config, state, isFirstRun, log, warn } = ctx;
+  const { client, config, state, isFirstRun, log, warn } = ctx;
   const maxDepth = config.maxFolderDepth ?? DEFAULT_MAX_DEPTH;
   const budget = { left: config.folderScanBudget ?? DEFAULT_FOLDER_BUDGET };
   const staleBudget = { left: config.staleRescanBudget ?? 50 };
@@ -197,8 +197,26 @@ async function checkFolderAdditions(ctx) {
       prevSet,
       seedOnly,
       firstSeen,
+      notifyAllNewFiles: Boolean(folder.isNewFolder && !seedOnly),
     });
     notified += result.notified;
+
+    if (folder.isNewFolder && !seedOnly) {
+      if (!wasRecentlyNotified(state, folder.token, config, nowSec)) {
+        await ctx.notifyFolderCreated(client, config, {
+          folderToken: folder.token,
+          folderName: folder.name,
+          folderPath: folder.path,
+          parentPath: folder.path.includes('/')
+            ? folder.path.slice(0, folder.path.lastIndexOf('/'))
+            : '',
+          fileNames: result.fileNames,
+        });
+        markNotified(state, folder.token, nowSec);
+        notified += 1;
+      }
+    }
+
     state.folderChildren[folder.token] = result.tokens;
     rememberSubfolders(state, folder, result.subfolders);
     if (!state.folderListedAt) state.folderListedAt = {};
@@ -212,9 +230,8 @@ async function checkFolderAdditions(ctx) {
           path: `${folder.path}/${sub.name}`,
           parentName: folder.name,
           depth: folder.depth + 1,
-          // Newly discovered folders must be listed immediately so files already
-          // inside them (the usual "upload into a nested folder" case) are seen.
           force: firstSeen || !state.folderChildren[sub.token],
+          isNewFolder: folder.isNewFolder || sub.isNew,
         });
       }
     } else if (result.subfolders.length) {
@@ -253,6 +270,7 @@ function enqueueKnownChildren(state, folder, maxDepth, queue) {
       parentName: folder.name,
       depth: folder.depth + 1,
       force: state.folderChildren[sub.token] === undefined,
+      isNewFolder: false,
     });
   }
 }
@@ -275,7 +293,7 @@ function folderIsStale(state, token, config, nowSec) {
   return last > 0 && nowSec - last >= staleSec;
 }
 
-async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSeen }) {
+async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSeen, notifyAllNewFiles }) {
   const { client, config, state, log } = ctx;
   const tokens = [];
   const subfolders = [];
@@ -291,19 +309,16 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
     const isNew = !prevSet.has(child.token);
 
     if (child.type === 'folder') {
-      if (isNew && !seedOnly && !firstSeen) {
-        log(`new folder: ${child.name}`);
-        await ctx.notifyFolderCreated(client, config, {
-          folderName: child.name,
-          parentName: folder.name,
-        });
-        notified += 1;
-      }
-      subfolders.push({ token: child.token, name: child.name });
+      subfolders.push({ token: child.token, name: child.name, isNew });
       continue;
     }
 
     if (!isNew) continue;
+    if (notifyAllNewFiles) {
+      log(`new folder upload file ${child.name}`);
+      newFiles.push(child);
+      continue;
+    }
     if (seedOnly || firstSeen) {
       bootstrapCandidates.push(child);
       continue;
@@ -325,8 +340,16 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
     }
   }
 
-  notified += await sendNewFiles(ctx, folder, newFiles, nowSec);
-  return { tokens, subfolders, notified };
+  const fileNotifyCount = await sendNewFiles(ctx, folder, newFiles, nowSec);
+  notified += fileNotifyCount;
+
+  return {
+    tokens,
+    subfolders,
+    notified,
+    fileNames: newFiles.map((c) => c.name),
+    fileCount: newFiles.length,
+  };
 }
 
 async function sendNewFiles(ctx, folder, newFiles, nowSec) {

@@ -18,4 +18,8 @@ test('resolveDriveFileUrl falls back by file type', () => {
     resolveDriveFileUrl(null, 'tok123', 'file'),
     'https://www.feishu.cn/file/tok123',
   );
+  assert.equal(
+    resolveDriveFileUrl(null, 'tok123', 'folder'),
+    'https://www.feishu.cn/drive/folder/tok123',
+  );
 });
