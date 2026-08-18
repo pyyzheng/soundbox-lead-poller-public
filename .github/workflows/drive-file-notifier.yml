@@ -17,9 +17,9 @@ on:
         description: "正常结束后是否接力下一轮"
         required: false
         default: "true"
-  # 看门狗：链条断了时每半小时尝试拉起来一次
+  # 看门狗：链条断了时每 2 小时尝试拉起来一次（太频繁会 cancel 正在跑的 job 并丢状态）
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "17 */2 * * *"
 
 # 新 run 启动时取消还在跑的旧 run，避免一直卡在旧代码上
 concurrency:
@@ -72,7 +72,8 @@ jobs:
           APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           CHAT_ID: ${{ secrets.DRIVE_NOTIFIER_CHAT_ID }}
           STATE_PATH: ${{ github.workspace }}/drive-file-notifier/.drive-notifier-state.json
-          POLL_INTERVAL_MS: "30000"
+          POLL_INTERVAL_MS: "60000"
+          CYCLE_TIMEOUT_MS: "1200000"
           DURATION_MINUTES: ${{ inputs.duration_minutes || '60' }}
         run: MAX_RUN_MS=$(( DURATION_MINUTES * 60 * 1000 )) npm run loop
 

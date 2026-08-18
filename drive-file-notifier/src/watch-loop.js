@@ -4,13 +4,12 @@ import { pollCycle } from './poll-cycle.js';
 import { loadState, resolveStatePath, saveState } from './state.js';
 
 const DEFAULT_INTERVAL_MS = 30_000;
-// Stay well under the 6h GitHub Actions job ceiling; the workflow chains a successor.
 const DEFAULT_DURATION_MS = 5 * 60 * 60 * 1000;
+// Large Drive trees can take several minutes; never start the next cycle on top.
+const DEFAULT_CYCLE_TIMEOUT_MS = 20 * 60 * 1000;
 
 /**
  * Long-running poll loop for hosted runners.
- * GitHub's `schedule` events are unreliable and capped at 5 minutes, so a
- * single job polls on a short interval and the workflow starts the next one.
  */
 async function main() {
   const statePath = resolveStatePath(loadConfig());
@@ -20,6 +19,7 @@ async function main() {
   let client = createClient(config.appId, config.appSecret);
   const intervalMs = Number(process.env.POLL_INTERVAL_MS) || config.pollIntervalMs || DEFAULT_INTERVAL_MS;
   const durationMs = Number(process.env.MAX_RUN_MS) || DEFAULT_DURATION_MS;
+  const cycleTimeoutMs = Number(process.env.CYCLE_TIMEOUT_MS) || config.cycleTimeoutMs || DEFAULT_CYCLE_TIMEOUT_MS;
   const deadline = Date.now() + durationMs;
 
   console.log(
@@ -38,21 +38,44 @@ async function main() {
 
   while (!stopping && Date.now() < deadline) {
     cycles += 1;
+    const cycleStart = Date.now();
     try {
-      // Pick up watchFolders / config edits without waiting for job restart.
       config = loadConfig();
       client = createClient(config.appId, config.appSecret);
-      const { notified } = await pollCycle({ client, config, state, tag: 'loop' });
+      const { notified } = await withTimeout(
+        pollCycle({ client, config, state, tag: 'loop' }),
+        cycleTimeoutMs,
+        `poll cycle exceeded ${Math.round(cycleTimeoutMs / 1000)}s`,
+      );
       totalNotified += notified;
       saveState(statePath, state);
     } catch (err) {
       console.error(`[loop] cycle ${cycles} failed: ${err.message}`);
     }
+
+    const elapsed = Date.now() - cycleStart;
     if (stopping || Date.now() >= deadline) break;
-    await sleep(intervalMs);
+    const waitMs = Math.max(0, intervalMs - elapsed);
+    if (waitMs > 0) await sleep(waitMs);
   }
 
   console.log(`[loop] done cycles=${cycles} notified=${totalNotified} state=${statePath}`);
+}
+
+function withTimeout(promise, ms, message) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
 }
 
 function sleep(ms) {

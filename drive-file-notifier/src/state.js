@@ -1,7 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const EMPTY_STATE = { initialized: false, files: {}, folderChildren: {}, notified: {} };
+const EMPTY_STATE = {
+  initialized: false,
+  files: {},
+  folderChildren: {},
+  notified: {},
+  folderMeta: {},
+  subfolders: {},
+};
 
 export function resolveStatePath(config) {
   return process.env.STATE_PATH || path.join(config.root, '.drive-notifier-state.json');

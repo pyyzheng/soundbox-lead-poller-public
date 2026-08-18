@@ -1,29 +1,50 @@
-import { getFileMetas, listFolderChildren } from './feishu.js';
 import {
-  maybeAutoSubscribe,
-  notifyFileAttachment,
-  notifyFilesAsZip,
-  notifyFolderCreated,
+  getFileMetas as defaultGetFileMetas,
+  listFolderChildren as defaultListFolderChildren,
+} from './feishu.js';
+import {
+  maybeAutoSubscribe as defaultMaybeAutoSubscribe,
+  notifyFileAttachment as defaultNotifyFileAttachment,
+  notifyFilesAsZip as defaultNotifyFilesAsZip,
+  notifyFolderCreated as defaultNotifyFolderCreated,
 } from './notify.js';
 
-// Drive meta API accepts at most 50 tokens per request.
 const META_BATCH_SIZE = 50;
-const DEFAULT_MAX_DEPTH = 5;
+const DEFAULT_MAX_DEPTH = 8;
 const DEFAULT_RECENT_UPLOAD_SEC = 6 * 60 * 60;
-// 即使状态文件回退，同一文件在此时间内也不重复通知
 const DEFAULT_NOTIFY_DEDUP_SEC = 24 * 60 * 60;
+const DEFAULT_FOLDER_BUDGET = 80;
 
 /**
  * One detection pass over watched files and folders.
  * Mutates `state` and returns how many notifications were sent.
- * On the very first pass it only records a baseline so we don't spam the chat.
+ * On the very first pass it only establishes a baseline (no spam).
  */
-export async function pollCycle({ client, config, state, tag = 'once' }) {
+export async function pollCycle({
+  client,
+  config,
+  state,
+  tag = 'once',
+  deps = {},
+}) {
   const isFirstRun = !state.initialized;
   const log = (msg) => console.log(`[${tag}] ${msg}`);
   const warn = (msg) => console.warn(`[${tag}] ${msg}`);
+  const ctx = {
+    client,
+    config,
+    state,
+    isFirstRun,
+    log,
+    warn,
+    listFolderChildren: deps.listFolderChildren || defaultListFolderChildren,
+    getFileMetas: deps.getFileMetas || defaultGetFileMetas,
+    notifyFileAttachment: deps.notifyFileAttachment || defaultNotifyFileAttachment,
+    notifyFilesAsZip: deps.notifyFilesAsZip || defaultNotifyFilesAsZip,
+    notifyFolderCreated: deps.notifyFolderCreated || defaultNotifyFolderCreated,
+    maybeAutoSubscribe: deps.maybeAutoSubscribe || defaultMaybeAutoSubscribe,
+  };
 
-  const ctx = { client, config, state, isFirstRun, log, warn };
   let notified = 0;
   notified += await checkContentChanges(ctx);
   notified += await checkFolderAdditions(ctx);
@@ -40,10 +61,11 @@ async function checkContentChanges(ctx) {
   if (!docs.length) return 0;
 
   let notified = 0;
+  const nowSec = Math.floor(Date.now() / 1000);
   for (let i = 0; i < docs.length; i += META_BATCH_SIZE) {
     let metas;
     try {
-      metas = await getFileMetas(client, docs.slice(i, i + META_BATCH_SIZE));
+      metas = await ctx.getFileMetas(client, docs.slice(i, i + META_BATCH_SIZE));
     } catch (err) {
       warn(`getFileMetas failed: ${err.message}`);
       continue;
@@ -67,19 +89,19 @@ async function checkContentChanges(ctx) {
         log(`baseline update ${meta.title} (no notify on first run)`);
         continue;
       }
-
-      log(`changed ${meta.title}`);
-      if (wasRecentlyNotified(state, token, config, Math.floor(Date.now() / 1000))) {
+      if (wasRecentlyNotified(state, token, config, nowSec)) {
         log(`skip duplicate notify ${meta.title}`);
         continue;
       }
-      await notifyFileAttachment(client, config, {
+
+      log(`changed ${meta.title}`);
+      await ctx.notifyFileAttachment(client, config, {
         fileToken: token,
         fileType: type,
         reason: '文件内容已更新',
         titleHint: meta.title,
       });
-      markNotified(state, token, Math.floor(Date.now() / 1000));
+      markNotified(state, token, nowSec);
       notified += 1;
     }
   }
@@ -89,7 +111,6 @@ async function checkContentChanges(ctx) {
 function collectTrackedDocs(config, state) {
   const docs = [];
   const seen = new Set();
-
   for (const f of config.watchFiles || []) {
     if (!f?.token || seen.has(f.token)) continue;
     seen.add(f.token);
@@ -104,18 +125,26 @@ function collectTrackedDocs(config, state) {
   return docs;
 }
 
-/** Walk every watched folder and its subfolders, breadth-first. */
+/**
+ * Walk watched folders. After the tree is known, only re-list folders whose
+ * metadata changed, plus any folder we have never listed. This keeps a large
+ * Drive tree (300+ folders) inside one poll interval.
+ */
 async function checkFolderAdditions(ctx) {
-  const { config, state, isFirstRun, warn } = ctx;
+  const { config, state, isFirstRun, log, warn } = ctx;
   const maxDepth = config.maxFolderDepth ?? DEFAULT_MAX_DEPTH;
+  const budget = { left: config.folderScanBudget ?? DEFAULT_FOLDER_BUDGET };
+  ensureFolderMeta(state);
 
   let notified = 0;
   const visited = new Set();
   const queue = (config.watchFolders || []).map((f) => ({
     token: f.token,
     name: f.name || f.token,
+    path: f.name || f.token,
+    parentName: '',
     depth: 0,
-    isRoot: true,
+    force: true, // roots always listed so new top-level files are never missed
   }));
 
   while (queue.length) {
@@ -123,9 +152,26 @@ async function checkFolderAdditions(ctx) {
     if (!folder.token || visited.has(folder.token)) continue;
     visited.add(folder.token);
 
+    const listed = state.folderChildren[folder.token] !== undefined;
+    let needsRescan = false;
+    if (listed && !folder.force) {
+      needsRescan = await folderNeedsRescan(ctx, folder.token, listed);
+    }
+    const shouldList = folder.force || !listed || needsRescan;
+    if (!shouldList) {
+      enqueueKnownChildren(state, folder, maxDepth, queue);
+      continue;
+    }
+    // Never defer roots, first-time folders, or folders whose metadata changed.
+    if (budget.left <= 0 && listed && !needsRescan && !folder.force) {
+      enqueueKnownChildren(state, folder, maxDepth, queue);
+      continue;
+    }
+    budget.left -= 1;
+
     let children;
     try {
-      children = await listFolderChildren(ctx.client, folder.token);
+      children = await ctx.listFolderChildren(ctx.client, folder.token);
     } catch (err) {
       warn(`list folder ${folder.name} failed: ${err.message}`);
       continue;
@@ -133,8 +179,7 @@ async function checkFolderAdditions(ctx) {
 
     const known = state.folderChildren[folder.token];
     const seedOnly = isFirstRun;
-    // 新监听根目录、以及首次见到的子文件夹，都按「最近上传」补发，避免静默跳过
-    const bootstrapNewWatch = !known && !isFirstRun;
+    const firstSeen = !listed && !isFirstRun;
     const prevSet = new Set(known || []);
 
     const result = await scanChildren(ctx, {
@@ -142,24 +187,77 @@ async function checkFolderAdditions(ctx) {
       children,
       prevSet,
       seedOnly,
-      bootstrapNewWatch,
+      firstSeen,
     });
     notified += result.notified;
     state.folderChildren[folder.token] = result.tokens;
+    rememberSubfolders(state, folder, result.subfolders);
 
     if (folder.depth < maxDepth) {
       for (const sub of result.subfolders) {
-        queue.push({ ...sub, depth: folder.depth + 1 });
+        queue.push({
+          token: sub.token,
+          name: sub.name,
+          path: `${folder.path}/${sub.name}`,
+          parentName: folder.name,
+          depth: folder.depth + 1,
+          // Newly discovered folders must be listed immediately so files already
+          // inside them (the usual "upload into a nested folder" case) are seen.
+          force: firstSeen || !state.folderChildren[sub.token],
+        });
       }
     } else if (result.subfolders.length) {
       warn(`depth limit ${maxDepth} reached at ${folder.name}, skipping subfolders`);
     }
   }
 
+  if (budget.left <= 0) {
+    log(`folder scan budget exhausted; remaining folders wait for later cycles`);
+  }
   return notified;
 }
 
-async function scanChildren(ctx, { folder, children, prevSet, seedOnly, bootstrapNewWatch }) {
+async function folderNeedsRescan(ctx, token, listed) {
+  if (!listed) return true;
+  const { client, state } = ctx;
+  try {
+    const [meta] = await ctx.getFileMetas(client, [{ token, type: 'folder' }]);
+    const modify = Number(meta?.latest_modify_time) || 0;
+    const prev = Number(state.folderMeta[token]?.lastModify) || 0;
+    if (modify && modify === prev) return false;
+    state.folderMeta[token] = { lastModify: modify || prev };
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+function enqueueKnownChildren(state, folder, maxDepth, queue) {
+  if (folder.depth >= maxDepth) return;
+  for (const sub of state.subfolders?.[folder.token] || []) {
+    queue.push({
+      token: sub.token,
+      name: sub.name,
+      path: `${folder.path}/${sub.name}`,
+      parentName: folder.name,
+      depth: folder.depth + 1,
+      force: state.folderChildren[sub.token] === undefined,
+    });
+  }
+}
+
+function rememberSubfolders(state, folder, subfolders) {
+  if (!state.subfolders) state.subfolders = {};
+  state.subfolders[folder.token] = subfolders.map((s) => ({ token: s.token, name: s.name }));
+}
+
+function ensureFolderMeta(state) {
+  if (!state.folderMeta) state.folderMeta = {};
+  if (!state.subfolders) state.subfolders = {};
+  if (!state.notified) state.notified = {};
+}
+
+async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSeen }) {
   const { client, config, state, log } = ctx;
   const tokens = [];
   const subfolders = [];
@@ -175,127 +273,125 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, bootstra
     const isNew = !prevSet.has(child.token);
 
     if (child.type === 'folder') {
-      // 已在监听树里的父目录新出现子文件夹才发「新建文件夹」通知
-      if (isNew && !seedOnly && !bootstrapNewWatch) {
+      if (isNew && !seedOnly && !firstSeen) {
         log(`new folder: ${child.name}`);
-        await notifyFolderCreated(client, config, {
+        await ctx.notifyFolderCreated(client, config, {
           folderName: child.name,
           parentName: folder.name,
         });
         notified += 1;
       }
-      subfolders.push({ token: child.token, name: child.name, isRoot: false });
+      subfolders.push({ token: child.token, name: child.name });
       continue;
     }
 
     if (!isNew) continue;
     if (seedOnly) {
       log(`seed folder child ${child.name}`);
+      await trackNewChild(ctx, { child });
       continue;
     }
-    if (bootstrapNewWatch) {
+    if (firstSeen) {
       bootstrapCandidates.push(child);
       continue;
     }
-
     newFiles.push(child);
   }
 
   if (bootstrapCandidates.length) {
-    const metaByToken = await loadModifyTimes(client, bootstrapCandidates);
+    const metaByToken = await loadModifyTimes(ctx, bootstrapCandidates);
     for (const child of bootstrapCandidates) {
-      const modify = metaByToken.get(child.token) || 0;
+      const modify = Number(metaByToken.get(child.token)) || 0;
       if (modify >= nowSec - recentWindowSec) {
         log(`bootstrap notify recent ${child.name}`);
         newFiles.push(child);
       } else {
         log(`bootstrap seed old ${child.name}`);
-        await trackNewChild({
-          client,
-          state,
-          child,
-          metaModify: metaByToken.get(child.token),
-        });
+        await trackNewChild(ctx, { child, metaModify: modify });
       }
     }
   }
 
-  // 同一文件夹本轮新增：单文件直发，多文件打 zip
+  notified += await sendNewFiles(ctx, folder, newFiles, nowSec);
+  return { tokens, subfolders, notified };
+}
+
+async function sendNewFiles(ctx, folder, newFiles, nowSec) {
+  const { client, config, state, log } = ctx;
   const toNotify = [];
   for (const child of newFiles) {
     if (wasRecentlyNotified(state, child.token, config, nowSec)) {
       log(`skip duplicate notify ${child.name}`);
-      await trackNewChild({ client, state, child });
+      await trackNewChild(ctx, { child });
       continue;
     }
     toNotify.push(child);
   }
+  if (!toNotify.length) return 0;
 
   if (toNotify.length === 1) {
     const child = toNotify[0];
     log(`notify ${child.name} in ${folder.name}`);
-    await maybeAutoSubscribe(client, config, child.token, child.type);
-    await notifyFileAttachment(client, config, {
+    await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
+    await ctx.notifyFileAttachment(client, config, {
       fileToken: child.token,
       fileType: child.type,
       reason: '文件夹有新上传/新建',
       titleHint: child.name,
+      folderPath: folder.path,
     });
-    await trackNewChild({ client, state, child });
+    await trackNewChild(ctx, { child });
     markNotified(state, child.token, nowSec);
-    notified += 1;
-  } else if (toNotify.length > 1) {
-    log(`zip ${toNotify.length} new file(s) in ${folder.name}`);
-    for (const child of toNotify) {
-      await maybeAutoSubscribe(client, config, child.token, child.type);
-      await trackNewChild({ client, state, child });
-      markNotified(state, child.token, nowSec);
-    }
-    await notifyFilesAsZip(client, config, {
-      reason: '文件夹有新上传/新建',
-      folderName: folder.name,
-      zipNameHint: folder.name,
-      files: toNotify.map((c) => ({ token: c.token, type: c.type, name: c.name })),
-    });
-    notified += 1;
+    return 1;
   }
 
-  return { tokens, subfolders, notified };
+  log(`zip ${toNotify.length} new file(s) in ${folder.name}`);
+  for (const child of toNotify) {
+    await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
+    await trackNewChild(ctx, { child });
+    markNotified(state, child.token, nowSec);
+  }
+  await ctx.notifyFilesAsZip(client, config, {
+    reason: '文件夹有新上传/新建',
+    folderName: folder.path,
+    zipNameHint: folder.name,
+    files: toNotify.map((c) => ({ token: c.token, type: c.type, name: c.name })),
+  });
+  return 1;
 }
 
-async function loadModifyTimes(client, children) {
+async function loadModifyTimes(ctx, children) {
   const map = new Map();
   for (let i = 0; i < children.length; i += META_BATCH_SIZE) {
     const chunk = children.slice(i, i + META_BATCH_SIZE);
     try {
-      const metas = await getFileMetas(
-        client,
+      const metas = await ctx.getFileMetas(
+        ctx.client,
         chunk.map((c) => ({ token: c.token, type: c.type })),
       );
       for (const meta of metas) {
         map.set(meta.doc_token, Number(meta.latest_modify_time) || 0);
       }
     } catch {
-      // leave missing entries at 0
+      // missing entries stay 0 → treated as not recent
     }
   }
   return map;
 }
 
-/** Record the new file so later passes can detect edits to it. */
-async function trackNewChild({ client, state, child, metaModify, metaTitle }) {
+async function trackNewChild(ctx, { child, metaModify, metaTitle }) {
   let lastModify = metaModify || 0;
   let title = metaTitle || child.name;
-  if (!metaModify) {
+  if (metaModify == null) {
     try {
-      const [meta] = await getFileMetas(client, [{ token: child.token, type: child.type }]);
+      const [meta] = await ctx.getFileMetas(ctx.client, [{ token: child.token, type: child.type }]);
       lastModify = Number(meta?.latest_modify_time) || 0;
       title = meta?.title || child.name;
     } catch {
-      // keep defaults; next pass will seed the real modify time
+      // keep defaults
     }
   }
-  state.files[child.token] = { type: child.type, lastModify, title };
+  ctx.state.files[child.token] = { type: child.type, lastModify, title };
 }
 
 function wasRecentlyNotified(state, token, config, nowSec) {

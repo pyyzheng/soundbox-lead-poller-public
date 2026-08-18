@@ -26,7 +26,11 @@
     }
   ],
   "editDebounceMs": 15000,
-  "pollIntervalMs": 30000,
+  "pollIntervalMs": 60000,
+  "maxFolderDepth": 8,
+  "folderScanBudget": 120,
+  "recentUploadWindowSec": 21600,
+  "notifyDedupSec": 86400,
   "maxFileBytes": 31457280,
   "autoSubscribeNewFiles": true,
   "captionPrefix": "【云盘更新】",

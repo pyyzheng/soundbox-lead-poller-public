@@ -25,6 +25,7 @@ export async function notifyFileAttachment(client, config, {
   fileType,
   reason,
   titleHint,
+  folderPath,
 }) {
   fs.mkdirSync(config.tmpDir, { recursive: true });
   const maxBytes = config.maxFileBytes || 30 * 1024 * 1024;
@@ -60,6 +61,7 @@ export async function notifyFileAttachment(client, config, {
     }
 
     const caption = composeMessage(config, resolveEventLabel(reason), [
+      ...(folderPath ? [`文件夹：${folderPath}`] : []),
       `文件：${sendName}`,
       `大小：${formatBytes(size)}`,
       ...(note ? [note] : []),
@@ -130,6 +132,7 @@ export async function notifyFilesAsZip(client, config, {
         packIndex: i,
         packCount: packs.length,
         folderName,
+        folderPath: folderName,
       });
       const sent = await sendTextMessage(client, config.chatId, caption);
       const fileKey = await uploadImFile(client, pack.localPath, pack.fileName);
@@ -266,9 +269,9 @@ function sanitizeZipStem(name) {
   return (raw || 'cloud-update').slice(0, 80);
 }
 
-function buildZipCaption(config, { reason, pack, packIndex, packCount, folderName }) {
+function buildZipCaption(config, { reason, pack, packIndex, packCount, folderName, folderPath }) {
   const detail = [];
-  if (folderName) detail.push(`文件夹：${folderName}`);
+  if (folderPath || folderName) detail.push(`文件夹：${folderPath || folderName}`);
   detail.push(`压缩包：${pack.fileName}`);
   detail.push(`大小：${formatBytes(pack.size)}`);
   detail.push(`包含 ${pack.names.length} 个文件：`);
