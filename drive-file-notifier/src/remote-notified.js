@@ -92,6 +92,10 @@ export async function mergeRemoteNotifiedInto(state) {
       const remote = Number(at) || 0;
       if (remote > prev) state.notified[token] = remote;
     }
+    if (Object.keys(notified).length > 0 && !state.initialized) {
+      state.initialized = true;
+      console.log(`[state] remote has notified tokens → marking initialized to skip bootstrap`);
+    }
     console.log(`[state] merged ${Object.keys(notified).length} remote notified token(s)`);
   } catch (err) {
     console.warn(`[state] merge remote notified failed: ${err.message}`);
