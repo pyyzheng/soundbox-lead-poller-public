@@ -192,3 +192,27 @@ test('does not resend a file already notified within the dedup window', async ()
   assert.equal(notified, 0);
   assert.equal(sent.length, 0);
 });
+
+test('second poll does not resend a file notified in the previous cycle', async () => {
+  const client = {
+    listed: [],
+    folders: { [ROOT]: [{ token: FILE_NEW, type: 'file', name: 'new.pdf' }] },
+    metas: { [FILE_NEW]: { modify: now, title: 'new.pdf' } },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+  };
+  const first = makeDeps(client);
+  const { notified } = await pollCycle({ client, config, state, tag: 't', deps: first.deps });
+  assert.equal(notified, 1);
+  client.listed = [];
+  const second = makeDeps(client);
+  const again = await pollCycle({ client, config, state, tag: 't', deps: second.deps });
+  assert.equal(again.notified, 0);
+  assert.equal(second.sent.length, 0);
+});

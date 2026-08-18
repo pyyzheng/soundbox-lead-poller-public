@@ -5,8 +5,6 @@ import { loadState, resolveStatePath, saveState } from './state.js';
 
 const DEFAULT_INTERVAL_MS = 30_000;
 const DEFAULT_DURATION_MS = 5 * 60 * 60 * 1000;
-// Large Drive trees can take several minutes; never start the next cycle on top.
-const DEFAULT_CYCLE_TIMEOUT_MS = 20 * 60 * 1000;
 
 /**
  * Long-running poll loop for hosted runners.
@@ -19,8 +17,8 @@ async function main() {
   let client = createClient(config.appId, config.appSecret);
   const intervalMs = Number(process.env.POLL_INTERVAL_MS) || config.pollIntervalMs || DEFAULT_INTERVAL_MS;
   const durationMs = Number(process.env.MAX_RUN_MS) || DEFAULT_DURATION_MS;
-  const cycleTimeoutMs = Number(process.env.CYCLE_TIMEOUT_MS) || config.cycleTimeoutMs || DEFAULT_CYCLE_TIMEOUT_MS;
   const deadline = Date.now() + durationMs;
+  const persistState = () => saveState(statePath, state);
 
   console.log(
     `[loop] polling every ${Math.round(intervalMs / 1000)}s for ${Math.round(durationMs / 60000)}min`,
@@ -42,16 +40,18 @@ async function main() {
     try {
       config = loadConfig();
       client = createClient(config.appId, config.appSecret);
-      const { notified } = await withTimeout(
-        pollCycle({ client, config, state, tag: 'loop' }),
-        cycleTimeoutMs,
-        `poll cycle exceeded ${Math.round(cycleTimeoutMs / 1000)}s`,
-      );
+      const { notified } = await pollCycle({
+        client,
+        config,
+        state,
+        tag: 'loop',
+        deps: { persistState },
+      });
       totalNotified += notified;
-      saveState(statePath, state);
+      persistState();
     } catch (err) {
       console.error(`[loop] cycle ${cycles} failed: ${err.message}`);
-      saveState(statePath, state);
+      persistState();
     }
 
     const elapsed = Date.now() - cycleStart;
@@ -61,22 +61,6 @@ async function main() {
   }
 
   console.log(`[loop] done cycles=${cycles} notified=${totalNotified} state=${statePath}`);
-}
-
-function withTimeout(promise, ms, message) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(message)), ms);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (err) => {
-        clearTimeout(timer);
-        reject(err);
-      },
-    );
-  });
 }
 
 function sleep(ms) {

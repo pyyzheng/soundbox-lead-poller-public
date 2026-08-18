@@ -4,6 +4,7 @@ import {
   downloadDriveFile,
   exportOnlineDoc,
   getFileMeta,
+  probeDriveFileSize,
   resolveDriveFileUrl,
   safeFileName,
   sendFileMessage,
@@ -28,12 +29,28 @@ export async function notifyFileAttachment(client, config, {
   titleHint,
   folderPath,
   folderToken,
+  driveUrl,
 }) {
   fs.mkdirSync(config.tmpDir, { recursive: true });
   const maxBytes = config.maxFileBytes || 30 * 1024 * 1024;
   const temps = [];
 
   try {
+    const metaHint = await getFileMeta(client, fileToken, fileType).catch(() => null);
+    const metaForLink = { ...metaHint, url: driveUrl || metaHint?.url };
+    const hintedSize = Number(metaHint?.size) || await probeDriveFileSize(client, fileToken).catch(() => 0);
+    if (hintedSize > maxBytes) {
+      return notifyOversizedLink(client, config, {
+        fileToken,
+        fileType,
+        reason,
+        titleHint: titleHint || metaHint?.title,
+        folderPath,
+        sizeBytes: hintedSize,
+        meta: metaForLink,
+      });
+    }
+
     const prepared = await prepareLocalFile(
       client,
       config,
@@ -61,7 +78,7 @@ export async function notifyFileAttachment(client, config, {
           titleHint: prepared.sendName,
           folderPath,
           sizeBytes: prepared.size,
-          meta: prepared.meta,
+          meta: { ...prepared.meta, url: driveUrl || prepared.meta?.url },
         });
       }
       temps.push(compressed.localPath);

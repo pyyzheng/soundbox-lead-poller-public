@@ -43,14 +43,12 @@ export async function pollCycle({
     notifyFilesAsZip: deps.notifyFilesAsZip || defaultNotifyFilesAsZip,
     notifyFolderCreated: deps.notifyFolderCreated || defaultNotifyFolderCreated,
     maybeAutoSubscribe: deps.maybeAutoSubscribe || defaultMaybeAutoSubscribe,
+    persistState: deps.persistState,
   };
 
   let notified = 0;
   notified += await checkContentChanges(ctx);
   notified += await checkFolderAdditions(ctx);
-  if (!isFirstRun) {
-    notified += await backfillUnnotifiedRecent(ctx);
-  }
   return { notified, isFirstRun };
 }
 
@@ -98,13 +96,14 @@ async function checkContentChanges(ctx) {
       }
 
       log(`changed ${meta.title}`);
+      markNotified(ctx, token, nowSec);
       await ctx.notifyFileAttachment(client, config, {
         fileToken: token,
         fileType: type,
         reason: '文件内容已更新',
         titleHint: meta.title,
+        driveUrl: meta.url,
       });
-      markNotified(state, token, nowSec);
       notified += 1;
     }
   }
@@ -203,11 +202,11 @@ async function checkFolderAdditions(ctx) {
 
     if (folder.isNewFolder && !seedOnly && result.fileCount === 0) {
       if (!wasRecentlyNotified(state, folder.token, config, nowSec)) {
+        markNotified(ctx, folder.token, nowSec);
         await ctx.notifyFolderCreated(client, config, {
           folderToken: folder.token,
           folderPath: folder.path,
         });
-        markNotified(state, folder.token, nowSec);
         notified += 1;
       }
     }
@@ -363,7 +362,9 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
   if (toNotify.length === 1) {
     const child = toNotify[0];
     log(`notify ${child.name} in ${folder.name}`);
+    markNotified(ctx, child.token, nowSec);
     await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
+    await trackNewChild(ctx, { child });
     await ctx.notifyFileAttachment(client, config, {
       fileToken: child.token,
       fileType: child.type,
@@ -371,17 +372,16 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
       titleHint: child.name,
       folderPath: folder.path,
       folderToken: folder.token,
+      driveUrl: child.url,
     });
-    await trackNewChild(ctx, { child });
-    markNotified(state, child.token, nowSec);
     return 1;
   }
 
   log(`zip ${toNotify.length} new file(s) in ${folder.name}`);
   for (const child of toNotify) {
+    markNotified(ctx, child.token, nowSec);
     await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
     await trackNewChild(ctx, { child });
-    markNotified(state, child.token, nowSec);
   }
   await ctx.notifyFilesAsZip(client, config, {
     reason: '文件夹有新上传/新建',
@@ -433,31 +433,13 @@ function wasRecentlyNotified(state, token, config, nowSec) {
   return at > 0 && nowSec - at < dedupSec;
 }
 
-function markNotified(state, token, nowSec) {
+function markNotified(ctx, token, nowSec) {
+  const { state } = ctx;
   if (!state.notified) state.notified = {};
   state.notified[token] = nowSec;
-}
-
-/** Recover files that were silently seeded during an earlier baseline pass. */
-async function backfillUnnotifiedRecent(ctx) {
-  const { client, config, state, log } = ctx;
-  const nowSec = Math.floor(Date.now() / 1000);
-  const window = config.recentUploadWindowSec ?? DEFAULT_RECENT_UPLOAD_SEC;
-  let notified = 0;
-  for (const [token, info] of Object.entries(state.files || {})) {
-    if (!info?.type || info.type === 'folder' || info.type === 'shortcut') continue;
-    if (wasRecentlyNotified(state, token, config, nowSec)) continue;
-    const modify = Number(info.lastModify) || 0;
-    if (modify < nowSec - window) continue;
-    log(`backfill notify ${info.title || token}`);
-    await ctx.notifyFileAttachment(client, config, {
-      fileToken: token,
-      fileType: info.type,
-      reason: '文件夹有新上传/新建',
-      titleHint: info.title || token,
-    });
-    markNotified(state, token, nowSec);
-    notified += 1;
+  try {
+    ctx.persistState?.();
+  } catch (err) {
+    ctx.warn?.(`persist state failed: ${err.message}`);
   }
-  return notified;
 }

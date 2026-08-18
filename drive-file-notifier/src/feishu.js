@@ -28,6 +28,28 @@ export async function getTenantToken(client) {
   return res.tenant_access_token;
 }
 
+/** Best-effort size from Content-Length; avoids downloading a 100MB+ file just to reject it. */
+export async function probeDriveFileSize(client, fileToken) {
+  const accessToken = await getTenantToken(client);
+  const controller = new AbortController();
+  try {
+    const resp = await fetch(
+      `https://open.feishu.cn/open-apis/drive/v1/files/${fileToken}/download`,
+      { headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal },
+    );
+    const len = Number(resp.headers.get('content-length')) || 0;
+    controller.abort();
+    try {
+      await resp.body?.cancel?.();
+    } catch {
+      // ignore
+    }
+    return len;
+  } catch {
+    return 0;
+  }
+}
+
 export async function subscribeResource(client, fileToken, fileType) {
   const params = { file_type: fileType };
   if (fileType === 'folder') {
@@ -94,6 +116,7 @@ export async function listFolderChildren(client, folderToken) {
         token: f.token,
         type: f.type || 'file',
         name: f.name,
+        url: f.url || '',
       });
     }
     pageToken = data?.has_more ? data.next_page_token : undefined;
@@ -363,7 +386,10 @@ export function safeFileName(name, fallback) {
 
 /** Drive meta URL from batchQuery(with_url=true), with a best-effort fallback. */
 export function resolveDriveFileUrl(meta, fileToken, fileType = 'file') {
-  if (meta?.url) return meta.url;
+  const candidates = [meta?.url, meta?.url_path];
+  for (const raw of candidates) {
+    if (isHttpUrl(raw)) return raw;
+  }
   const t = fileType || meta?.doc_type || 'file';
   const seg = {
     doc: 'docx',
@@ -375,4 +401,8 @@ export function resolveDriveFileUrl(meta, fileToken, fileType = 'file') {
     file: 'file',
   }[t] || 'file';
   return `https://www.feishu.cn/${seg}/${fileToken}`;
+}
+
+function isHttpUrl(value) {
+  return /^https?:\/\//i.test(String(value || '').trim());
 }
