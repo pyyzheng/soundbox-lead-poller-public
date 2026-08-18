@@ -30,6 +30,11 @@ export async function pollCycle({
   const isFirstRun = !state.initialized;
   const log = (msg) => console.log(`[${tag}] ${msg}`);
   const warn = (msg) => console.warn(`[${tag}] ${msg}`);
+
+  const notifiedCount = Object.keys(state.notified || {}).length;
+  const filesCount = Object.keys(state.files || {}).length;
+  log(`cycle start | isFirstRun=${isFirstRun} notified=${notifiedCount} files=${filesCount}`);
+
   const ctx = {
     client,
     config,
@@ -50,6 +55,10 @@ export async function pollCycle({
   let notified = 0;
   notified += await checkContentChanges(ctx);
   notified += await checkFolderAdditions(ctx);
+
+  if (notified > 0) {
+    log(`cycle end | sent ${notified} notification(s) this cycle`);
+  }
   return { notified, isFirstRun };
 }
 
@@ -93,11 +102,11 @@ async function checkContentChanges(ctx) {
         continue;
       }
       if (wasEverNotified(state, token)) {
-        log(`skip duplicate notify ${meta.title}`);
+        log(`skip duplicate content-change ${meta.title} token=${token.slice(0, 8)}`);
         continue;
       }
 
-      log(`changed ${meta.title}`);
+      log(`changed ${meta.title} token=${token.slice(0, 8)} modify=${modify} prev=${prev.lastModify}`);
       if (!(await markNotified(ctx, token, nowSec))) continue;
       await ctx.notifyFileAttachment(client, config, {
         fileToken: token,
@@ -152,7 +161,7 @@ async function checkFolderAdditions(ctx) {
     path: f.name || f.token,
     parentName: '',
     depth: 0,
-    force: true, // roots always listed so new top-level files are never missed
+    force: true,
   }));
 
   while (queue.length) {
@@ -172,7 +181,6 @@ async function checkFolderAdditions(ctx) {
       enqueueKnownChildren(state, folder, maxDepth, queue);
       continue;
     }
-    // Never defer roots, first-time folders, stale folders, or folders whose metadata changed.
     if (budget.left <= 0 && listed && !needsRescan && !folder.force && !stale) {
       enqueueKnownChildren(state, folder, maxDepth, queue);
       continue;
@@ -205,6 +213,7 @@ async function checkFolderAdditions(ctx) {
     if (folder.isNewFolder && !seedOnly && result.fileCount === 0) {
       if (!wasEverNotified(state, folder.token)) {
         if (await markNotified(ctx, folder.token, nowSec)) {
+          log(`notify empty new folder ${folder.path} token=${folder.token.slice(0, 8)}`);
           await ctx.notifyFolderCreated(client, config, {
             folderToken: folder.token,
             folderPath: folder.path,
@@ -311,8 +320,16 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
     }
 
     if (!isNew) continue;
+
+    // All paths check wasEverNotified before queueing for notification
+    if (wasEverNotified(state, child.token)) {
+      log(`skip already-notified ${child.name} token=${child.token.slice(0, 8)} path=${folder.path}`);
+      await trackNewChild(ctx, { child });
+      continue;
+    }
+
     if (notifyAllNewFiles) {
-      log(`new folder upload file ${child.name}`);
+      log(`new folder upload file ${child.name} token=${child.token.slice(0, 8)}`);
       newFiles.push(child);
       continue;
     }
@@ -320,6 +337,7 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
       bootstrapCandidates.push(child);
       continue;
     }
+    log(`new child ${child.name} token=${child.token.slice(0, 8)} in ${folder.path}`);
     newFiles.push(child);
   }
 
@@ -329,14 +347,14 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
       const modify = Number(metaByToken.get(child.token)) || 0;
       if (modify >= nowSec - recentWindowSec) {
         if (wasEverNotified(state, child.token)) {
-          log(`bootstrap skip duplicate ${child.name}`);
+          log(`bootstrap skip duplicate ${child.name} token=${child.token.slice(0, 8)}`);
           await trackNewChild(ctx, { child, metaModify: modify });
           continue;
         }
-        log(`${seedOnly ? 'baseline' : 'bootstrap'} notify recent ${child.name}`);
+        log(`${seedOnly ? 'baseline' : 'bootstrap'} notify recent ${child.name} token=${child.token.slice(0, 8)} age=${nowSec - modify}s`);
         newFiles.push(child);
       } else {
-        log(`${seedOnly ? 'baseline' : 'bootstrap'} seed old ${child.name}`);
+        log(`${seedOnly ? 'baseline' : 'bootstrap'} seed old ${child.name} token=${child.token.slice(0, 8)}`);
         await trackNewChild(ctx, { child, metaModify: modify });
       }
     }
@@ -359,7 +377,7 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
   const toNotify = [];
   for (const child of newFiles) {
     if (wasEverNotified(state, child.token)) {
-      log(`skip duplicate notify ${child.name}`);
+      log(`sendNewFiles skip duplicate ${child.name} token=${child.token.slice(0, 8)}`);
       await trackNewChild(ctx, { child });
       continue;
     }
@@ -369,7 +387,7 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
 
   if (toNotify.length === 1) {
     const child = toNotify[0];
-    log(`notify ${child.name} in ${folder.name}`);
+    log(`notify single ${child.name} token=${child.token.slice(0, 8)} in ${folder.path}`);
     if (!(await markNotified(ctx, child.token, nowSec))) return 0;
     await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
     await trackNewChild(ctx, { child });
@@ -385,7 +403,7 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
     return 1;
   }
 
-  log(`zip ${toNotify.length} new file(s) in ${folder.name}`);
+  log(`zip ${toNotify.length} new file(s) in ${folder.path}: ${toNotify.map((c) => c.name).join(', ')}`);
   const zipBatch = [];
   for (const child of toNotify) {
     if (await markNotified(ctx, child.token, nowSec)) {
@@ -446,17 +464,21 @@ function wasEverNotified(state, token) {
 async function markNotified(ctx, token, nowSec) {
   const { state, log, warn } = ctx;
   if (!state.notified) state.notified = {};
-  if (Number(state.notified[token]) > 0) return false;
+
+  if (Number(state.notified[token]) > 0) {
+    log(`markNotified BLOCKED (local) token=${token.slice(0, 8)} notifiedAt=${state.notified[token]}`);
+    return false;
+  }
 
   let claimed = true;
   try {
     claimed = await ctx.claimRemoteNotified(token, nowSec);
   } catch (err) {
-    warn(`remote claim failed (proceeding anyway): ${err.message}`);
+    warn(`remote claim error (proceeding with local-only dedup): ${err.message}`);
   }
   if (!claimed) {
     state.notified[token] = state.notified[token] || nowSec;
-    log(`skip duplicate notify (remote) ${token.slice(0, 8)}`);
+    log(`markNotified BLOCKED (remote) token=${token.slice(0, 8)}`);
     try {
       ctx.persistState?.();
     } catch (err) {
@@ -466,6 +488,7 @@ async function markNotified(ctx, token, nowSec) {
   }
 
   state.notified[token] = nowSec;
+  log(`markNotified OK token=${token.slice(0, 8)} at=${nowSec}`);
   try {
     ctx.persistState?.();
   } catch (err) {

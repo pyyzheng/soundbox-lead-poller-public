@@ -7,15 +7,28 @@ import { loadState, resolveStatePath, saveState } from './state.js';
 const DEFAULT_INTERVAL_MS = 30_000;
 const DEFAULT_DURATION_MS = 5 * 60 * 60 * 1000;
 
-/**
- * Long-running poll loop for hosted runners.
- */
+function stateDigest(state) {
+  const notifiedCount = Object.keys(state.notified || {}).length;
+  const filesCount = Object.keys(state.files || {}).length;
+  const foldersCount = Object.keys(state.folderChildren || {}).length;
+  return `initialized=${!!state.initialized} notified=${notifiedCount} files=${filesCount} folders=${foldersCount}`;
+}
+
 async function main() {
   const statePath = resolveStatePath(loadConfig());
   const state = loadState(statePath);
+  console.log(`[boot] state loaded from ${statePath}: ${stateDigest(state)}`);
+
+  console.log(`[boot] GITHUB_REPOSITORY=${process.env.GITHUB_REPOSITORY || '(unset)'}`);
+  console.log(`[boot] GITHUB_TOKEN=${process.env.GITHUB_TOKEN ? 'set' : 'unset'} GH_TOKEN=${process.env.GH_TOKEN ? 'set' : 'unset'}`);
+  console.log(`[boot] remoteNotifiedEnabled=${remoteNotifiedEnabled()}`);
+
   if (remoteNotifiedEnabled()) {
     await mergeRemoteNotifiedInto(state);
     saveState(statePath, state);
+    console.log(`[boot] state after remote merge: ${stateDigest(state)}`);
+  } else {
+    console.warn('[boot] remote notified NOT enabled — dedup depends only on local cache');
   }
 
   let config = loadConfig();
@@ -56,6 +69,7 @@ async function main() {
       persistState();
     } catch (err) {
       console.error(`[loop] cycle ${cycles} failed: ${err.message}`);
+      console.error(err.stack);
       persistState();
     }
 
@@ -66,6 +80,7 @@ async function main() {
   }
 
   console.log(`[loop] done cycles=${cycles} notified=${totalNotified} state=${statePath}`);
+  console.log(`[loop] final state: ${stateDigest(state)}`);
 }
 
 function sleep(ms) {
