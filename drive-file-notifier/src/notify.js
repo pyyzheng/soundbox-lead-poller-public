@@ -350,40 +350,23 @@ function buildZipCaption(config, { reason, pack, packIndex, packCount, folderNam
   return composeMessage(config, resolveEventLabel(reason), detail);
 }
 
-/** Text notice for a newly created folder, with a Drive link. */
-export async function notifyFolderCreated(client, config, {
-  folderToken,
-  folderName,
-  folderPath,
-  parentPath,
-  fileNames,
-}) {
+/** Text notice for an empty newly created folder — same caption layout as file notices. */
+export async function notifyFolderCreated(client, config, { folderToken, folderPath }) {
   const meta = folderToken
     ? await getFileMeta(client, folderToken, 'folder').catch(() => null)
     : null;
   const driveUrl = folderToken
     ? resolveDriveFileUrl(meta, folderToken, 'folder')
     : null;
+  const folderName = folderPath || meta?.title || folderToken || '新建文件夹';
   const detail = [
-    `文件夹：${folderPath || folderName}`,
-    ...(parentPath && parentPath !== (folderPath || folderName)
-      ? [`位置：${parentPath}`]
-      : []),
+    `文件夹：${folderName}`,
+    '说明：新建空文件夹，请打开链接在云盘查看',
+    ...(driveUrl ? [`链接：${driveUrl}`] : []),
   ];
-  if (fileNames?.length) {
-    detail.push(`包含 ${fileNames.length} 个文件：`);
-    for (const name of fileNames.slice(0, 15)) detail.push(`· ${name}`);
-    if (fileNames.length > 15) {
-      detail.push(`· …另有 ${fileNames.length - 15} 个文件，请打开链接查看`);
-    }
-    detail.push('说明：文件夹内文件见下方附件；也可点击链接在云盘查看');
-  } else {
-    detail.push('说明：新建空文件夹，请打开链接在云盘查看');
-  }
-  if (driveUrl) detail.push(`链接：${driveUrl}`);
   const text = composeMessage(config, '文件夹有新上传/新建', detail);
   const sent = await sendTextMessage(client, config.chatId, text);
-  console.log(`[sent-folder] ${folderPath || folderName}`);
+  console.log(`[sent-folder] ${folderName}`);
   return { messageId: sent?.message_id, mode: 'text', driveUrl };
 }
 

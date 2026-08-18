@@ -168,9 +168,9 @@ test('newly uploaded folder notifies all contained files regardless of modify ti
   const { sent, deps } = makeDeps(client);
   const { notified } = await pollCycle({ client, config, state, tag: 't', deps });
   assert.ok(sent.some((s) => s.kind === 'zip'));
-  assert.ok(sent.some((s) => s.kind === 'folder'));
+  assert.equal(sent.some((s) => s.kind === 'folder'), false);
   assert.equal(sent.find((s) => s.kind === 'zip').files.length, 2);
-  assert.ok(notified >= 2);
+  assert.equal(notified, 1);
 });
 
 test('does not resend a file already notified within the dedup window', async () => {

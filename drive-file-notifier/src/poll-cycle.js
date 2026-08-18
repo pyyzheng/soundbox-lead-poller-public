@@ -201,16 +201,11 @@ async function checkFolderAdditions(ctx) {
     });
     notified += result.notified;
 
-    if (folder.isNewFolder && !seedOnly) {
+    if (folder.isNewFolder && !seedOnly && result.fileCount === 0) {
       if (!wasRecentlyNotified(state, folder.token, config, nowSec)) {
         await ctx.notifyFolderCreated(client, config, {
           folderToken: folder.token,
-          folderName: folder.name,
           folderPath: folder.path,
-          parentPath: folder.path.includes('/')
-            ? folder.path.slice(0, folder.path.lastIndexOf('/'))
-            : '',
-          fileNames: result.fileNames,
         });
         markNotified(state, folder.token, nowSec);
         notified += 1;
