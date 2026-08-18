@@ -47,11 +47,6 @@ jobs:
           cache: npm
           cache-dependency-path: drive-file-notifier/package-lock.json
 
-      - name: Install system deps (PDF/image compress)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick ghostscript zip
-
       - name: Install npm deps
         run: npm ci
 

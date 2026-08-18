@@ -29,6 +29,7 @@
   "pollIntervalMs": 60000,
   "maxFolderDepth": 8,
   "folderScanBudget": 120,
+  "staleRescanSec": 180,
   "recentUploadWindowSec": 21600,
   "notifyDedupSec": 86400,
   "maxFileBytes": 31457280,

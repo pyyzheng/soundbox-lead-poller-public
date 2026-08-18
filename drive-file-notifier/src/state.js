@@ -8,6 +8,7 @@ const EMPTY_STATE = {
   notified: {},
   folderMeta: {},
   subfolders: {},
+  folderListedAt: {},
 };
 
 export function resolveStatePath(config) {

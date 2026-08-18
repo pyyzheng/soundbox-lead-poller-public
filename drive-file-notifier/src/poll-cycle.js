@@ -125,15 +125,18 @@ function collectTrackedDocs(config, state) {
   return docs;
 }
 
+const DEFAULT_STALE_RESCAN_SEC = 180;
+
 /**
  * Walk watched folders. After the tree is known, only re-list folders whose
- * metadata changed, plus any folder we have never listed. This keeps a large
- * Drive tree (300+ folders) inside one poll interval.
+ * metadata changed, plus any folder we have never listed. Stale folders are
+ * re-listed on a timer so uploads are not missed when modify_time is unchanged.
  */
 async function checkFolderAdditions(ctx) {
   const { config, state, isFirstRun, log, warn } = ctx;
   const maxDepth = config.maxFolderDepth ?? DEFAULT_MAX_DEPTH;
   const budget = { left: config.folderScanBudget ?? DEFAULT_FOLDER_BUDGET };
+  const nowSec = Math.floor(Date.now() / 1000);
   ensureFolderMeta(state);
 
   let notified = 0;
@@ -157,13 +160,14 @@ async function checkFolderAdditions(ctx) {
     if (listed && !folder.force) {
       needsRescan = await folderNeedsRescan(ctx, folder.token, listed);
     }
-    const shouldList = folder.force || !listed || needsRescan;
+    const stale = listed && folderIsStale(state, folder.token, config, nowSec);
+    const shouldList = folder.force || !listed || needsRescan || stale;
     if (!shouldList) {
       enqueueKnownChildren(state, folder, maxDepth, queue);
       continue;
     }
-    // Never defer roots, first-time folders, or folders whose metadata changed.
-    if (budget.left <= 0 && listed && !needsRescan && !folder.force) {
+    // Never defer roots, first-time folders, stale folders, or folders whose metadata changed.
+    if (budget.left <= 0 && listed && !needsRescan && !folder.force && !stale) {
       enqueueKnownChildren(state, folder, maxDepth, queue);
       continue;
     }
@@ -192,6 +196,8 @@ async function checkFolderAdditions(ctx) {
     notified += result.notified;
     state.folderChildren[folder.token] = result.tokens;
     rememberSubfolders(state, folder, result.subfolders);
+    if (!state.folderListedAt) state.folderListedAt = {};
+    state.folderListedAt[folder.token] = nowSec;
 
     if (folder.depth < maxDepth) {
       for (const sub of result.subfolders) {
@@ -255,6 +261,13 @@ function ensureFolderMeta(state) {
   if (!state.folderMeta) state.folderMeta = {};
   if (!state.subfolders) state.subfolders = {};
   if (!state.notified) state.notified = {};
+  if (!state.folderListedAt) state.folderListedAt = {};
+}
+
+function folderIsStale(state, token, config, nowSec) {
+  const staleSec = config.staleRescanSec ?? DEFAULT_STALE_RESCAN_SEC;
+  const last = Number(state.folderListedAt?.[token]) || 0;
+  return last > 0 && nowSec - last >= staleSec;
 }
 
 async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSeen }) {
