@@ -13,7 +13,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from lead_fallback_parser import strip_html
+from lead_fallback_parser import choose_email_body
 
 log = logging.getLogger("lead-poller")
 
@@ -151,11 +151,7 @@ def extract_email_body(msg_data: dict) -> str:
         return plain, html
 
     plain, html = walk(payload)
-    if plain:
-        return plain
-    if html:
-        return strip_html(html)
-    return ""
+    return choose_email_body(plain, html)
 
 
 def extract_attachments(msg_data: dict) -> list:

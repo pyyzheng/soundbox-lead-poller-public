@@ -10,6 +10,7 @@ Usage:
   python3 lead-fallback-parser.py --file /tmp/email-body.txt --from 'email@soundboxbooth.com'
 """
 
+import html as html_module
 import json
 import re
 import sys
@@ -72,6 +73,8 @@ COUNTRY_EN_ZH = {
     "cambodia": "柬埔寨", "myanmar": "缅甸", "laos": "老挝",
     "oman": "阿曼", "kuwait": "科威特", "bahrain": "巴林",
     "jordan": "约旦", "lebanon": "黎巴嫩", "iraq": "伊拉克",
+    "sint maarten": "荷属圣马丁", "st maarten": "荷属圣马丁",
+    "saint maarten": "荷属圣马丁", "st. maarten": "荷属圣马丁",
     "iceland": "冰岛", "luxembourg": "卢森堡", "malta": "马耳他",
     "cyprus": "塞浦路斯", "moldova": "摩尔多瓦", "belarus": "白俄罗斯",
     "albania": "阿尔巴尼亚", "north macedonia": "北马其顿",
@@ -116,6 +119,7 @@ PHONE_PREFIXES = {
     "+855": "柬埔寨", "+95": "缅甸", "+380": "乌克兰", "+375": "白俄罗斯",
     "+7": "俄罗斯/哈萨克", "+371": "拉脱维亚", "+370": "立陶宛", "+372": "爱沙尼亚",
     "+373": "摩尔多瓦", "+354": "冰岛",
+    "+1721": "荷属圣马丁",
 }
 
 # 地名 → 国家（城市名在前，国家名在后；城市名更精确，优先匹配）
@@ -131,6 +135,8 @@ _CITY_NAMES = {
     "sydney": "澳大利亚", "melbourne": "澳大利亚", "toronto": "加拿大",
     "vancouver": "加拿大", "johannesburg": "南非", "sao paulo": "巴西",
     "doha": "卡塔尔",
+    "sint maarten": "荷属圣马丁", "st maarten": "荷属圣马丁",
+    "saint maarten": "荷属圣马丁", "st. maarten": "荷属圣马丁",
 }
 # 国家名（城市名未匹配时兜底）
 _COUNTRY_NAMES = {k: v for k, v in COUNTRY_EN_ZH.items() if k not in (
@@ -146,36 +152,117 @@ def load_rules():
     return {}
 
 
+_FORM_LABEL = (
+    r"Name|Full name|E-?mail|Company|Telephone(?:\s*Number)?|Phone(?:\s*number)?|"
+    r"Whatsapp|WhatsApp|Message|Inquiry(?:\s*No)?|Country|Date|Time|"
+    r"Page URL|Remote IP|User Agent|Powered by|Select your country|"
+    r"姓名|邮箱|电话|公司|留言内容|留言|国家|咨询单号"
+)
+_FIELD_LABEL_LINE = re.compile(rf"^(?:{_FORM_LABEL})\s*[:：]", re.IGNORECASE)
+_WEBSITE_FORM_HTML = re.compile(
+    r"询价通知|询盘通知|Inquiry No\s*:|新官网询",
+    re.IGNORECASE,
+)
+
+
 def strip_html(text: str) -> str:
-    """去除 HTML 标签和实体"""
+    """去除 HTML 标签和实体；保留表格换行，并把 mailto 链接变成可见邮箱。"""
     if not text:
         return ""
+
+    def _mailto_repl(m):
+        href = (m.group(1) or "").strip()
+        label = re.sub(r"<[^>]+>", "", m.group(2) or "").strip()
+        return label or href
+
+    text = re.sub(
+        r'<a[^>]*href=["\']mailto:([^"\'?]+)(?:\?[^"\']*)?["\'][^>]*>(.*?)</a>',
+        _mailto_repl,
+        text,
+        flags=re.I | re.S,
+    )
     text = re.sub(r'<br\s*/?>', '\n', text, flags=re.I)
-    text = re.sub(r'</(?:p|div|span|strong|em|b|i|ul|ol|li)[^>]*>', '\n', text, flags=re.I)
+    text = re.sub(r'</t[rdh]\s*>', '\n', text, flags=re.I)
+    text = re.sub(r'<t[rdh][^>]*>', ' ', text, flags=re.I)
+    text = re.sub(r'</(?:p|div|span|strong|em|b|i|ul|ol|li|h[1-6]|tr)[^>]*>', '\n', text, flags=re.I)
     text = re.sub(r'<[^>]+>', '', text)
-    for entity, char in [('&amp;', '&'), ('&lt;', '<'), ('&gt;', '>'), ('&nbsp;', ' '), ('&quot;', '"')]:
-        text = text.replace(entity, char)
-    text = re.sub(r'&#(\d+);', lambda m: chr(int(m.group(1))), text)
+    text = html_module.unescape(text)
     return re.sub(r'\n{3,}', '\n\n', text).strip()
+
+
+def is_website_form_html(html: str) -> bool:
+    if not html:
+        return False
+    if _WEBSITE_FORM_HTML.search(html):
+        return True
+    if "mailto:" in html.lower() and re.search(r"(Name|Email|Phone|Country)\s*:", html, re.I):
+        return True
+    return False
+
+
+def choose_email_body(plain: str, html: str) -> str:
+    """网站询盘通知优先用 HTML（plain 常把表格邮箱留空）。"""
+    html_text = strip_html(html) if html else ""
+    if html and is_website_form_html(html):
+        return html_text
+    return (plain or html_text).strip()
 
 
 _INVALID_VALUES = {"/", "-", "N/A", "n/a", "null", "none"}
 
 
+def _looks_like_form_label(val: str) -> bool:
+    text = (val or "").strip()
+    if not text:
+        return False
+    return bool(_FIELD_LABEL_LINE.match(text))
+
+
+def _usable_phone(val: str) -> bool:
+    text = (val or "").strip()
+    if not text or text in _INVALID_VALUES or _looks_like_form_label(text):
+        return False
+    if "@" in text:
+        return False
+    if text.lower().startswith(("message", "inquiry", "name", "email", "company", "country")):
+        return False
+    return True
+
+
+def _usable_email(val: str) -> bool:
+    text = (val or "").strip()
+    if not text or text in _INVALID_VALUES or _looks_like_form_label(text):
+        return False
+    return "@" in text and "." in text.split("@")[-1]
+
+
+def extract_mailto_address(text: str) -> str:
+    for m in re.finditer(r"mailto:([^\s\"'<>?&]+)", text or "", re.I):
+        addr = html_module.unescape(m.group(1)).strip().rstrip(".")
+        if _usable_email(addr):
+            return addr
+    return ""
+
+
 def _valid_match(m):
     """提取正则匹配值，有效返回字符串，否则返回 None"""
     val = m.group(1).strip()
-    return val if val and val not in _INVALID_VALUES else None
+    if not val or val in _INVALID_VALUES or _looks_like_form_label(val):
+        return None
+    return val
 
 
 def extract_field(body, field_names):
-    """Extract field value — same-line "Name: Alice" and next-line "Name:\\nAlice" """
+    """Extract field value — same-line "Name: Alice" and next-line "Name:\\nAlice"。
+
+    空字段禁止跨行吞掉下一个标签（如 Telephone Number:\\nMessage: ...）。
+    """
     for name in field_names:
         m = re.search(rf'(?<!\w){re.escape(name)}[ \t]*[:：][ \t]*([^\n]+)', body, re.IGNORECASE)
         val = _valid_match(m) if m else None
         if val:
             return val
-        m = re.search(rf'(?<!\w){re.escape(name)}[ \t]*[:：][ \t]*\n([^\n]+)', body, re.IGNORECASE)
+        m = re.search(rf'(?<!\w){re.escape(name)}[ \t]*[:：][ \t]*\n+[ \t]*([^\n]+)', body, re.IGNORECASE)
         val = _valid_match(m) if m else None
         if val:
             return val
@@ -184,17 +271,16 @@ def extract_field(body, field_names):
 
 def extract_fields(body: str) -> dict:
     """提取所有表单字段（支持英文和中文表单）"""
+    mailto = extract_mailto_address(body)
     clean_body = strip_html(body)
     has_message_field = body_has_message_field(clean_body)
     # 英文表单字段
     name = extract_field(clean_body, ["Name"])
     email = extract_field(clean_body, ["Email", "E-mail"])
     company = extract_field(clean_body, ["Company"])
-    phone = extract_field(clean_body, ["Phone", "Telephone", "Telephone Number"])
-    # Phone 字段邮箱误填校验：用户在 Phone 框填邮箱时清空，避免污染数据
-    if phone and "@" in phone:
+    phone = extract_field(clean_body, ["Telephone Number", "Phone number", "Phone", "Telephone"])
+    if not _usable_phone(phone):
         phone = ""
-    # Message/Inquiry 在下方多行匹配块统一处理
     message = ""
     country = extract_field(clean_body, ["Country", "Select your country *"])
     # 中文表单字段（舱网系列：姓名/邮箱/电话/公司/留言内容/国家）
@@ -206,28 +292,36 @@ def extract_fields(body: str) -> dict:
         company = extract_field(clean_body, ["公司"])
     if not phone:
         phone = extract_field(clean_body, ["电话"])
+        if not _usable_phone(phone):
+            phone = ""
     if not message:
         message = extract_field(clean_body, ["留言内容", "留言"])
     if not country:
         country = extract_field(clean_body, ["国家"])
 
-    # Message/Inquiry 优先多行匹配（这些字段通常包含多行内容）
-    # extract_field 只取下一行，会导致多行 inquiry 被截断为第一行
+    if not _usable_email(email):
+        email = mailto if _usable_email(mailto) else ""
+    if _looks_like_form_label(name):
+        name = ""
+    if country and (_looks_like_form_label(country) or "inquiry" in country.lower()):
+        country = ""
+
+    # Message/Inquiry 优先多行匹配；Inquiry No 不是留言字段
     m = re.search(
-        r'(?:Message|Inquiry|留言内容|留言)\s*[:：]\s*(.+?)(?=\n\s*(?:[A-Z][^:\n]{2,30}\*?\s*[:：]|Date|Time|Page URL|Remote IP|User Agent|Powered by|是否|页面信息|---|$))',
+        r'(?:Message|Inquiry(?!\s*No)|留言内容|留言)\s*[:：]\s*(.+?)(?=\n\s*(?:[A-Z][^:\n]{2,30}\*?\s*[:：]|Date|Time|Page URL|Remote IP|User Agent|Powered by|是否|页面信息|---|$))',
         clean_body, re.IGNORECASE | re.DOTALL
     )
     if m:
-        message = m.group(1).strip()
+        candidate = m.group(1).strip()
+        if candidate and not _looks_like_form_label(candidate):
+            message = candidate
 
-    # 多行未匹配 → 回退到单行 extract_field
     if not message:
         message = extract_field(clean_body, ["Message", "Inquiry"])
 
-    # Fallback：Message 仍为空时，去掉表单字段行，用剩余正文作为 message
     if not message:
         cleaned = re.sub(
-            r'^(?:Name|E-?mail|Company|Telephone\s*Number|Phone|Message|Inquiry|Inquiry\s*No|Date|Time|'
+            r'^(?:Name|Full name|E-?mail|Company|Telephone\s*Number|Phone(?:\s*number)?|Message|Inquiry|Inquiry\s*No|Date|Time|'
             r'Page URL|Page Type|Page Title|Product Name|Remote IP|IP Address|User Agent|Powered by|Country|Select your country|Device Type|Submitted At'
             r'|姓名|邮箱|电话|公司|留言内容|留言|国家|咨询单号|是否需要回调|页面类型|页面标题|页面完整URL|来源页面URL'
             r'|客户IP地址|浏览器类型|设备类型|处理状态|优先级|提交时间'
@@ -235,6 +329,10 @@ def extract_fields(body: str) -> dict:
             '', clean_body, flags=re.MULTILINE | re.IGNORECASE
         )
         cleaned = re.sub(r'^-{3,}\s*$', '', cleaned, flags=re.MULTILINE)
+        cleaned = re.sub(
+            r'^(?:新官网询[价盘]通知|A new product inquiry has been submitted).*$',
+            '', cleaned, flags=re.MULTILINE | re.IGNORECASE
+        )
         cleaned = strip_html(cleaned).strip()
         if cleaned and len(cleaned) > 10:
             message = cleaned
@@ -248,6 +346,33 @@ def extract_fields(body: str) -> dict:
         "country": country,
         "has_message_field": has_message_field,
     }
+
+
+def overlay_form_fields(parsed: dict, fields_pre: dict) -> dict:
+    """LLM 漏提/误提联系方式时，用规则引擎从原文抽出的字段补上。"""
+    out = dict(parsed or {})
+    pre = fields_pre or {}
+    llm_email = (out.get("email") or "").strip()
+    pre_email = (pre.get("email") or "").strip()
+    out["email"] = pre_email if not _usable_email(llm_email) and _usable_email(pre_email) else (
+        llm_email if _usable_email(llm_email) else ""
+    )
+
+    llm_phone = (out.get("phone") or "").strip()
+    pre_phone = (pre.get("phone") or "").strip()
+    out["phone"] = pre_phone if not _usable_phone(llm_phone) and _usable_phone(pre_phone) else (
+        llm_phone if _usable_phone(llm_phone) else ""
+    )
+
+    for key in ("name", "company", "country"):
+        llm_val = (out.get(key) or "").strip()
+        pre_val = (pre.get(key) or "").strip()
+        if (not llm_val or _looks_like_form_label(llm_val) or "inquiry" in llm_val.lower()) and pre_val:
+            if not _looks_like_form_label(pre_val):
+                out[key] = pre_val
+        else:
+            out[key] = llm_val
+    return out
 
 
 def extract_remote_ip(body: str) -> str:
@@ -278,6 +403,9 @@ def identify_country(ip: str, phone: str, message: str, country_field: str = "")
         translated = translate_country(country_field)
         if translated:
             return translated
+
+    if "荷属圣马丁" in (message or "") or "圣马丁岛" in (message or ""):
+        return "荷属圣马丁"
 
     # 0.5 交付地/项目地（"ship to India", "project in Dubai" 等）
     for pattern in _DELIVERY_PATTERNS:

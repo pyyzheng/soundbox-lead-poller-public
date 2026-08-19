@@ -22,6 +22,7 @@ from assignment_fields import (  # noqa: E402
     SUB_CHANNEL_TO_CHANNEL as _SHARED_SUB_CHANNEL_TO_CHANNEL,
     heal_invalid_sub_channel,
     is_invalid_sub_channel,
+    resolve_channel_from_sub,
 )
 
 CATEGORY_TO_FEISHU = {
@@ -95,31 +96,26 @@ def infer_product_category(content: str) -> str:
 
 
 def parse_inquiry_fields(content: str) -> dict[str, str]:
-    fields: dict[str, str] = {}
-    patterns = {
-        "email": r"(?:Email|email|邮箱)[：:]\s*(.+?)(?:\n|$)",
-        "phone": r"(?:Telephone Number|Phone number|Phone|Whatsapp|WhatsApp|电话)[：:]\s*(.+?)(?:\n|$)",
-        "company": r"(?:Company|公司)[：:]\s*(.+?)(?:\n|$)",
-        "ali_id": r"(?:ID|阿里ID)[：:]\s*(.+?)(?:\n|$)",
-    }
-    for key, pattern in patterns.items():
-        match = re.search(pattern, content, re.IGNORECASE)
-        if match:
-            value = match.group(1).strip()
-            if value:
-                fields[key] = value
+    from lead_fallback_parser import extract_field, extract_fields, _usable_email, _usable_phone
 
-    for pattern in (
-        r"(?:Full name|name|姓名|Name)[：:]\s*(.+?)(?:\n|$)",
-        r"Name:\s*(.+?)(?:\n|$)",
-    ):
-        match = re.search(pattern, content, re.IGNORECASE)
-        if not match:
-            continue
-        name = match.group(1).strip()
-        if name and not name.lower().startswith("email"):
-            fields["name"] = name
-            break
+    extracted = extract_fields(content or "")
+    fields: dict[str, str] = {}
+    if extracted.get("name"):
+        fields["name"] = extracted["name"]
+    if _usable_email(extracted.get("email", "")):
+        fields["email"] = extracted["email"]
+    if extracted.get("company"):
+        fields["company"] = extracted["company"]
+    if _usable_phone(extracted.get("phone", "")):
+        fields["phone"] = extracted["phone"]
+
+    ali_id = extract_field(content or "", ["阿里ID"])
+    if not ali_id:
+        match = re.search(r"(?:^|\n)\s*(?:阿里)?ID[：:]\s*([^\n]+)", content or "", re.IGNORECASE)
+        if match:
+            ali_id = match.group(1).strip()
+    if ali_id and not ali_id.lower().startswith(("inq", "inquiry")):
+        fields["ali_id"] = ali_id
     return fields
 
 
@@ -258,6 +254,10 @@ def filter_missing_fields(existing: dict, candidate: dict) -> dict:
             continue
         if field_name == FIELD_SUB_CHANNEL:
             current_text = extract_text(get_field(existing, FIELD_SUB_CHANNEL, "")).strip()
+            existing_ch = extract_text(get_field(existing, FIELD_CHANNELS, "")).strip()
+            if existing_ch == "LinkedIn" and resolve_channel_from_sub(current_text) != "LinkedIn":
+                missing[field_name] = value
+                continue
             if current_text in INVALID_SUB_CHANNEL_VALUES or current_text not in SUB_CHANNEL_TO_CHANNEL:
                 missing[field_name] = value
                 continue

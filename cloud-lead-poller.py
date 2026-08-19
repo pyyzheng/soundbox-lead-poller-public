@@ -51,7 +51,7 @@ from lead_filter_common import (
     check_system_notification,
 )
 from lead_fallback_parser import (
-    strip_html, extract_fields, extract_remote_ip,
+    strip_html, extract_fields, extract_remote_ip, overlay_form_fields,
     translate_country, identify_country,
     identify_product_category, identify_product_model,
     resolve_channel,
@@ -557,6 +557,9 @@ def process_email(service, msg_data: dict, label_id: str, feishu_token: str, rul
         if supplier:
             log.info("post-LLM 供应商推销拦截: %s", sup_reason)
             return _skip_and_label(service, msg_id, label_id, "skipped", sup_reason)
+
+        # 网站表单 HTML 里的邮箱常被 LLM 漏提；用规则引擎结果补上
+        llm_result = overlay_form_fields(llm_result, fields_pre)
 
         # LLM 解析成功 → 标准化输出
         _, llm_sub_channel = resolve_channel(from_addr, rules, subject, to_addr)
