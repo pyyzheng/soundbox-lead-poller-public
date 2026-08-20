@@ -31,7 +31,6 @@
   "folderScanBudget": 120,
   "staleRescanSec": 180,
   "staleRescanBudget": 300,
-  "emptyFolderNotifyGraceSec": 600,
   "recentUploadWindowSec": 21600,
   "notifyDedupSec": 86400,
   "maxFileBytes": 31457280,

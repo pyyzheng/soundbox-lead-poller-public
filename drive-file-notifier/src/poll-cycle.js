@@ -6,7 +6,6 @@ import {
   maybeAutoSubscribe as defaultMaybeAutoSubscribe,
   notifyFileAttachment as defaultNotifyFileAttachment,
   notifyFilesAsZip as defaultNotifyFilesAsZip,
-  notifyFolderCreated as defaultNotifyFolderCreated,
 } from './notify.js';
 import { claimRemoteNotified } from './remote-notified.js';
 
@@ -14,7 +13,6 @@ const META_BATCH_SIZE = 50;
 const DEFAULT_MAX_DEPTH = 8;
 const DEFAULT_RECENT_UPLOAD_SEC = 6 * 60 * 60;
 const DEFAULT_FOLDER_BUDGET = 80;
-const DEFAULT_EMPTY_FOLDER_NOTIFY_GRACE_SEC = 10 * 60;
 
 /**
  * One detection pass over watched files and folders.
@@ -47,7 +45,6 @@ export async function pollCycle({
     getFileMetas: deps.getFileMetas || defaultGetFileMetas,
     notifyFileAttachment: deps.notifyFileAttachment || defaultNotifyFileAttachment,
     notifyFilesAsZip: deps.notifyFilesAsZip || defaultNotifyFilesAsZip,
-    notifyFolderCreated: deps.notifyFolderCreated || defaultNotifyFolderCreated,
     maybeAutoSubscribe: deps.maybeAutoSubscribe || defaultMaybeAutoSubscribe,
     persistState: deps.persistState,
     claimRemoteNotified: deps.claimRemoteNotified || claimRemoteNotified,
@@ -211,39 +208,6 @@ async function checkFolderAdditions(ctx) {
     });
     notified += result.notified;
 
-    if (folder.isNewFolder && !seedOnly) {
-      const folderRecent = await folderRecentlyChanged(ctx, folder.token, config, nowSec);
-      if (!folderRecent) {
-        log(`skip empty-folder flow for old folder ${folder.path}`);
-      } else {
-      const hasDirectFile = result.fileCount > 0;
-      const hasSubfolder = result.subfolders.length > 0;
-      const pending = state.emptyFolderPending?.[folder.token];
-      const graceSec = config.emptyFolderNotifyGraceSec ?? DEFAULT_EMPTY_FOLDER_NOTIFY_GRACE_SEC;
-      if (hasDirectFile || hasSubfolder) {
-        if (pending) {
-          delete state.emptyFolderPending[folder.token];
-          log(`clear empty-folder pending ${folder.path} token=${folder.token.slice(0, 8)} (children detected)`);
-        }
-      } else if (!pending) {
-        state.emptyFolderPending[folder.token] = { firstSeenAt: nowSec, path: folder.path };
-        log(`defer empty-folder notify ${folder.path} token=${folder.token.slice(0, 8)} grace=${graceSec}s`);
-      } else if ((nowSec - Number(pending.firstSeenAt || nowSec)) >= graceSec) {
-        if (!wasEverNotified(state, folder.token)) {
-          if (await markNotified(ctx, folder.token, nowSec)) {
-            log(`notify empty new folder ${folder.path} token=${folder.token.slice(0, 8)} graceElapsed=${nowSec - pending.firstSeenAt}s`);
-            await ctx.notifyFolderCreated(client, config, {
-              folderToken: folder.token,
-              folderPath: folder.path,
-            });
-            notified += 1;
-          }
-        }
-        delete state.emptyFolderPending[folder.token];
-      }
-      }
-    }
-
     state.folderChildren[folder.token] = result.tokens;
     rememberSubfolders(state, folder, result.subfolders);
     if (!state.folderListedAt) state.folderListedAt = {};
@@ -270,17 +234,6 @@ async function checkFolderAdditions(ctx) {
     log(`folder scan budget exhausted; remaining folders wait for later cycles`);
   }
   return notified;
-}
-
-async function folderRecentlyChanged(ctx, token, config, nowSec) {
-  const recentSec = config.recentUploadWindowSec ?? DEFAULT_RECENT_UPLOAD_SEC;
-  try {
-    const [meta] = await ctx.getFileMetas(ctx.client, [{ token, type: 'folder' }]);
-    const modify = Number(meta?.latest_modify_time) || 0;
-    return modify >= nowSec - recentSec;
-  } catch {
-    return false;
-  }
 }
 
 async function folderNeedsRescan(ctx, token, listed) {
@@ -323,7 +276,6 @@ function ensureFolderMeta(state) {
   if (!state.subfolders) state.subfolders = {};
   if (!state.notified) state.notified = {};
   if (!state.folderListedAt) state.folderListedAt = {};
-  if (!state.emptyFolderPending) state.emptyFolderPending = {};
 }
 
 function folderIsStale(state, token, config, nowSec) {

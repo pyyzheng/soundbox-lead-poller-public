@@ -298,7 +298,7 @@ test('remote claim failure skips duplicate notify across job restarts', async ()
   assert.equal(sent.length, 0);
 });
 
-test('does not notify empty folder immediately within grace window', async () => {
+test('never notifies an empty newly created folder', async () => {
   const NEW_FOLDER = 'new-empty-folder';
   const client = {
     listed: [],
@@ -317,14 +317,11 @@ test('does not notify empty folder immediately within grace window', async () =>
     notified: {},
     folderMeta: {},
     subfolders: {},
-    emptyFolderPending: {},
   };
   const { sent, deps } = makeDeps(client);
-  const cfg = { ...config, emptyFolderNotifyGraceSec: 600 };
-  const result = await pollCycle({ client, config: cfg, state, tag: 't', deps });
+  const result = await pollCycle({ client, config, state, tag: 't', deps });
   assert.equal(result.notified, 0);
-  assert.equal(sent.some((s) => s.kind === 'folder'), false);
-  assert.ok(state.emptyFolderPending[NEW_FOLDER]);
+  assert.equal(sent.length, 0);
 });
 
 test('does not notify empty folder when it has subfolders', async () => {
