@@ -12,7 +12,7 @@
 | | `DUdufPTFZlAKcwdHy6ychCCBnGc`（A-Case Gallery案例） |
 | 文件 | `HubRbexqdo5VRqxh220c1TUpn0f`（公司简介及产品及解决方案.md） |
 | 目标群 | `oc_f57656944eaa6b10c8c04fb385f3fc00` |
-| 发送 | 同一文件夹内多个小文件打成一个 ≤30MB zip；不同文件夹/装不下的文件各发一条；单文件仍超 30MB 只发云盘链接 |
+| 发送 | 同一文件夹多个小文件打成一个 ≤30MB zip；装不下则发该文件夹云盘链接（一条）；不同文件夹各发一条；单文件仍超 30MB 发文件云盘链接 |
 
 ## 推荐部署：GitHub Actions（关机也能跑）
 

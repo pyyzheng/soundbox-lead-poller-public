@@ -114,8 +114,8 @@ export async function notifyFileAttachment(client, config, {
 }
 
 /**
- * Same-folder batch: pack files into one zip when it stays under the IM limit.
- * Files that cannot fit (or are already oversized) are sent as separate messages.
+ * Same-folder batch: one zip if everything fits under the IM limit.
+ * If it cannot all fit, send a single folder-link notice (not per-file messages).
  * Different folders are handled by the caller (one call per folder).
  */
 export async function notifyFilesAsZip(client, config, {
@@ -130,111 +130,92 @@ export async function notifyFilesAsZip(client, config, {
   fs.mkdirSync(config.tmpDir, { recursive: true });
   const maxBytes = config.maxFileBytes || 30 * 1024 * 1024;
   const temps = [];
-  const oversized = [];
-  const packable = [];
+  const names = [];
+  let totalHinted = 0;
+  let anyOversized = false;
 
   try {
     for (const item of files) {
       const fileType = item.type || 'file';
       const meta = await getFileMeta(client, item.token, fileType).catch(() => null);
       const title = safeFileName(item.name || meta?.title, item.token);
+      names.push(title);
       const hintedSize = Number(meta?.size)
         || await probeDriveFileSize(client, item.token).catch(() => 0);
-      if (hintedSize > maxBytes) {
-        console.log(`[zip] oversized skip download ${title} ${formatBytes(hintedSize)}`);
-        oversized.push({
-          token: item.token,
-          type: fileType,
-          name: title,
-          size: hintedSize,
-          meta,
-        });
-        continue;
-      }
+      totalHinted += hintedSize;
+      if (hintedSize > maxBytes) anyOversized = true;
+    }
 
-      const prepared = await prepareLocalFile(client, config, { ...item, name: title }, temps);
+    const folderUrl = await resolveFolderUrl(client, folderToken);
+    if (anyOversized || totalHinted > maxBytes * 0.9) {
+      console.log(`[zip] same-folder batch cannot fit in ${formatBytes(maxBytes)}, sending folder link`);
+      return notifyFolderTooLarge(client, config, {
+        reason,
+        folderPath: folderName,
+        folderToken,
+        folderUrl,
+        fileNames: names,
+        sizeBytes: totalHinted,
+      });
+    }
+
+    const packable = [];
+    for (const item of files) {
+      const prepared = await prepareLocalFile(client, config, item, temps);
       if (!prepared) continue;
       packable.push({
         token: item.token,
-        type: fileType,
+        type: item.type || 'file',
         localPath: prepared.localPath,
         entryName: prepared.sendName,
         originalSize: prepared.size,
         meta: prepared.meta,
       });
     }
-    if (!packable.length && !oversized.length) {
+    if (!packable.length) {
       throw new Error('没有可打包的文件');
     }
 
     const { pack, leftovers } = await packOneZipIfFits(packable, {
       maxBytes,
       tmpDir: config.tmpDir,
-      zipNameHint: zipNameHint || folderName || packable[0]?.entryName || 'cloud-update',
+      zipNameHint: zipNameHint || folderName || packable[0].entryName,
       temps,
     });
 
-    let lastMessageId;
-    let totalSize = 0;
-    let packCount = 0;
-    const folderUrl = await resolveFolderUrl(client, folderToken);
-
-    if (pack) {
-      totalSize += pack.size;
-      packCount = 1;
-      const caption = buildZipCaption(config, {
+    if (!pack || leftovers.length) {
+      console.log(`[zip] packed zip over limit or leftover files, sending folder link`);
+      return notifyFolderTooLarge(client, config, {
         reason,
-        pack,
-        folderName,
-        folderPath: folderName,
-        folderUrl,
-      });
-      const sent = await sendTextMessage(client, config.chatId, caption);
-      const fileKey = await uploadImFile(client, pack.localPath, pack.fileName);
-      await sendFileMessage(client, config.chatId, fileKey, { msgType: guessImMsgType(pack.fileName) });
-      lastMessageId = sent?.message_id;
-      console.log(`[sent-zip] ${pack.fileName} ${formatBytes(pack.size)} (${pack.names.length} files)`);
-    }
-
-    for (const item of leftovers) {
-      const sent = await notifyFileAttachment(client, config, {
-        fileToken: item.token,
-        fileType: item.type,
-        reason,
-        titleHint: item.entryName,
         folderPath: folderName,
         folderToken,
-        driveUrl: item.meta?.url,
+        folderUrl,
+        fileNames: names.length ? names : packable.map((e) => e.entryName),
+        sizeBytes: totalHinted || packable.reduce((sum, e) => sum + (e.originalSize || 0), 0),
       });
-      lastMessageId = sent?.messageId || lastMessageId;
     }
 
-    for (const item of oversized) {
-      const sent = await notifyOversizedLink(client, config, {
-        fileToken: item.token,
-        fileType: item.type,
-        reason,
-        titleHint: item.name,
-        folderPath: folderName,
-        sizeBytes: item.size,
-        meta: item.meta,
-      });
-      lastMessageId = sent?.messageId || lastMessageId;
-    }
+    const caption = buildZipCaption(config, {
+      reason,
+      pack,
+      folderName,
+      folderPath: folderName,
+      folderUrl,
+    });
+    const sent = await sendTextMessage(client, config.chatId, caption);
+    const fileKey = await uploadImFile(client, pack.localPath, pack.fileName);
+    await sendFileMessage(client, config.chatId, fileKey, { msgType: guessImMsgType(pack.fileName) });
+    console.log(`[sent-zip] ${pack.fileName} ${formatBytes(pack.size)} (${pack.names.length} files)`);
 
     return {
       skipped: false,
-      messageId: lastMessageId,
-      fileName: [
-        ...(pack ? [pack.fileName] : []),
-        ...leftovers.map((e) => e.entryName),
-        ...oversized.map((e) => e.name),
-      ].join(', '),
-      size: totalSize,
-      mode: packCount && !leftovers.length && !oversized.length ? 'zip' : 'mixed',
-      fileCount: packable.length + oversized.length,
-      packCount,
-      linkOnlyCount: oversized.length,
+      messageId: sent?.message_id,
+      fileName: pack.fileName,
+      size: pack.size,
+      mode: 'zip',
+      fileCount: packable.length,
+      packCount: 1,
+      linkOnlyCount: 0,
     };
   } finally {
     for (const f of temps) cleanup(f);
@@ -278,7 +259,40 @@ async function prepareLocalFile(client, config, item, temps) {
   return { localPath, sendName, size, meta };
 }
 
-/** Text-only notice when attachment cannot be sent within the IM size limit. */
+/** One notice with the folder Drive link when a same-folder zip cannot stay under 30MB. */
+export async function notifyFolderTooLarge(client, config, {
+  reason,
+  folderPath,
+  folderToken,
+  folderUrl,
+  fileNames = [],
+  sizeBytes,
+}) {
+  const url = folderUrl || await resolveFolderUrl(client, folderToken);
+  const listed = fileNames.slice(0, 20);
+  const caption = composeMessage(config, resolveEventLabel(reason), [
+    ...(folderPath ? [`文件夹：${folderPath}`] : []),
+    ...(sizeBytes ? [`大小：${formatBytes(sizeBytes)}`] : []),
+    `包含 ${fileNames.length || listed.length} 个文件：`,
+    ...listed.map((n) => `· ${n}`),
+    ...(fileNames.length > listed.length ? [`· …另有 ${fileNames.length - listed.length} 个文件`] : []),
+    '说明：压缩后仍超过 30MB，请去云盘查看',
+    `链接：${url || folderPath || ''}`,
+  ]);
+  const sent = await sendTextMessage(client, config.chatId, caption);
+  console.log(`[sent-folder-link] ${folderPath || folderToken} files=${fileNames.length}`);
+  return {
+    skipped: false,
+    messageId: sent?.message_id,
+    fileName: folderPath || 'folder',
+    size: sizeBytes || 0,
+    mode: 'folder-link',
+    driveUrl: url,
+    fileCount: fileNames.length,
+    packCount: 0,
+    linkOnlyCount: fileNames.length,
+  };
+}
 export async function notifyOversizedLink(client, config, {
   fileToken,
   fileType,
