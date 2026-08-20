@@ -435,7 +435,7 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
     return 1;
   }
 
-  log(`zip ${toNotify.length} new file(s) in ${folder.path}: ${toNotify.map((c) => c.name).join(', ')}`);
+  log(`zip ${toNotify.length} new file(s) in ${folder.path} token=${folder.token.slice(0, 8)}: ${toNotify.map((c) => c.name).join(', ')}`);
   const zipBatch = [];
   for (const child of toNotify) {
     if (await markNotified(ctx, child.token, nowSec)) {

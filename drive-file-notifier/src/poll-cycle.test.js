@@ -139,6 +139,7 @@ test('already-listed subfolder notifies a brand new child', async () => {
 });
 
 test('newly uploaded folder only notifies recent files inside', async () => {
+
   const NEW_FOLDER = 'newfolder';
   const FILE1 = 'f1';
   const FILE2 = 'f2';
@@ -171,6 +172,57 @@ test('newly uploaded folder only notifies recent files inside', async () => {
   assert.equal(sent.length, 1);
   assert.equal(sent[0].kind, 'file');
   assert.equal(sent[0].fileToken, FILE2);
+});
+
+test('files in two sibling folders send two separate notices', async () => {
+  const A = 'projA';
+  const B = 'projB';
+  const A1 = 'a1';
+  const A2 = 'a2';
+  const B1 = 'b1';
+  const B2 = 'b2';
+  const client = {
+    listed: [],
+    folders: {
+      [ROOT]: [
+        { token: A, type: 'folder', name: 'project-a' },
+        { token: B, type: 'folder', name: 'project-b' },
+      ],
+      [A]: [
+        { token: A1, type: 'file', name: '图层 1.jpg' },
+        { token: A2, type: 'file', name: '图层 2.jpg' },
+      ],
+      [B]: [
+        { token: B1, type: 'file', name: '图层 1.jpg' },
+        { token: B2, type: 'file', name: '图层 2.jpg' },
+      ],
+    },
+    metas: {
+      [A]: { modify: now, title: 'project-a' },
+      [B]: { modify: now, title: 'project-b' },
+      [A1]: { modify: now, title: '图层 1.jpg' },
+      [A2]: { modify: now, title: '图层 2.jpg' },
+      [B1]: { modify: now, title: '图层 1.jpg' },
+      [B2]: { modify: now, title: '图层 2.jpg' },
+    },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+  };
+  const { sent, deps } = makeDeps(client);
+  const { notified } = await pollCycle({ client, config, state, tag: 't', deps });
+  const zips = sent.filter((s) => s.kind === 'zip');
+  assert.equal(zips.length, 2);
+  assert.equal(notified, 2);
+  assert.equal(zips[0].folderToken, A);
+  assert.equal(zips[1].folderToken, B);
+  assert.equal(zips[0].files.length, 2);
+  assert.equal(zips[1].files.length, 2);
 });
 
 test('never resends a new-file notice for a token already in notified', async () => {
