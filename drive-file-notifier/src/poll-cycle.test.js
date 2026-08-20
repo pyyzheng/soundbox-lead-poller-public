@@ -138,7 +138,7 @@ test('already-listed subfolder notifies a brand new child', async () => {
   assert.equal(sent[0].fileToken, FILE_NEW);
 });
 
-test('newly uploaded folder notifies all contained files regardless of modify time', async () => {
+test('newly uploaded folder only notifies recent files inside', async () => {
   const NEW_FOLDER = 'newfolder';
   const FILE1 = 'f1';
   const FILE2 = 'f2';
@@ -148,13 +148,13 @@ test('newly uploaded folder notifies all contained files regardless of modify ti
       [ROOT]: [{ token: NEW_FOLDER, type: 'folder', name: 'uploaded' }],
       [NEW_FOLDER]: [
         { token: FILE1, type: 'file', name: 'old1.pdf' },
-        { token: FILE2, type: 'file', name: 'old2.pdf' },
+        { token: FILE2, type: 'file', name: 'new2.pdf' },
       ],
     },
     metas: {
       [NEW_FOLDER]: { modify: now, title: 'uploaded' },
       [FILE1]: { modify: now - 86400 * 90, title: 'old1.pdf' },
-      [FILE2]: { modify: now - 86400 * 60, title: 'old2.pdf' },
+      [FILE2]: { modify: now - 60, title: 'new2.pdf' },
     },
   };
   const state = {
@@ -167,10 +167,10 @@ test('newly uploaded folder notifies all contained files regardless of modify ti
   };
   const { sent, deps } = makeDeps(client);
   const { notified } = await pollCycle({ client, config, state, tag: 't', deps });
-  assert.ok(sent.some((s) => s.kind === 'zip'));
-  assert.equal(sent.some((s) => s.kind === 'folder'), false);
-  assert.equal(sent.find((s) => s.kind === 'zip').files.length, 2);
   assert.equal(notified, 1);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].kind, 'file');
+  assert.equal(sent[0].fileToken, FILE2);
 });
 
 test('never resends a new-file notice for a token already in notified', async () => {

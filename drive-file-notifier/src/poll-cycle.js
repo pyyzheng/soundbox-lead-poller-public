@@ -212,6 +212,10 @@ async function checkFolderAdditions(ctx) {
     notified += result.notified;
 
     if (folder.isNewFolder && !seedOnly) {
+      const folderRecent = await folderRecentlyChanged(ctx, folder.token, config, nowSec);
+      if (!folderRecent) {
+        log(`skip empty-folder flow for old folder ${folder.path}`);
+      } else {
       const hasDirectFile = result.fileCount > 0;
       const hasSubfolder = result.subfolders.length > 0;
       const pending = state.emptyFolderPending?.[folder.token];
@@ -237,6 +241,7 @@ async function checkFolderAdditions(ctx) {
         }
         delete state.emptyFolderPending[folder.token];
       }
+      }
     }
 
     state.folderChildren[folder.token] = result.tokens;
@@ -253,7 +258,7 @@ async function checkFolderAdditions(ctx) {
           parentName: folder.name,
           depth: folder.depth + 1,
           force: firstSeen || !state.folderChildren[sub.token],
-          isNewFolder: folder.isNewFolder || sub.isNew,
+          isNewFolder: sub.isNew && (Boolean(folder.isNewFolder) || folder.depth === 0),
         });
       }
     } else if (result.subfolders.length) {
@@ -265,6 +270,17 @@ async function checkFolderAdditions(ctx) {
     log(`folder scan budget exhausted; remaining folders wait for later cycles`);
   }
   return notified;
+}
+
+async function folderRecentlyChanged(ctx, token, config, nowSec) {
+  const recentSec = config.recentUploadWindowSec ?? DEFAULT_RECENT_UPLOAD_SEC;
+  try {
+    const [meta] = await ctx.getFileMetas(ctx.client, [{ token, type: 'folder' }]);
+    const modify = Number(meta?.latest_modify_time) || 0;
+    return modify >= nowSec - recentSec;
+  } catch {
+    return false;
+  }
 }
 
 async function folderNeedsRescan(ctx, token, listed) {
@@ -346,8 +362,7 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
     }
 
     if (notifyAllNewFiles) {
-      log(`new folder upload file ${child.name} token=${child.token.slice(0, 8)}`);
-      newFiles.push(child);
+      bootstrapCandidates.push(child);
       continue;
     }
     if (seedOnly || firstSeen) {

@@ -133,11 +133,29 @@ export async function notifyFilesAsZip(client, config, {
 
   try {
     for (const item of files) {
-      const prepared = await prepareLocalFile(client, config, item, temps);
+      const fileType = item.type || 'file';
+      const meta = await getFileMeta(client, item.token, fileType).catch(() => null);
+      const title = safeFileName(item.name || meta?.title, item.token);
+      const hintedSize = Number(meta?.size)
+        || await probeDriveFileSize(client, item.token).catch(() => 0);
+      if (hintedSize > maxBytes) {
+        console.log(`[zip] oversized skip download ${title} ${formatBytes(hintedSize)}`);
+        entries.push({
+          token: item.token,
+          type: fileType,
+          entryName: title,
+          originalSize: hintedSize,
+          meta,
+          linkOnly: true,
+        });
+        continue;
+      }
+
+      const prepared = await prepareLocalFile(client, config, { ...item, name: title }, temps);
       if (!prepared) continue;
       entries.push({
         token: item.token,
-        type: item.type || 'file',
+        type: fileType,
         localPath: prepared.localPath,
         entryName: prepared.sendName,
         originalSize: prepared.size,
@@ -148,12 +166,15 @@ export async function notifyFilesAsZip(client, config, {
       throw new Error('没有可打包的文件');
     }
 
-    const { packs, linkOnly } = await packEntriesIntoZips(entries, {
+    const prelinked = entries.filter((e) => e.linkOnly);
+    const packable = entries.filter((e) => !e.linkOnly);
+    const { packs, linkOnly } = await packEntriesIntoZips(packable, {
       maxBytes,
       tmpDir: config.tmpDir,
       zipNameHint: zipNameHint || folderName || entries[0].entryName,
       temps,
     });
+    linkOnly.push(...prelinked);
 
     let lastMessageId;
     let totalSize = 0;
@@ -282,40 +303,30 @@ async function packEntriesIntoZips(entries, { maxBytes, tmpDir, zipNameHint, tem
   const stem = sanitizeZipStem(zipNameHint);
   const packs = [];
   const linkOnly = [];
-  let part = 1;
+  if (!entries.length) return { packs, linkOnly };
 
-  const makeZip = async (batch) => {
-    if (!batch.length) return;
-    const suffix = entries.length > batch.length || part > 1 ? `-part${part}` : '';
-    const outPath = path.join(tmpDir, `${stem}${suffix}-${Date.now()}.zip`);
+  const tryZip = async (batch) => {
+    const outPath = path.join(tmpDir, `${stem}-${Date.now()}.zip`);
     const packed = await createZipArchive(batch, outPath, tmpDir);
     if (!packed) throw new Error(`打包失败: ${batch.map((e) => e.entryName).join(', ')}`);
     temps.push(packed.localPath);
+    return packed;
+  };
 
+  if (entries.length === 1) {
+    const one = entries[0];
+    const packed = await tryZip([one]);
     if (packed.size <= maxBytes) {
       packs.push({
         localPath: packed.localPath,
-        fileName: `${stem}${suffix}.zip`,
+        fileName: `${stem}.zip`,
         size: packed.size,
-        names: batch.map((e) => e.entryName),
+        names: [one.entryName],
       });
-      part += 1;
-      return;
+      return { packs, linkOnly };
     }
-
-    // Archive too big: split the batch, or compress the lone remaining file
-    if (batch.length === 1) {
-      const one = batch[0];
-      const compressed = await compressAnyUnderLimit(
-        one.localPath,
-        one.entryName,
-        maxBytes,
-        tmpDir,
-      );
-      if (!compressed) {
-        linkOnly.push(one);
-        return;
-      }
+    const compressed = await compressAnyUnderLimit(one.localPath, one.entryName, maxBytes, tmpDir);
+    if (compressed && compressed.size <= maxBytes) {
       temps.push(compressed.localPath);
       packs.push({
         localPath: compressed.localPath,
@@ -324,28 +335,29 @@ async function packEntriesIntoZips(entries, { maxBytes, tmpDir, zipNameHint, tem
         names: [one.entryName],
         note: `单文件压缩（${compressed.method}）`,
       });
-      part += 1;
-      return;
+    } else {
+      console.log(`[zip] ${one.entryName} still over limit after compress, link only`);
+      linkOnly.push(one);
     }
-
-    const mid = Math.ceil(batch.length / 2);
-    await makeZip(batch.slice(0, mid));
-    await makeZip(batch.slice(mid));
-  };
-
-  // First-cut batches by raw size so we rarely need to split after zipping
-  let batch = [];
-  let batchBytes = 0;
-  for (const entry of entries) {
-    if (batch.length && batchBytes + (entry.originalSize || 0) > maxBytes * 0.9) {
-      await makeZip(batch);
-      batch = [];
-      batchBytes = 0;
-    }
-    batch.push(entry);
-    batchBytes += entry.originalSize || 0;
+    return { packs, linkOnly };
   }
-  await makeZip(batch);
+
+  const totalBytes = entries.reduce((sum, e) => sum + (e.originalSize || 0), 0);
+  if (totalBytes <= maxBytes * 0.9) {
+    const packed = await tryZip(entries);
+    if (packed.size <= maxBytes) {
+      packs.push({
+        localPath: packed.localPath,
+        fileName: `${stem}.zip`,
+        size: packed.size,
+        names: entries.map((e) => e.entryName),
+      });
+      return { packs, linkOnly };
+    }
+  }
+
+  console.log(`[zip] cannot fit ${entries.length} file(s) in one archive, sending links`);
+  linkOnly.push(...entries);
   return { packs, linkOnly };
 }
 
@@ -368,7 +380,6 @@ function buildZipCaption(config, { reason, pack, packIndex, packCount, folderNam
   if (pack.names.length > listed.length) {
     detail.push(`· …另有 ${pack.names.length - listed.length} 个文件`);
   }
-  if (packCount > 1) detail.push(`（分卷 ${packIndex + 1}/${packCount}）`);
   if (pack.note) detail.push(pack.note);
   if (folderUrl) detail.push(`链接：${folderUrl}`);
   return composeMessage(config, resolveEventLabel(reason), detail);
