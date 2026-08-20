@@ -1,5 +1,5 @@
 {
-  "chatId": "oc_f931f4c688a7da9c14e87e7a1e12e322",
+  "chatId": "oc_f57656944eaa6b10c8c04fb385f3fc00",
   "watchFolders": [
     {
       "token": "RsXZfdPMtlN6tjdCLI0c12munfc",
@@ -41,8 +41,8 @@
   "notifyMode": "attachment",
   "mentions": [
     {
-      "name": "Darren",
-      "openId": "ou_b54d8a652ccee8972173137f93253cd7"
+      "name": "西米",
+      "openId": "ou_8f57357a0c3ce70ce30be90021bff676"
     }
   ]
 }

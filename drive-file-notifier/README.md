@@ -1,6 +1,6 @@
 # 云盘文件变更 → 外部群 IM 附件通知
 
-监听指定飞书云盘文件夹（新建/上传）和文件（内容更新），向目标群发送 **IM 附件**（并 `@Darren`）。
+监听指定飞书云盘文件夹（新建/上传）和文件（内容更新），向目标群发送 **IM 附件**（并 `@西米`）。
 
 ## 当前配置
 
@@ -11,7 +11,7 @@
 | | `BGGMfON8vl4uHVdac7Bcv8HDnvf`（M-Marketing 品牌营销资料） |
 | | `DUdufPTFZlAKcwdHy6ychCCBnGc`（A-Case Gallery案例） |
 | 文件 | `HubRbexqdo5VRqxh220c1TUpn0f`（公司简介及产品及解决方案.md） |
-| 目标群 | `oc_f931f4c688a7da9c14e87e7a1e12e322` |
+| 目标群 | `oc_f57656944eaa6b10c8c04fb385f3fc00` |
 | 发送 | ≤30MB 直接发附件；更大先压缩（PDF/图片降质，其它 zip）；仍超限只发文字 |
 
 ## 推荐部署：GitHub Actions（关机也能跑）
