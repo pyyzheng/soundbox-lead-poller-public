@@ -114,8 +114,9 @@ export async function notifyFileAttachment(client, config, {
 }
 
 /**
- * Download one or more Drive files, pack into a zip, then send caption + zip.
- * Splits into multiple zips if a single archive would exceed the IM size limit.
+ * Same-folder batch: pack files into one zip when it stays under the IM limit.
+ * Files that cannot fit (or are already oversized) are sent as separate messages.
+ * Different folders are handled by the caller (one call per folder).
  */
 export async function notifyFilesAsZip(client, config, {
   reason,
@@ -129,7 +130,8 @@ export async function notifyFilesAsZip(client, config, {
   fs.mkdirSync(config.tmpDir, { recursive: true });
   const maxBytes = config.maxFileBytes || 30 * 1024 * 1024;
   const temps = [];
-  const entries = [];
+  const oversized = [];
+  const packable = [];
 
   try {
     for (const item of files) {
@@ -140,20 +142,19 @@ export async function notifyFilesAsZip(client, config, {
         || await probeDriveFileSize(client, item.token).catch(() => 0);
       if (hintedSize > maxBytes) {
         console.log(`[zip] oversized skip download ${title} ${formatBytes(hintedSize)}`);
-        entries.push({
+        oversized.push({
           token: item.token,
           type: fileType,
-          entryName: title,
-          originalSize: hintedSize,
+          name: title,
+          size: hintedSize,
           meta,
-          linkOnly: true,
         });
         continue;
       }
 
       const prepared = await prepareLocalFile(client, config, { ...item, name: title }, temps);
       if (!prepared) continue;
-      entries.push({
+      packable.push({
         token: item.token,
         type: fileType,
         localPath: prepared.localPath,
@@ -162,45 +163,28 @@ export async function notifyFilesAsZip(client, config, {
         meta: prepared.meta,
       });
     }
-    if (!entries.length) {
+    if (!packable.length && !oversized.length) {
       throw new Error('没有可打包的文件');
     }
 
-    const prelinked = entries.filter((e) => e.linkOnly);
-    const packable = entries.filter((e) => !e.linkOnly);
-    const { packs, linkOnly } = await packEntriesIntoZips(packable, {
+    const { pack, leftovers } = await packOneZipIfFits(packable, {
       maxBytes,
       tmpDir: config.tmpDir,
-      zipNameHint: zipNameHint || folderName || entries[0].entryName,
+      zipNameHint: zipNameHint || folderName || packable[0]?.entryName || 'cloud-update',
       temps,
     });
-    linkOnly.push(...prelinked);
 
     let lastMessageId;
     let totalSize = 0;
+    let packCount = 0;
     const folderUrl = await resolveFolderUrl(client, folderToken);
 
-    for (const item of linkOnly) {
-      const sent = await notifyOversizedLink(client, config, {
-        fileToken: item.token,
-        fileType: item.type,
-        reason,
-        titleHint: item.entryName,
-        folderPath: folderName,
-        sizeBytes: item.originalSize,
-        meta: item.meta,
-      });
-      lastMessageId = sent?.messageId || lastMessageId;
-    }
-
-    for (let i = 0; i < packs.length; i += 1) {
-      const pack = packs[i];
+    if (pack) {
       totalSize += pack.size;
+      packCount = 1;
       const caption = buildZipCaption(config, {
         reason,
         pack,
-        packIndex: i,
-        packCount: packs.length,
         folderName,
         folderPath: folderName,
         folderUrl,
@@ -212,18 +196,45 @@ export async function notifyFilesAsZip(client, config, {
       console.log(`[sent-zip] ${pack.fileName} ${formatBytes(pack.size)} (${pack.names.length} files)`);
     }
 
+    for (const item of leftovers) {
+      const sent = await notifyFileAttachment(client, config, {
+        fileToken: item.token,
+        fileType: item.type,
+        reason,
+        titleHint: item.entryName,
+        folderPath: folderName,
+        folderToken,
+        driveUrl: item.meta?.url,
+      });
+      lastMessageId = sent?.messageId || lastMessageId;
+    }
+
+    for (const item of oversized) {
+      const sent = await notifyOversizedLink(client, config, {
+        fileToken: item.token,
+        fileType: item.type,
+        reason,
+        titleHint: item.name,
+        folderPath: folderName,
+        sizeBytes: item.size,
+        meta: item.meta,
+      });
+      lastMessageId = sent?.messageId || lastMessageId;
+    }
+
     return {
       skipped: false,
       messageId: lastMessageId,
       fileName: [
-        ...linkOnly.map((e) => e.entryName),
-        ...packs.map((p) => p.fileName),
+        ...(pack ? [pack.fileName] : []),
+        ...leftovers.map((e) => e.entryName),
+        ...oversized.map((e) => e.name),
       ].join(', '),
       size: totalSize,
-      mode: linkOnly.length && !packs.length ? 'link-only' : 'zip',
-      fileCount: entries.length,
-      packCount: packs.length,
-      linkOnlyCount: linkOnly.length,
+      mode: packCount && !leftovers.length && !oversized.length ? 'zip' : 'mixed',
+      fileCount: packable.length + oversized.length,
+      packCount,
+      linkOnlyCount: oversized.length,
     };
   } finally {
     for (const f of temps) cleanup(f);
@@ -299,12 +310,11 @@ export async function notifyOversizedLink(client, config, {
   };
 }
 
-async function packEntriesIntoZips(entries, { maxBytes, tmpDir, zipNameHint, temps }) {
-  const stem = sanitizeZipStem(zipNameHint);
-  const packs = [];
-  const linkOnly = [];
-  if (!entries.length) return { packs, linkOnly };
+/** Pack as many same-folder files as fit in a single <30MB zip. The rest stay leftovers. */
+async function packOneZipIfFits(entries, { maxBytes, tmpDir, zipNameHint, temps }) {
+  if (entries.length < 2) return { pack: null, leftovers: entries };
 
+  const stem = sanitizeZipStem(zipNameHint);
   const tryZip = async (batch) => {
     const outPath = path.join(tmpDir, `${stem}-${Date.now()}.zip`);
     const packed = await createZipArchive(batch, outPath, tmpDir);
@@ -313,52 +323,39 @@ async function packEntriesIntoZips(entries, { maxBytes, tmpDir, zipNameHint, tem
     return packed;
   };
 
-  if (entries.length === 1) {
-    const one = entries[0];
-    const packed = await tryZip([one]);
-    if (packed.size <= maxBytes) {
-      packs.push({
-        localPath: packed.localPath,
-        fileName: `${stem}.zip`,
-        size: packed.size,
-        names: [one.entryName],
-      });
-      return { packs, linkOnly };
-    }
-    const compressed = await compressAnyUnderLimit(one.localPath, one.entryName, maxBytes, tmpDir);
-    if (compressed && compressed.size <= maxBytes) {
-      temps.push(compressed.localPath);
-      packs.push({
-        localPath: compressed.localPath,
-        fileName: compressed.fileName,
-        size: compressed.size,
-        names: [one.entryName],
-        note: `单文件压缩（${compressed.method}）`,
-      });
+  const sorted = [...entries].sort((a, b) => (a.originalSize || 0) - (b.originalSize || 0));
+  const batch = [];
+  let batchBytes = 0;
+  const leftovers = [];
+  for (const entry of sorted) {
+    if (batchBytes + (entry.originalSize || 0) <= maxBytes * 0.9) {
+      batch.push(entry);
+      batchBytes += entry.originalSize || 0;
     } else {
-      console.log(`[zip] ${one.entryName} still over limit after compress, link only`);
-      linkOnly.push(one);
+      leftovers.push(entry);
     }
-    return { packs, linkOnly };
   }
 
-  const totalBytes = entries.reduce((sum, e) => sum + (e.originalSize || 0), 0);
-  if (totalBytes <= maxBytes * 0.9) {
-    const packed = await tryZip(entries);
-    if (packed.size <= maxBytes) {
-      packs.push({
+  if (batch.length < 2) {
+    console.log(`[zip] no same-folder batch under ${formatBytes(maxBytes)}, sending files separately`);
+    return { pack: null, leftovers: entries };
+  }
+
+  const packed = await tryZip(batch);
+  if (packed.size <= maxBytes) {
+    return {
+      pack: {
         localPath: packed.localPath,
         fileName: `${stem}.zip`,
         size: packed.size,
-        names: entries.map((e) => e.entryName),
-      });
-      return { packs, linkOnly };
-    }
+        names: batch.map((e) => e.entryName),
+      },
+      leftovers,
+    };
   }
 
-  console.log(`[zip] cannot fit ${entries.length} file(s) in one archive, sending links`);
-  linkOnly.push(...entries);
-  return { packs, linkOnly };
+  console.log(`[zip] ${stem}.zip ${formatBytes(packed.size)} over limit, sending files separately`);
+  return { pack: null, leftovers: entries };
 }
 
 function sanitizeZipStem(name) {
@@ -369,7 +366,7 @@ function sanitizeZipStem(name) {
   return (raw || 'cloud-update').slice(0, 80);
 }
 
-function buildZipCaption(config, { reason, pack, packIndex, packCount, folderName, folderPath, folderUrl }) {
+function buildZipCaption(config, { reason, pack, folderName, folderPath, folderUrl }) {
   const detail = [];
   if (folderPath || folderName) detail.push(`文件夹：${folderPath || folderName}`);
   detail.push(`压缩包：${pack.fileName}`);
