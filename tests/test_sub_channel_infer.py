@@ -129,6 +129,20 @@ class TestInferSubChannel(unittest.TestCase):
         )
         self.assertIsNone(infer_sub_channel_from_content(content))
 
+    def test_heal_linkedin_channel_overrides_facebook_sub(self):
+        self.assertEqual(
+            heal_invalid_sub_channel("Facebook", channels="LinkedIn"),
+            "LinkedIn",
+        )
+
+    def test_linkedin_lead_phrase(self):
+        content = "Status: Linkedin lead, pending follow-up"
+        self.assertEqual(infer_sub_channel_from_content(content), "LinkedIn")
+
+    def test_lingying_form_phrase(self):
+        content = "跟进状态：全新领英表单线索，待销售对接"
+        self.assertEqual(infer_sub_channel_from_content(content), "LinkedIn")
+
 
 if __name__ == "__main__":
     unittest.main()

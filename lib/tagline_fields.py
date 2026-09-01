@@ -211,6 +211,14 @@ def build_feishu_fields_from_content(
         if inferred:
             updates[FIELD_PRODUCT_CAT] = feishu_product_category(inferred)
 
+    country = updates.get(FIELD_COUNTRY, "")
+    if (not country or country in {"Unknown", "无法识别", "N/A"}) and updates.get(FIELD_PHONE):
+        from lead_fallback_parser import identify_country
+
+        phone_country = identify_country("", updates[FIELD_PHONE], content)
+        if phone_country:
+            updates[FIELD_COUNTRY] = phone_country
+
     sub_channel = updates.get(FIELD_SUB_CHANNEL, "")
     if sub_channel and not updates.get(FIELD_CHANNELS):
         updates[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(sub_channel, sub_channel)

@@ -70,7 +70,7 @@ from gmail_client import (
 from url_model_map import identify_model_from_url, extract_page_url, extract_url_keyword
 from feishu_writer import (
     get_feishu_token, check_feishu_duplicate, check_feishu_email_duplicate,
-    merge_feishu_record,
+    check_feishu_phone_duplicate, merge_feishu_record,
     create_feishu_record, update_feishu_autoreply,
     FEISHU_APP_TOKEN, FEISHU_TABLE_ID, FEISHU_FIELD_NAME,
 )
@@ -768,6 +768,45 @@ def process_email(service, msg_data: dict, label_id: str, feishu_token: str, rul
                 log.error("合并写入失败: %s，回退跳过", merge_result)
                 return _skip_and_label(service, msg_id, label_id, "duplicate",
                                        "email_dedup_merge_failed", email=email)
+
+    # ── 5.2 飞书电话去重（无邮箱时，30 天内同号 → 合并追加，避免重复分配） ──
+    if llm_result and llm_result.get("status") == "parsed":
+        dedup_phone = (llm_result.get("phone") or "").strip()
+    else:
+        dedup_phone = (fields.get("phone") or "").strip()
+    invalid_email = not dedup_email or dedup_email in {"n/a", "na", "none", "-"}
+    if invalid_email and dedup_phone:
+        existing_phone = check_feishu_phone_duplicate(feishu_token, dedup_phone)
+        if existing_phone:
+            existing_record_id = existing_phone.get("record_id", "")
+            existing_fields = existing_phone.get("fields", {})
+            old_content = extract_text(existing_fields.get(FEISHU_FIELD_NAME, ""))
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+            append_body = inquiry_content.rsplit("\n\n", 1)[0] if "\n\n" in inquiry_content else inquiry_content
+            merged_content = f"{old_content}\n\n--- 追加询盘 [{now_str}] [电话合并] ---\n{append_body}"
+            merge_patch = _structured_write_fields(
+                sub_channel=customer_channel if isinstance(customer_channel, str) else str(customer_channel or ""),
+                country=customer_country,
+                product_category=customer_product,
+                product_model=(normalized.get("product_model", "") if llm_result and llm_result.get("status") == "parsed"
+                               else (product_model if not llm_result or llm_result.get("status") != "parsed" else "")),
+            )
+            log.info("电话合并: phone=%s | record=%s", dedup_phone, existing_record_id)
+            merge_result = merge_feishu_record(
+                feishu_token, existing_record_id,
+                merged_content=merged_content,
+                new_msg_id=msg_id,
+                extra_fields=merge_patch or None,
+            )
+            if merge_result.get("code") == 0:
+                log.info("电话合并写入成功: record_id=%s", existing_record_id)
+                apply_label(service, msg_id, label_id)
+                return {"id": msg_id, "status": "merged", "email": email,
+                        "feishu_record_id": existing_record_id,
+                        "autoreply": "Skipped(Merged)"}
+            log.error("电话合并写入失败: %s，回退跳过", merge_result)
+            return _skip_and_label(service, msg_id, label_id, "duplicate",
+                                   "phone_dedup_merge_failed", email=email)
 
     # ── 5.5 附件处理（非阻塞） ──
     attachment_tokens = []

@@ -172,6 +172,20 @@ def build_result() -> str:
     )
 
 
+def build_dup_inherit_reason() -> str:
+    r = ref
+    dup_result = "fldqjZeH49"  # Dup_Match_Result（与主表公式字段 id 对齐）
+    return (
+        f'IF(OR(ISBLANK({r(DUP_OWNER)}),{r(DUP_OWNER)}="",{r(DUP_OWNER)}="匹配错误请检查"),"",'
+        f'IF({r(dup_result)}="匹配错误请检查","查重结果异常",'
+        f'IF(AND({r("fldyMGTE7A")}="是",OR({r("flde1hdT3S")}="本部（公共）",'
+        f'{r("fld6WkdNyf")}={r("flde1hdT3S")})),"",'
+        f'IF({r("fldyMGTE7A")}!="是","历史业务员不可接单",'
+        f'IF(OR(ISBLANK({r("fld6WkdNyf")}),{r("fld6WkdNyf")}="",'
+        f'{r("fld6WkdNyf")}!={r("flde1hdT3S")}),"历史负责人与分配部门不一致","其他原因")))))'
+    )
+
+
 FORMULA_SPECS = {
     "dup-formula-ready.json": ("Dup Formula Ready（公式查重就绪）", build_ready),
     "dup-match-conflict.json": ("Dup_Match_Conflict", build_conflict),
@@ -180,6 +194,7 @@ FORMULA_SPECS = {
     "dup-match-result.json": ("Dup_Match_Result", build_result),
     "assignment-source.json": ("分配来源", build_assignment_source),
     "system-assignee.json": ("系统匹配业务员", build_system_assignee),
+    "dup-inherit-reason.json": ("查重未继承原因", build_dup_inherit_reason),
 }
 
 

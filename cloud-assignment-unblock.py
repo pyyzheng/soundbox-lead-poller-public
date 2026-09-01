@@ -63,6 +63,7 @@ from assignment_fields import (  # noqa: E402
     QUEUE_POINTER_TABLE,
     get_field,
     heal_invalid_channel,
+    heal_invalid_sub_channel,
     is_invalid_channel,
 )
 from channel_queue_assign import (  # noqa: E402
@@ -665,6 +666,22 @@ def run() -> int:
         # Channels=无法识别 时先自愈；即使写回失败，后续仍可用区域队列兜底选人。
         if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))):
             _heal_invalid_channels(token, fields, record_id, lead_id)
+
+        channel = extract_text(get_field(fields, FIELD_CHANNELS, "")).strip()
+        sub_channel = extract_text(get_field(fields, FIELD_SUB_CHANNEL, "")).strip()
+        healed_sub = heal_invalid_sub_channel(
+            sub_channel,
+            enquiry=extract_text(get_field(fields, FIELD_ENQUIRY, "")),
+            channels=channel,
+            gmail_msg_id=extract_text(get_field(fields, FIELD_GMAIL_MSG, "")),
+            fb_leadgen=extract_text(get_field(fields, FIELD_FB_LEADGEN, "")),
+        )
+        if healed_sub:
+            log.info("自愈细分渠道 %s: %r → %s", lead_id or record_id, sub_channel, healed_sub)
+            if DRY_RUN:
+                fields[FIELD_SUB_CHANNEL] = healed_sub
+            elif _update_record(token, FEISHU_TABLE_ID, record_id, {FIELD_SUB_CHANNEL: healed_sub}):
+                fields[FIELD_SUB_CHANNEL] = healed_sub
 
         if eligible_for_channel_queue(fields):
             # 写前复核：其他 run / 工作流可能已写入业务员

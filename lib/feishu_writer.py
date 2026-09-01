@@ -111,7 +111,9 @@ def check_feishu_duplicate(token: str, gmail_msg_id: str,
 
 FEISHU_EMAIL_FIELD = "Email（客户邮箱）"
 _FEISHU_ENTRY_TIME = "Entry Time（录入时间）"
+FEISHU_PHONE_FIELD = "Phone（客户电话）"
 _EMAIL_DEDUP_HOURS = 12
+_PHONE_DEDUP_HOURS = 720  # 30d — phone-only leads (no email) reuse existing assignee
 
 
 def _search_feishu_records(token: str, body: dict,
@@ -210,6 +212,49 @@ def check_feishu_fb_contact_duplicate(token: str, customer_email: str = "",
         entry_ms = it.get("fields", {}).get(_FEISHU_ENTRY_TIME)
         if isinstance(entry_ms, (int, float)) and entry_ms >= cutoff_ms:
             return it
+    return None
+
+
+def check_feishu_phone_duplicate(token: str, phone: str,
+                                 hours: int = _PHONE_DEDUP_HOURS,
+                                 extra_fields: list = None,
+                                 app_token: str = "", table_id: str = "") -> dict | None:
+    """按客户电话查重（近 N 小时内同号记录，默认 30 天）。
+
+    用于无邮箱线索（官网聊天留资等），避免同一电话重复分配不同业务员。
+    匹配末 8 位数字，与 Facebook 渠道查重口径一致。
+    """
+    app_token = app_token or FEISHU_APP_TOKEN
+    table_id = table_id or FEISHU_TABLE_ID
+    phone_digits = "".join(c for c in (phone or "") if c.isdigit())
+    if len(phone_digits) < 8:
+        return None
+    cutoff_ms = int((datetime.now() - timedelta(hours=hours)).timestamp() * 1000)
+    field_names = [FEISHU_PHONE_FIELD, _FEISHU_ENTRY_TIME, FEISHU_FIELD_NAME, FIELD_LEAD_ID]
+    if extra_fields:
+        field_names.extend(f for f in extra_fields if f not in field_names)
+    items = _search_feishu_records(
+        token,
+        {
+            "filter": {
+                "conjunction": "and",
+                "conditions": [
+                    {"field_name": FEISHU_PHONE_FIELD, "operator": "contains", "value": [phone_digits[-8:]]},
+                ],
+            },
+            "field_names": field_names,
+            "sort": [{"field_name": _FEISHU_ENTRY_TIME, "desc": True}],
+            "page_size": 20,
+        },
+        app_token=app_token,
+        table_id=table_id,
+    )
+    for it in items:
+        entry_ms = it.get("fields", {}).get(_FEISHU_ENTRY_TIME)
+        if isinstance(entry_ms, (int, float)) and entry_ms >= cutoff_ms:
+            stored = "".join(c for c in str(it.get("fields", {}).get(FEISHU_PHONE_FIELD, "")) if c.isdigit())
+            if stored and stored[-8:] == phone_digits[-8:]:
+                return it
     return None
 
 

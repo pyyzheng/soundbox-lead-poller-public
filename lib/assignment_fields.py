@@ -235,8 +235,10 @@ def infer_sub_channel_from_content(content: str) -> str | None:
     if (
         "linkedin.com" in lower
         or "inmail" in lower
-        or "linkedin lead gen" in lower
+        or "linkedin lead" in lower
         or "领英询盘" in text
+        or "领英表单" in text
+        or "领英主页" in text
     ):
         return "LinkedIn"
 
@@ -306,7 +308,11 @@ def heal_invalid_sub_channel(
     email_subject: str = "",
     rules: dict | None = None,
 ) -> str | None:
-    """细分渠道无效时返回应写回值；无需修复则返回 None。"""
+    """细分渠道无效，或与主渠道 LinkedIn 冲突时返回应写回值。"""
+    channel = (channels or "").strip()
+    mapped = resolve_channel_from_sub(sub_channel)
+    if channel == "LinkedIn" and mapped != "LinkedIn":
+        return "LinkedIn"
     if not is_invalid_sub_channel(sub_channel):
         return None
     return infer_sub_channel_from_signals(

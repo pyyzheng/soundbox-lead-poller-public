@@ -47,6 +47,21 @@ EMPTY_FORM_PLAIN = (
 
 
 class TestNewSiteHtmlExtract(unittest.TestCase):
+    def test_phone_country_inference_bulgaria(self):
+        from lead_fallback_parser import identify_country
+
+        self.assertEqual(identify_country("", "+359233511", ""), "保加利亚")
+
+    def test_build_fields_infer_country_from_phone(self):
+        from tagline_fields import FIELD_COUNTRY
+
+        content = (
+            "Name: \nEmail: \nTelephone Number: +359233511\n"
+            "Message: customer asked about certification\n"
+        )
+        fields = build_feishu_fields_from_content(content, channels="谷歌")
+        self.assertEqual(fields.get(FIELD_COUNTRY), "保加利亚")
+
     def test_html_table_extracts_mailto_email_and_name(self):
         fields = extract_fields(NEW_SITE_HTML)
         self.assertEqual(fields["email"], "rbr.samuel@gmail.com")
