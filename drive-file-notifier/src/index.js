@@ -1,8 +1,27 @@
 import * as lark from '@larksuiteoapi/node-sdk';
 import { loadConfig } from './config.js';
-import { createClient } from './feishu.js';
+import { createClient, getFileMeta } from './feishu.js';
 import { maybeAutoSubscribe, notifyFileAttachment } from './notify.js';
+import { matchSkipTitleKeyword } from './poll-cycle.js';
 import { createPoller } from './poller.js';
+
+async function shouldSkipByTitle(client, config, fileToken, fileType, titleHint = '') {
+  let title = titleHint;
+  if (!title) {
+    try {
+      const meta = await getFileMeta(client, fileToken, fileType || 'file');
+      title = meta?.title || '';
+    } catch {
+      // keep empty
+    }
+  }
+  const hit = matchSkipTitleKeyword(title, config.skipTitleKeywords);
+  if (hit) {
+    console.log(`[skip] blocked title "${title}" keyword=${hit} token=${fileToken}`);
+    return true;
+  }
+  return false;
+}
 
 async function main() {
   const config = loadConfig();
@@ -22,6 +41,7 @@ async function main() {
     client,
     config,
     onChange: async ({ token, type, meta }) => {
+      if (await shouldSkipByTitle(client, config, token, type, meta?.title)) return;
       await notifyFileAttachment(client, config, {
         fileToken: token,
         fileType: type,
@@ -44,6 +64,10 @@ async function main() {
 
       console.log(`[event] ${eventName} type=${fileType} token=${fileToken}`);
       scheduleEdit(pendingEdits, config.editDebounceMs, fileToken, async () => {
+        if (await shouldSkipByTitle(client, config, fileToken, fileType)) {
+          await poller.markSeen(fileToken);
+          return;
+        }
         const result = await notifyFileAttachment(client, config, {
           fileToken,
           fileType,
@@ -71,6 +95,11 @@ async function main() {
         if (dedupe(recentEvents, `${data?.header?.event_id || fileToken}:created`)) return;
 
         console.log(`[event] created_in_folder type=${fileType} token=${fileToken}`);
+        if (await shouldSkipByTitle(client, config, fileToken, fileType)) {
+          acceptedFiles.add(fileToken);
+          await poller.track([{ token: fileToken, type: fileType }]);
+          return;
+        }
         acceptedFiles.add(fileToken);
         await maybeAutoSubscribe(client, config, fileToken, fileType);
         const result = await notifyFileAttachment(client, config, {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { pollCycle } from './poll-cycle.js';
+import { matchSkipTitleKeyword, pollCycle } from './poll-cycle.js';
 
 function emptyState() {
   return {
@@ -406,4 +406,72 @@ test('eventually notifies deep uploaded file after transient subfolder scan fail
   assert.equal(second.notified, 1);
   assert.equal(sent.filter((s) => s.kind === 'file').length, 1);
   assert.equal(sent.find((s) => s.kind === 'file').fileToken, IMG);
+});
+
+test('matchSkipTitleKeyword detects 禁止外发 and 禁止', () => {
+  assert.equal(matchSkipTitleKeyword('产品手册-禁止外发.pdf'), '禁止外发');
+  assert.equal(matchSkipTitleKeyword('内部/禁止分享资料'), '禁止分享');
+  assert.equal(matchSkipTitleKeyword('普通文件.pdf'), null);
+  assert.equal(matchSkipTitleKeyword(['普通', '禁止外传.zip']), '禁止外传');
+});
+
+test('skips notify when file title contains 禁止外发', async () => {
+  const BLOCKED = 'blocked';
+  const OK = 'ok';
+  const client = {
+    listed: [],
+    folders: {
+      [ROOT]: [
+        { token: BLOCKED, type: 'file', name: '报价单-禁止外发.pdf' },
+        { token: OK, type: 'file', name: '公开画册.pdf' },
+      ],
+    },
+    metas: {
+      [BLOCKED]: { modify: now, title: '报价单-禁止外发.pdf' },
+      [OK]: { modify: now, title: '公开画册.pdf' },
+    },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+  };
+  const { sent, deps } = makeDeps(client);
+  const { notified } = await pollCycle({ client, config, state, tag: 't', deps });
+  assert.equal(notified, 1);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].fileToken, OK);
+  assert.ok(state.files[BLOCKED], 'blocked file still tracked in state');
+});
+
+test('skips notify for files inside a folder titled 禁止', async () => {
+  const SECRET = 'secretFolder';
+  const FILE = 'secretFile';
+  const client = {
+    listed: [],
+    folders: {
+      [ROOT]: [{ token: SECRET, type: 'folder', name: '客户报价-禁止外发' }],
+      [SECRET]: [{ token: FILE, type: 'file', name: '图层1.jpg' }],
+    },
+    metas: {
+      [SECRET]: { modify: now, title: '客户报价-禁止外发' },
+      [FILE]: { modify: now, title: '图层1.jpg' },
+    },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+  };
+  const { sent, deps } = makeDeps(client);
+  const { notified } = await pollCycle({ client, config, state, tag: 't', deps });
+  assert.equal(notified, 0);
+  assert.equal(sent.length, 0);
+  assert.ok(state.files[FILE], 'file under blocked folder still tracked');
 });

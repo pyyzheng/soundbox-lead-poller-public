@@ -35,6 +35,14 @@
   "notifyDedupSec": 86400,
   "maxFileBytes": 31457280,
   "autoSubscribeNewFiles": true,
+  "skipTitleKeywords": [
+    "禁止外发",
+    "禁止外传",
+    "禁止分享",
+    "勿外发",
+    "勿外传",
+    "禁止"
+  ],
   "captionPrefix": "【云盘更新】",
   "captionAction": "麻烦安排超级图册更新。",
   "notifyMode": "attachment",

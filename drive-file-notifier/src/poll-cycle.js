@@ -14,6 +14,43 @@ const DEFAULT_MAX_DEPTH = 8;
 const DEFAULT_RECENT_UPLOAD_SEC = 6 * 60 * 60;
 const DEFAULT_FOLDER_BUDGET = 80;
 
+/** 文件/文件夹标题命中这些词则不发群通知（仍会记入本地 state）。 */
+const DEFAULT_SKIP_TITLE_KEYWORDS = [
+  '禁止外发',
+  '禁止外传',
+  '禁止分享',
+  '勿外发',
+  '勿外传',
+  '禁止',
+];
+
+/**
+ * @param {string|string[]|null|undefined} texts
+ * @param {string[]|null|undefined} keywords
+ * @returns {string|null} matched keyword, or null
+ */
+export function matchSkipTitleKeyword(texts, keywords = DEFAULT_SKIP_TITLE_KEYWORDS) {
+  const list = (Array.isArray(keywords) ? keywords : DEFAULT_SKIP_TITLE_KEYWORDS)
+    .map((k) => String(k || '').trim())
+    .filter(Boolean);
+  if (!list.length) return null;
+  const haystacks = (Array.isArray(texts) ? texts : [texts])
+    .map((t) => String(t || '').trim())
+    .filter(Boolean);
+  if (!haystacks.length) return null;
+  for (const text of haystacks) {
+    for (const kw of list) {
+      if (text.includes(kw)) return kw;
+    }
+  }
+  return null;
+}
+
+function skipNotifyKeywords(config) {
+  if (Array.isArray(config?.skipTitleKeywords)) return config.skipTitleKeywords;
+  return DEFAULT_SKIP_TITLE_KEYWORDS;
+}
+
 /**
  * One detection pass over watched files and folders.
  * Mutates `state` and returns how many notifications were sent.
@@ -101,6 +138,15 @@ async function checkContentChanges(ctx) {
       }
       if (wasEverNotified(state, token)) {
         log(`skip duplicate content-change ${meta.title} token=${token.slice(0, 8)}`);
+        continue;
+      }
+
+      const blocked = matchSkipTitleKeyword(
+        [meta.title, prev.title],
+        skipNotifyKeywords(config),
+      );
+      if (blocked) {
+        log(`skip blocked title content-change ${meta.title} keyword=${blocked} token=${token.slice(0, 8)}`);
         continue;
       }
 
@@ -313,6 +359,16 @@ async function scanChildren(ctx, { folder, children, prevSet, seedOnly, firstSee
       continue;
     }
 
+    const blocked = matchSkipTitleKeyword(
+      [child.name, folder.name, folder.path],
+      skipNotifyKeywords(config),
+    );
+    if (blocked) {
+      log(`skip blocked title ${child.name} keyword=${blocked} path=${folder.path}`);
+      await trackNewChild(ctx, { child });
+      continue;
+    }
+
     if (notifyAllNewFiles) {
       bootstrapCandidates.push(child);
       continue;
@@ -362,6 +418,15 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
   for (const child of newFiles) {
     if (wasEverNotified(state, child.token)) {
       log(`sendNewFiles skip duplicate ${child.name} token=${child.token.slice(0, 8)}`);
+      await trackNewChild(ctx, { child });
+      continue;
+    }
+    const blocked = matchSkipTitleKeyword(
+      [child.name, folder.name, folder.path],
+      skipNotifyKeywords(config),
+    );
+    if (blocked) {
+      log(`sendNewFiles skip blocked title ${child.name} keyword=${blocked} path=${folder.path}`);
       await trackNewChild(ctx, { child });
       continue;
     }
