@@ -24,6 +24,7 @@ from assignment_fields import (
     FIELD_FB_LEADGEN,
     FIELD_GMAIL_MSG,
     FIELD_LEAD_ID,
+    FIELD_MANUAL_ASSIGNEE,
     FIELD_QUEUE_ASSIGNEE,
     FIELD_QUEUE_KEY,
     FIELD_STATUS,
@@ -44,6 +45,19 @@ from channel_queue_assign import (
     parse_queue_pointers,
     pick_queue_assignee,
 )
+from daily_least_assign import (
+    PUBLIC_REGION_ME,
+    PUBLIC_REGION_POINTER_KEY,
+    bump_count,
+    counts_should_include,
+    eligible_for_daily_least,
+    is_daily_least_queue,
+    normalize_public_region,
+    pick_daily_least_assignee,
+    shanghai_day_bounds,
+    to_utc_ms,
+    TRACKED_ASSIGNEES,
+)
 from feishu_utils import (
     FEISHU_APP_TOKEN,
     FEISHU_TABLE_ID,
@@ -54,20 +68,96 @@ from feishu_utils import (
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("fix-anomaly")
+DAILY_LEAST_ENABLED = os.environ.get("DAILY_LEAST_ASSIGN_ENABLED", "true").lower() == "true"
+FIELD_ENTRY_TIME = "Entry Time（录入时间）"
 
 
 def _search(token: str, table_id: str, body: dict) -> list[dict]:
-    resp = feishu_api(
-        "POST",
-        f"https://open.feishu.cn/open-apis/bitable/v1/apps/{FEISHU_APP_TOKEN}"
-        f"/tables/{table_id}/records/search?page_size=50",
-        token=token,
-        json=body,
+    items: list[dict] = []
+    page_token = ""
+    while True:
+        url = (
+            f"https://open.feishu.cn/open-apis/bitable/v1/apps/{FEISHU_APP_TOKEN}"
+            f"/tables/{table_id}/records/search?page_size=50"
+        )
+        if page_token:
+            url += f"&page_token={page_token}"
+        resp = feishu_api("POST", url, token=token, json=body)
+        data = resp.json()
+        if data.get("code") != 0:
+            raise RuntimeError(data)
+        body_data = data.get("data", {})
+        items.extend(body_data.get("items", []))
+        if not body_data.get("has_more"):
+            break
+        page_token = body_data.get("page_token", "")
+        if not page_token:
+            break
+    return items
+
+
+def _load_daily_counts(token: str) -> dict[str, int]:
+    counts = {name: 0 for name in TRACKED_ASSIGNEES}
+    yesterday_start, _, tomorrow_start = shanghai_day_bounds()
+    from_ms = to_utc_ms(yesterday_start)
+    try:
+        items = _search(
+            token,
+            FEISHU_TABLE_ID,
+            {
+                "filter": {
+                    "conjunction": "and",
+                    "conditions": [
+                        {
+                            "field_name": FIELD_ENTRY_TIME,
+                            "operator": "isGreater",
+                            "value": ["ExactDate", str(from_ms - 1)],
+                        },
+                        {
+                            "field_name": FIELD_ENTRY_TIME,
+                            "operator": "isLess",
+                            "value": ["ExactDate", str(to_utc_ms(tomorrow_start))],
+                        },
+                    ],
+                },
+                "field_names": [FIELD_ENTRY_TIME, FIELD_ASSIGNEE, FIELD_MANUAL_ASSIGNEE],
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("加载按天累计失败: %s", exc)
+        return counts
+    for item in items:
+        fields = item.get("fields", {}) or {}
+        final = extract_text(get_field(fields, FIELD_ASSIGNEE, "")).strip()
+        manual = extract_text(get_field(fields, FIELD_MANUAL_ASSIGNEE, "")).strip()
+        if counts_should_include(final_assignee=final, manual_assignee=manual):
+            bump_count(counts, final)
+    return counts
+
+
+def _load_public_region(token: str) -> tuple[int, str]:
+    rows = _search(
+        token,
+        QUEUE_POINTER_TABLE,
+        {
+            "filter": {
+                "conjunction": "and",
+                "conditions": [
+                    {"field_name": "队列Key", "operator": "is", "value": [PUBLIC_REGION_POINTER_KEY]}
+                ],
+            },
+            "field_names": ["队列Key", "当前顺序号"],
+        },
     )
-    data = resp.json()
-    if data.get("code") != 0:
-        raise RuntimeError(data)
-    return data.get("data", {}).get("items", [])
+    if not rows:
+        return PUBLIC_REGION_ME, ""
+    rid = rows[0].get("record_id", "")
+    cur = rows[0].get("fields", {}).get("当前顺序号", 1) or 1
+    try:
+        cur_i = int(cur)
+    except (TypeError, ValueError):
+        cur_i = 1
+    return normalize_public_region(cur_i), rid
 
 
 def _update(token: str, table_id: str, record_id: str, fields: dict) -> bool:
@@ -139,6 +229,10 @@ def main() -> int:
             },
         )
     )
+    daily_counts = _load_daily_counts(token) if DAILY_LEAST_ENABLED else {}
+    public_region, public_region_rid = (
+        _load_public_region(token) if DAILY_LEAST_ENABLED else (PUBLIC_REGION_ME, "")
+    )
 
     fixed = 0
     for item in anomalies:
@@ -199,10 +293,6 @@ def main() -> int:
                 else:
                     fields[FIELD_CHANNELS] = healed
 
-        if not eligible_for_channel_queue(fields):
-            log.info("跳过 %s（不满足渠道轮转条件）", lead_id or rid)
-            continue
-
         # 写前复核：避免与 unblock / 工作流并发时覆盖已有业务员
         if os.environ.get("FIX_ANOMALY_DRY_RUN", "false").lower() != "true":
             live_resp = feishu_api(
@@ -220,6 +310,47 @@ def main() -> int:
                     continue
 
         queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, ""))
+
+        if DAILY_LEAST_ENABLED and eligible_for_daily_least(fields):
+            pick = pick_daily_least_assignee(queue_key, daily_counts, public_region)
+            if not pick:
+                log.warning("按天最少无候选人 %s queue=%s", lead_id, queue_key)
+                continue
+            patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
+            log.info(
+                "修复(按天最少) %s → %s pool=%s",
+                lead_id,
+                pick.assignee,
+                pick.pool,
+            )
+            if os.environ.get("FIX_ANOMALY_DRY_RUN", "false").lower() == "true":
+                fixed += 1
+                bump_count(daily_counts, pick.assignee)
+                if pick.advance_public_region and pick.next_public_region:
+                    public_region = pick.next_public_region
+                continue
+            if _update(token, FEISHU_TABLE_ID, rid, patch):
+                time.sleep(0.5)
+                bump_count(daily_counts, pick.assignee)
+                if pick.advance_public_region and pick.next_public_region and public_region_rid:
+                    _update(
+                        token,
+                        QUEUE_POINTER_TABLE,
+                        public_region_rid,
+                        {"当前顺序号": pick.next_public_region},
+                    )
+                    public_region = pick.next_public_region
+                time.sleep(0.5)
+                fixed += 1
+            continue
+
+        if not eligible_for_channel_queue(fields):
+            log.info("跳过 %s（不满足渠道轮转条件）", lead_id or rid)
+            continue
+        if DAILY_LEAST_ENABLED and is_daily_least_queue(queue_key):
+            log.info("跳过 %s（中东/亚洲/公区已改按天最少）", lead_id or rid)
+            continue
+
         pick = pick_queue_assignee(queue_key, pointers, queue_map)
         if not pick:
             log.warning("无队列业务员 %s queue=%s", lead_id, queue_key)

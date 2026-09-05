@@ -13,6 +13,7 @@ FIELD_ROTATION = "是否满足渠道轮转"
 FIELD_DUP_READY = "Dup Formula Ready（公式查重就绪）"
 FIELD_STATUS = "Allocation Status（分配状态）"
 FIELD_ASSIGNEE = "The final assigned salesperson（最终分配的业务员）"
+FIELD_MANUAL_ASSIGNEE = "Manually reassigned sales representatives（人工改派的业务员）"
 FIELD_SYSTEM = "Matched Sales Rep（系统匹配业务员）"
 FIELD_EMAIL = "Email（客户邮箱）"
 FIELD_QUEUE_ASSIGNEE = "渠道顺序队列匹配业务员"
@@ -32,6 +33,7 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     FIELD_ASSIGN_METHOD: ("分配方式",),
     FIELD_STATUS: ("分配状态",),
     FIELD_ASSIGNEE: ("最终分配的业务员",),
+    FIELD_MANUAL_ASSIGNEE: ("人工改派的业务员",),
     FIELD_SYSTEM: ("系统匹配业务员",),
     FIELD_SUCCESS: ("是否成功分配",),
     FIELD_ASSIGN_SOURCE: ("分配来源",),
@@ -99,6 +101,8 @@ ERROR_ASSIGNEES = ("未命中规则", "匹配错误请检查", "公式计算异�
 QUEUE_POINTER_TABLE = "tblGWSsPla3eRfuY"
 CHANNEL_QUEUE_TABLE = "tblav9GLrm8Vnf1j"
 AGENT_RULE_TABLE = "tblk9x487yPMJGZr"
+# 中东/亚洲/公区「按天最少优先」计数看板（只读角色：按天最少优先计数查看）
+DAILY_LEAST_COUNT_TABLE = "tbl5SGCRhshZ8f4w"
 
 # OpenAPI 中单选/公式字段可能返回中文标签、双语标签或 option id，需一并识别。
 OPTION_YES = frozenset({"是", "Yes", "Yes（是）", "true", "True"})

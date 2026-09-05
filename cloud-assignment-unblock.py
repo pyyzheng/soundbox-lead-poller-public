@@ -45,6 +45,7 @@ from assignment_fields import (  # noqa: E402
     FIELD_ENTRY_TIME,
     FIELD_FB_LEADGEN,
     FIELD_GMAIL_MSG,
+    FIELD_MANUAL_ASSIGNEE,
     FIELD_PRODUCT_CAT,
     FIELD_PRODUCT_MODEL,
     FIELD_QUEUE_ASSIGNEE,
@@ -72,6 +73,19 @@ from channel_queue_assign import (  # noqa: E402
     parse_queue_pointers,
     pick_queue_assignee,
     reconcile_pointer_fields,
+)
+from daily_least_assign import (  # noqa: E402
+    PUBLIC_REGION_ME,
+    PUBLIC_REGION_POINTER_KEY,
+    TRACKED_ASSIGNEES,
+    bump_count,
+    counts_should_include,
+    eligible_for_daily_least,
+    is_daily_least_queue,
+    normalize_public_region,
+    pick_daily_least_assignee,
+    shanghai_day_bounds,
+    to_utc_ms,
 )
 from feishu_utils import (  # noqa: E402
     FEISHU_APP_TOKEN,
@@ -108,6 +122,8 @@ DRY_RUN = os.environ.get("ASSIGN_UNBLOCK_DRY_RUN", "false").lower() == "true"
 PENDING_ALERT_MINUTES = int(os.environ.get("ASSIGN_PENDING_ALERT_MINUTES", "10"))
 PENDING_ALERT_WINDOW_MINUTES = int(os.environ.get("ASSIGN_PENDING_ALERT_WINDOW_MINUTES", "3"))
 FIELD_PENDING_ALERT_AT = os.environ.get("ASSIGN_PENDING_ALERT_FIELD", "待确认超时告警时间")
+# 中东/亚洲/公区：按天累计最少优先（默认开启）；欧洲等仍走渠道顺序队列。
+DAILY_LEAST_ENABLED = os.environ.get("DAILY_LEAST_ASSIGN_ENABLED", "true").lower() == "true"
 
 
 def _search_records(token: str, table_id: str, body: dict) -> list[dict]:
@@ -240,6 +256,8 @@ def _advance_pointer_if_stale(
     queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, "")).strip()
     if not queue_assignee or not queue_key:
         return False
+    if DAILY_LEAST_ENABLED and is_daily_least_queue(queue_key):
+        return False
     if not is_success_assigned(fields.get(FIELD_SUCCESS, "")):
         return False
 
@@ -362,6 +380,7 @@ def _record_field_names() -> list[str]:
         FIELD_DUP_READY,
         FIELD_STATUS,
         FIELD_ASSIGNEE,
+        FIELD_MANUAL_ASSIGNEE,
         FIELD_SYSTEM,
         FIELD_EMAIL,
         FIELD_QUEUE_ASSIGNEE,
@@ -473,6 +492,123 @@ def _load_queue_pointers(token: str) -> dict:
             {"field_names": ["队列Key", "当前顺序号", "最大顺序号"], "page_size": 100},
         )
     )
+
+
+def _load_daily_least_counts(token: str) -> dict[str, int]:
+    """从主表统计昨+今自动分配次数（人工改派不计入）。"""
+    counts = {name: 0 for name in TRACKED_ASSIGNEES}
+    yesterday_start, _, tomorrow_start = shanghai_day_bounds()
+    from_ms = to_utc_ms(yesterday_start)
+    # ExactDate 用毫秒；isGreater 为严格大于「昨天 0 点前一刻」用 isGreaterEqual 更稳——飞书用 isGreater + 昨日0点-1ms
+    try:
+        items = _search_records(
+            token,
+            FEISHU_TABLE_ID,
+            {
+                "filter": {
+                    "conjunction": "and",
+                    "conditions": [
+                        {
+                            "field_name": FIELD_ENTRY_TIME,
+                            "operator": "isGreater",
+                            "value": ["ExactDate", str(from_ms - 1)],
+                        },
+                        {
+                            "field_name": FIELD_ENTRY_TIME,
+                            "operator": "isLess",
+                            "value": ["ExactDate", str(to_utc_ms(tomorrow_start))],
+                        },
+                    ],
+                },
+                # 人工改派字段名超 OpenAPI field_names 单项 50 字符上限
+                "page_size": 100,
+            },
+        )
+    except Exception as exc:  # noqa: BLE001 — 计数失败时降级为空，避免阻断分配
+        log.warning("加载按天累计失败，降级为空计数: %s", exc)
+        return counts
+
+    for item in items:
+        fields = item.get("fields", {}) or {}
+        entry_ms = fields.get(FIELD_ENTRY_TIME, 0) or 0
+        if entry_ms and (entry_ms < from_ms or entry_ms >= to_utc_ms(tomorrow_start)):
+            continue
+        final = extract_text(get_field(fields, FIELD_ASSIGNEE, "")).strip()
+        manual = extract_text(get_field(fields, FIELD_MANUAL_ASSIGNEE, "")).strip()
+        if counts_should_include(final_assignee=final, manual_assignee=manual):
+            bump_count(counts, final)
+    log.info(
+        "按天累计(昨+今) %s",
+        {k: v for k, v in sorted(counts.items()) if v},
+    )
+    return counts
+
+
+def _ensure_public_region_pointer(token: str, pointers: dict) -> tuple[int, str]:
+    """返回 (当前区 1/2, pointer_record_id)；缺失则创建。"""
+    ptr = pointers.get(PUBLIC_REGION_POINTER_KEY)
+    if ptr and ptr.record_id:
+        return normalize_public_region(ptr.current), ptr.record_id
+
+    # 指针表可能尚未有该键：搜索全表含未启用
+    rows = _search_records(
+        token,
+        QUEUE_POINTER_TABLE,
+        {
+            "filter": {
+                "conjunction": "and",
+                "conditions": [
+                    {"field_name": "队列Key", "operator": "is", "value": [PUBLIC_REGION_POINTER_KEY]}
+                ],
+            },
+            "field_names": ["队列Key", "当前顺序号", "是否启用"],
+            "page_size": 10,
+        },
+    )
+    if rows:
+        rid = rows[0].get("record_id", "")
+        cur = rows[0].get("fields", {}).get("当前顺序号", 1) or 1
+        try:
+            cur_i = int(cur)
+        except (TypeError, ValueError):
+            cur_i = 1
+        region = normalize_public_region(cur_i)
+        if not DRY_RUN and rid:
+            _update_record(
+                token,
+                QUEUE_POINTER_TABLE,
+                rid,
+                {"当前顺序号": region, "是否启用": "启用"},
+            )
+        return region, rid
+
+    if DRY_RUN:
+        log.info("dry-run: 将创建公区区指针 %s = 中东", PUBLIC_REGION_POINTER_KEY)
+        return PUBLIC_REGION_ME, ""
+
+    resp = feishu_api(
+        "POST",
+        (
+            f"https://open.feishu.cn/open-apis/bitable/v1/apps/{FEISHU_APP_TOKEN}"
+            f"/tables/{QUEUE_POINTER_TABLE}/records"
+        ),
+        token=token,
+        json={
+            "fields": {
+                "队列Key": PUBLIC_REGION_POINTER_KEY,
+                "当前顺序号": PUBLIC_REGION_ME,
+                "是否启用": "启用",
+            }
+        },
+        max_retries=3,
+    )
+    data = resp.json()
+    if data.get("code") != 0:
+        log.error("创建公区区指针失败: %s", data)
+        return PUBLIC_REGION_ME, ""
+    rid = data.get("data", {}).get("record", {}).get("record_id", "")
+    log.info("已创建公区区指针 record=%s", rid)
+    return PUBLIC_REGION_ME, rid
 
 
 def _collect_pending_agent_confirm_alerts(records: list[dict], now_ms: int) -> list[tuple[str, str]]:
@@ -591,9 +727,22 @@ def run() -> int:
 
     agent_rules = _load_agent_rules(token)
 
+    daily_counts: dict[str, int] = {name: 0 for name in TRACKED_ASSIGNEES}
+    public_region = PUBLIC_REGION_ME
+    public_region_rid = ""
+    if DAILY_LEAST_ENABLED:
+        daily_counts = _load_daily_least_counts(token)
+        public_region, public_region_rid = _ensure_public_region_pointer(token, pointers)
+        log.info(
+            "按天最少优先已开启 public_region=%s rid=%s",
+            "中东" if public_region == PUBLIC_REGION_ME else "亚洲",
+            public_region_rid or "-",
+        )
+
     reset_count = 0
     agent_clear_count = 0
     queue_assign_count = 0
+    daily_least_count = 0
     queue_skip_live_count = 0
     manual_to_auto_count = 0
     messenger_fixed = _sync_messenger_duplicates(token, records, cutoff_ms)
@@ -659,9 +808,15 @@ def run() -> int:
             if DRY_RUN:
                 agent_clear_count += 1
                 fields.update(patch)
+                agent_name = extract_text(patch.get(FIELD_AGENT_ASSIGNEE, "")).strip()
+                if agent_name:
+                    bump_count(daily_counts, agent_name)
             elif _update_record(token, FEISHU_TABLE_ID, record_id, patch):
                 fields.update(patch)
                 agent_clear_count += 1
+                agent_name = extract_text(patch.get(FIELD_AGENT_ASSIGNEE, "")).strip()
+                if agent_name:
+                    bump_count(daily_counts, agent_name)
 
         # Channels=无法识别 时先自愈；即使写回失败，后续仍可用区域队列兜底选人。
         if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))):
@@ -683,14 +838,13 @@ def run() -> int:
             elif _update_record(token, FEISHU_TABLE_ID, record_id, {FIELD_SUB_CHANNEL: healed_sub}):
                 fields[FIELD_SUB_CHANNEL] = healed_sub
 
-        if eligible_for_channel_queue(fields):
-            # 写前复核：其他 run / 工作流可能已写入业务员
+        if DAILY_LEAST_ENABLED and eligible_for_daily_least(fields):
             live_assignee = ""
             if not DRY_RUN and record_id:
                 live_assignee = _live_queue_assignee(token, record_id)
             if live_assignee:
                 log.info(
-                    "跳过渠道轮转（写前已有业务员） %s -> %s",
+                    "跳过按天最少（写前已有业务员） %s -> %s",
                     lead_id or record_id,
                     live_assignee,
                 )
@@ -698,37 +852,99 @@ def run() -> int:
                 queue_skip_live_count += 1
             else:
                 queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, ""))
-                pick = pick_queue_assignee(queue_key, pointers, queue_map)
+                pick = pick_daily_least_assignee(queue_key, daily_counts, public_region)
                 if pick:
-                    resolved_key = pick.resolved_queue_key or queue_key
                     log.info(
-                        "渠道轮转分配 %s queue=%s -> %s",
+                        "按天最少分配 %s pool=%s region=%s counts=%s -> %s",
                         lead_id or record_id,
-                        resolved_key,
+                        pick.pool,
+                        public_region,
+                        {k: daily_counts.get(k, 0) for k in TRACKED_ASSIGNEES},
                         pick.assignee,
                     )
                     patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
-                    if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
-                        patch[FIELD_CHANNELS] = resolved_key.split("|", 1)[0]
+                    if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in queue_key:
+                        # 渠道无效时不改 Channels（公式队列Key 仍可能带无法识别）；仅写业务员
+                        pass
                     if DRY_RUN:
-                        queue_assign_count += 1
+                        daily_least_count += 1
                         fields[FIELD_QUEUE_ASSIGNEE] = pick.assignee
+                        bump_count(daily_counts, pick.assignee)
+                        if pick.advance_public_region and pick.next_public_region:
+                            public_region = pick.next_public_region
                     elif _update_record(token, FEISHU_TABLE_ID, record_id, patch):
-                        queue_assign_count += 1
+                        daily_least_count += 1
                         fields[FIELD_QUEUE_ASSIGNEE] = pick.assignee
-                        if _update_record(
-                            token,
-                            QUEUE_POINTER_TABLE,
-                            pick.pointer_record_id,
-                            {"当前顺序号": pick.next_rank},
+                        bump_count(daily_counts, pick.assignee)
+                        if (
+                            pick.advance_public_region
+                            and pick.next_public_region
+                            and public_region_rid
                         ):
-                            pointers[resolved_key] = type(pointers[resolved_key])(
-                                record_id=pick.pointer_record_id,
-                                current=pick.next_rank,
-                                max_rank=pick.max_rank,
-                            )
+                            if _update_record(
+                                token,
+                                QUEUE_POINTER_TABLE,
+                                public_region_rid,
+                                {"当前顺序号": pick.next_public_region},
+                            ):
+                                public_region = pick.next_public_region
                 else:
-                    log.warning("队列无可用业务员 %s queue=%s", lead_id or record_id, queue_key)
+                    log.warning("按天最少无候选人 %s queue=%s", lead_id or record_id, queue_key)
+
+        elif eligible_for_channel_queue(fields):
+            queue_key = extract_text(fields.get(FIELD_QUEUE_KEY, ""))
+            # 中东/亚洲/公区已由按天最少接管时，不再走旧渠道指针轮循
+            if DAILY_LEAST_ENABLED and is_daily_least_queue(queue_key):
+                log.info(
+                    "跳过旧渠道轮转（已启用按天最少） %s queue=%s",
+                    lead_id or record_id,
+                    queue_key,
+                )
+            else:
+                # 写前复核：其他 run / 工作流可能已写入业务员
+                live_assignee = ""
+                if not DRY_RUN and record_id:
+                    live_assignee = _live_queue_assignee(token, record_id)
+                if live_assignee:
+                    log.info(
+                        "跳过渠道轮转（写前已有业务员） %s -> %s",
+                        lead_id or record_id,
+                        live_assignee,
+                    )
+                    fields[FIELD_QUEUE_ASSIGNEE] = live_assignee
+                    queue_skip_live_count += 1
+                else:
+                    pick = pick_queue_assignee(queue_key, pointers, queue_map)
+                    if pick:
+                        resolved_key = pick.resolved_queue_key or queue_key
+                        log.info(
+                            "渠道轮转分配 %s queue=%s -> %s",
+                            lead_id or record_id,
+                            resolved_key,
+                            pick.assignee,
+                        )
+                        patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
+                        if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
+                            patch[FIELD_CHANNELS] = resolved_key.split("|", 1)[0]
+                        if DRY_RUN:
+                            queue_assign_count += 1
+                            fields[FIELD_QUEUE_ASSIGNEE] = pick.assignee
+                        elif _update_record(token, FEISHU_TABLE_ID, record_id, patch):
+                            queue_assign_count += 1
+                            fields[FIELD_QUEUE_ASSIGNEE] = pick.assignee
+                            if _update_record(
+                                token,
+                                QUEUE_POINTER_TABLE,
+                                pick.pointer_record_id,
+                                {"当前顺序号": pick.next_rank},
+                            ):
+                                pointers[resolved_key] = type(pointers[resolved_key])(
+                                    record_id=pick.pointer_record_id,
+                                    current=pick.next_rank,
+                                    max_rank=pick.max_rank,
+                                )
+                    else:
+                        log.warning("队列无可用业务员 %s queue=%s", lead_id or record_id, queue_key)
 
         channels = extract_text(fields.get(FIELD_CHANNELS, ""))
         assignee = extract_text(fields.get(FIELD_ASSIGNEE, ""))
@@ -770,10 +986,23 @@ def run() -> int:
             log.warning("已写入告警去重标记 count=%s", marked)
         log.warning("已发送待确认超时告警 count=%s", len(pending_alerts))
 
+    if DAILY_LEAST_ENABLED and not DRY_RUN:
+        try:
+            scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts")
+            if scripts_dir not in sys.path:
+                sys.path.insert(0, scripts_dir)
+            from sync_daily_least_counts import sync as sync_daily_least_board  # noqa: E402
+
+            board_n = sync_daily_least_board(token)
+            log.info("已刷新按天最少优先计数看板 rows=%s", board_n)
+        except Exception as exc:  # noqa: BLE001 — 看板失败不影响分配主路径
+            log.warning("刷新按天最少优先计数看板失败: %s", exc)
+
     log.info(
-        "完成: reset=%s agent=%s queue=%s queue_skip_live=%s pointer_sync=%s pointer_reconcile=%s manual→auto=%s messenger=%s pending_alert=%s dry_run=%s",
+        "完成: reset=%s agent=%s daily_least=%s queue=%s queue_skip_live=%s pointer_sync=%s pointer_reconcile=%s manual→auto=%s messenger=%s pending_alert=%s dry_run=%s",
         reset_count,
         agent_clear_count,
+        daily_least_count,
         queue_assign_count,
         queue_skip_live_count,
         pointer_sync_count,
