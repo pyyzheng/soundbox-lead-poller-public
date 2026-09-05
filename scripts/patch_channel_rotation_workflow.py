@@ -26,8 +26,8 @@ from workflow_bilingual import (  # noqa: E402
 
 WORKFLOW_ID = "wkf2Hopgt3bWuoOH"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
-# 渠道顺序队列表.业务员；与主表「渠道顺序队列匹配业务员」动态选项同源
-CHANNEL_QUEUE_ASSIGNEE_FIELD_ID = "fldJSP0l6d"
+# 渠道顺序队列表.业务员；与主表「渠道顺序队列匹配业务员」均引用实际跟进人名单.业务名称
+CHANNEL_QUEUE_ASSIGNEE_FIELD_ID = "fld6iPjghw"
 ASSIGNEE_REF = f"$.acteml359jG.firstfieldsRecord.{CHANNEL_QUEUE_ASSIGNEE_FIELD_ID}"
 FIELD_QUEUE_ASSIGNEE = "渠道顺序队列匹配业务员"
 FIELD_SUCCESS = "Allocation Status（是否成功分配）"

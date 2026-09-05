@@ -90,7 +90,7 @@ jobs:
   auto-reply:
     needs: poll
     if: ${{ !cancelled() && needs.poll.result == 'success' }}
-    name: Auto-Reply (Stephanie)
+    name: Auto-Reply
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -122,7 +122,7 @@ jobs:
           FEISHU_ALERT_WEBHOOK:         ${{ secrets.FEISHU_ALERT_WEBHOOK }}
           AUTO_REPLY_WORKER_ENABLED:    ${{ secrets.AUTO_REPLY_WORKER_ENABLED || 'false' }}
           AUTO_REPLY_WORKER_DRY_RUN:    ${{ secrets.AUTO_REPLY_WORKER_DRY_RUN || 'true' }}
-          AUTO_REPLY_ALLOWED_SALESPERSONS: ${{ secrets.AUTO_REPLY_ALLOWED_SALESPERSONS || 'Stephanie' }}
+          AUTO_REPLY_ALLOWED_SALESPERSONS: ${{ secrets.AUTO_REPLY_ALLOWED_SALESPERSONS || '' }}
           FEISHU_FOLLOWUP_TABLE:       ${{ secrets.FEISHU_FOLLOWUP_TABLE }}
         run: python cloud-auto-reply-worker.py
 

@@ -23,14 +23,17 @@ T_MAIN = "tbluuuXn9WexH8LV"
 
 CHANNELS = ["Facebook", "谷歌", "阿里国际站", "国内渠道", "Outbound渠道", "LinkedIn"]
 
+# 2026-09-02 Stephanie 离职：从亚洲/南美非洲公区轮循名单移除，避免脚本重跑把她重新启用。
+# 南美非洲公区当前启用顺序对齐线上：Gigi → Cathy → Kevin → Rita（Sue 亦已停用）。
 NEW_QUEUES: dict[str, list[str]] = {
     "中东区队列": ["Gigi", "Sue", "Cathy"],
-    "亚洲区队列": ["Stephanie", "Kevin", "Rita"],
-    "南美非洲公区队列": ["Gigi", "Sue", "Cathy", "Stephanie", "Kevin", "Rita"],
+    "亚洲区队列": ["Kevin", "Rita"],
+    "南美非洲公区队列": ["Gigi", "Cathy", "Kevin", "Rita"],
     "欧洲公区队列": ["Hanny", "Sherry", "Kaka", "Snow"],
     "英国子办队列": ["Lindsey", "James"],  # 张婉璐=Lindsey
     "德国子办队列": ["Hanny", "Sherry"],
 }
+LEFT_COMPANY = frozenset({"Stephanie"})
 
 OLD_QUEUES_DISABLE = [
     "欧洲区队列",
@@ -459,7 +462,7 @@ def step_employment() -> None:
         "Sue": "中东区",
         "Cathy": "中东区",
         "Leepy": "亚洲区",
-        "Stephanie": "亚洲区",
+        "Stephanie": "亚洲区",  # 已离职，下方强制 是否在职=否
         "Kevin": "亚洲区",
         "Rita": "亚洲区",
         "Kaka": "欧洲大区",
@@ -480,13 +483,19 @@ def step_employment() -> None:
 
     emp = list_all(T_EMP, ["业务员姓名", "是否在职", "所属部门"])
     upd = []
+    left_upd = []
     for r in emp:
         name = r.get("业务员姓名")
         if name in mapping and r.get("所属部门") != mapping[name]:
             upd.append([r["_id"], mapping[name]])
             print(f"  {name}: {r.get('所属部门')} -> {mapping[name]}")
+        if name in LEFT_COMPANY and r.get("是否在职") != "否":
+            left_upd.append([r["_id"], "否"])
+            print(f"  {name}: 是否在职 {r.get('是否在职')} -> 否")
     if upd:
         batch_update(T_EMP, ["所属部门"], upd)
+    if left_upd:
+        batch_update(T_EMP, ["是否在职"], left_upd)
 
 
 def step_verify() -> None:

@@ -32,6 +32,7 @@ from assignment_fields import (  # noqa: E402
     FIELD_ASSIGN_SOURCE,
     FIELD_ENTRY_TIME,
     FIELD_LEAD_ID,
+    FIELD_MANUAL_ASSIGNEE,
     FIELD_SYSTEM,
     get_field,
 )
@@ -47,7 +48,6 @@ RECENT_HOURS = int(os.environ.get("DEDUP_CONFLICT_RECENT_HOURS", "168"))
 MAX_RECORDS = int(os.environ.get("DEDUP_CONFLICT_MAX_RECORDS", "200"))
 DRY_RUN = os.environ.get("DEDUP_CONFLICT_DRY_RUN", "false").lower() == "true"
 
-FIELD_MANUAL_ASSIGNEE = "人工改派的业务员"
 FIELD_DUP_RESULT = "Dup_Match_Result"
 FIELD_DUP_OWNER = "Dup_Match_Owner"
 FIELD_DUP_CONFLICT = "Dup_Match_Conflict"

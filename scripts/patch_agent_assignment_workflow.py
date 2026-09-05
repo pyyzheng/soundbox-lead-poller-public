@@ -39,8 +39,8 @@ BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
 UNRECOGNIZED_MODEL = "无法识别"
 STALE_COUNTRY_FIELD_IDS = ("fldqTJjAD7",)
 COUNTRY_FIELD_NAME = "国家"
-# 代理优先规则表.业务员（与主表「代理规则命中业务员」动态选项同源）
-AGENT_RULE_ASSIGNEE_FIELD_ID = "fldcmDUWhH"
+# 代理优先规则表.业务员（与主表「代理规则命中业务员」均引用实际跟进人名单.业务名称）
+AGENT_RULE_ASSIGNEE_FIELD_ID = "fldTd4YnhR"
 FIELD_AGENT_ASSIGNEE = "代理规则命中业务员"
 FIELD_AGENT_PRODUCT = "是否命中代理产品"
 FIELD_SUCCESS = "Allocation Status（是否成功分配）"

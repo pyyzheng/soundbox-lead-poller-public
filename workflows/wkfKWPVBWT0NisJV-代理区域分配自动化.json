@@ -321,7 +321,7 @@
             "field_name": "代理规则命中业务员",
             "value": [
               {
-                "value": "$.actlMXhJW.firstfieldsRecord.fldcmDUWhH",
+                "value": "$.actlMXhJW.firstfieldsRecord.fldTd4YnhR",
                 "value_type": "ref"
               }
             ]
@@ -554,7 +554,7 @@
             "field_name": "代理规则命中业务员",
             "value": [
               {
-                "value": "$.act3Nvoal.firstfieldsRecord.fldcmDUWhH",
+                "value": "$.act3Nvoal.firstfieldsRecord.fldTd4YnhR",
                 "value_type": "ref"
               }
             ]

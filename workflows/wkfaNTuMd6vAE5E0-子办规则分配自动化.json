@@ -283,7 +283,7 @@
             "field_name": "子办规则命中负责人",
             "value": [
               {
-                "value": "$.actVWM1Z5.firstfieldsRecord.fldATnmAXs",
+                "value": "$.actVWM1Z5.firstfieldsRecord.fldGFALrDR",
                 "value_type": "ref"
               }
             ]

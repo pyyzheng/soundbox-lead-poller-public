@@ -32,18 +32,26 @@ FIELD_REF = re.compile(r"fld[A-Za-z0-9]+")
 # 历史上因字段对齐/迁移而失效的 id（含误用说明）
 KNOWN_STALE: dict[str, str] = {
     "fldkoE4cko": "旧 Case handler（现为 fldJi4Y57A）",
-    "fld9vps8a6": "旧代理规则业务员字段（现为 fldcmDUWhH）",
-    "fldxAsUa9t": "旧子办负责人字段（现为 fldATnmAXs）",
-    "fldNAEpBXi": "旧渠道队列表「业务员」（已改动态选项 fldJSP0l6d）",
+    "fld9vps8a6": "旧代理规则业务员字段（现为 fldTd4YnhR）",
+    "fldxAsUa9t": "旧子办负责人字段（现为 fldGFALrDR）",
+    "fldNAEpBXi": "旧渠道队列表「业务员」（现为 fld6iPjghw）",
+    "fldcmDUWhH": "旧代理规则表.业务员（现为 fldTd4YnhR）",
+    "fldATnmAXs": "旧子办规则表.负责人（现为 fldGFALrDR）",
+    "fldJSP0l6d": "旧渠道队列表.业务员（现为 fld6iPjghw）",
+    "fldBBzmesf": "旧子办规则命中负责人（现为 fldojCR4c6）",
+    "fld7jnKAvi": "旧代理规则命中业务员（现为 fld8G1tcDd）",
+    "fld4Uk8KfA": "旧渠道顺序队列匹配业务员（现为 fldYadBK0j）",
     "fldCMXBRI2": "Customer Type（US）单选，勿作客户名称（应用 flddqTlnEm）",
 }
 
 # 分配链路当前应使用的 field_id（仅用于快查输出）
 CORE_FIELD_IDS: dict[str, str] = {
-    "fldcmDUWhH": "代理规则命中业务员",
-    "fldATnmAXs": "子办规则命中负责人",
-    "fldJSP0l6d": "渠道顺序队列表.业务员",
-    "fld4Uk8KfA": "渠道顺序队列匹配业务员",
+    "fldTd4YnhR": "代理优先规则表.业务员",
+    "fldGFALrDR": "子办分配规则表.负责人",
+    "fld6iPjghw": "渠道顺序队列表.业务员",
+    "fldojCR4c6": "子办规则命中负责人",
+    "fld8G1tcDd": "代理规则命中业务员",
+    "fldYadBK0j": "渠道顺序队列匹配业务员",
     "fldphEUn67": "匹配的业务员账号",
     "fldyv3fLLI": "实际跟进人账号",
     "flddqTlnEm": "Customer Name（客户名称）",

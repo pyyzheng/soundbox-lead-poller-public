@@ -45,7 +45,7 @@ WORKER_ENABLED = os.environ.get("AUTO_REPLY_WORKER_ENABLED", "false") == "true"
 WORKER_DRY_RUN = os.environ.get("AUTO_REPLY_WORKER_DRY_RUN", "true") == "true"
 ALLOWED_SALESPERSONS = [
     s.strip()
-    for s in os.environ.get("AUTO_REPLY_ALLOWED_SALESPERSONS", "Stephanie").split(",")
+    for s in os.environ.get("AUTO_REPLY_ALLOWED_SALESPERSONS", "").split(",")
     if s.strip()
 ]
 WORKER_MAX_RECORDS = int(os.environ.get("AUTO_REPLY_WORKER_MAX_RECORDS", "20"))

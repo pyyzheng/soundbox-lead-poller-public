@@ -33,8 +33,8 @@ OPT_SUCCESS_YES = "Yes（是）"
 OPT_SUCCESS_NO = "No（否）"
 OPT_YES_CN = "是"
 OPT_NO_CN = "否"
-# 子办分配规则表.负责人
-SUBOFFICE_OWNER_FIELD_ID = "fldATnmAXs"
+# 子办分配规则表.负责人（与主表「子办规则命中负责人」均引用实际跟进人名单.业务名称）
+SUBOFFICE_OWNER_FIELD_ID = "fldGFALrDR"
 # 主表 Country
 MAIN_COUNTRY_FIELD_ID = "fldAEhwYJU"
 # 是否是子办国家 Lookup

@@ -407,7 +407,7 @@ def _manager_main_table(countries: list[str], views: list[str], field_perms: dic
             "visibility": {"all_visible": False, "visible_views": views},
         },
         "record_rule": {
-            "record_operations": ["add"],
+            "record_operations": [],
             "edit_filter_rule_group": _country_record_filters(countries),
             "read_filter_rule_group": _country_record_filters(countries),
         },
@@ -428,7 +428,7 @@ def _sp_main_table(views: list[str], field_perms: dict[str, str]) -> dict[str, A
             "visibility": {"all_visible": False, "visible_views": views},
         },
         "record_rule": {
-            "record_operations": ["add"],
+            "record_operations": [],
             "edit_filter_rule_group": own,
             "read_filter_rule_group": own,
         },
@@ -753,6 +753,7 @@ def phase_members(role_ids: dict[str, str] | None = None) -> None:
         "俄白子办负责人": [OID["古绮雯"]],
         "美国业务员": [OID["Alex"], OID["Kay"], OID["Burcu"], OID["Jessica"]],
         "德国业务员": [OID["芮圣美"]],
+        "墨西哥业务员": [OID["王芷芹"]],
     }
     for name, oids in assignments.items():
         role = rid(name, None)

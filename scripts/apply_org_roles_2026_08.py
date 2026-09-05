@@ -257,11 +257,12 @@ def align_members(*, dry_run: bool) -> None:
     add_members(ROLES["europe_mgr"], [OID["彭桑"]], dry_run=dry_run)
     # Gigi 补进国际部业务员（跟进人视角，与同级一致）
     add_members(ROLES["intl_sp"], [OID["Gigi"]], dry_run=dry_run)
-    # 德/英校验补齐
+    # 德：负责人 Hanny + 业务员 Sherry
     add_members(ROLES["de_sp"], [OID["Sherry"]], dry_run=dry_run)
     add_members(ROLES["de_mgr"], [OID["Hanny"]], dry_run=dry_run)
-    add_members(ROLES["uk_mgr"], [OID["Lindsey"]], dry_run=dry_run)
-    add_members(ROLES["uk_sp"], [OID["James"]], dry_run=dry_run)
+    # 英：无负责人（同俄白）；Lindsey + James 均为业务员，只看 UK Lead Region
+    remove_members(ROLES["uk_mgr"], [OID["Lindsey"], OID["James"]], dry_run=dry_run)
+    add_members(ROLES["uk_sp"], [OID["Lindsey"], OID["James"]], dry_run=dry_run)
 
 
 def verify() -> None:
