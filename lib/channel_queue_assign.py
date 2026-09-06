@@ -90,6 +90,9 @@ def advance_pointer(current: int, max_rank: int) -> int:
 
 
 def _is_queue_member_enabled(fields: dict[str, Any]) -> bool:
+    """未投影「是否启用」时视为启用（调用方通常已用 filter 筛过启用行）。"""
+    if "是否启用" not in fields:
+        return True
     status = fields.get("是否启用")
     if isinstance(status, list):
         status = status[0] if status else ""

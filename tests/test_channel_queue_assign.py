@@ -253,6 +253,21 @@ class TestParseHelpers(unittest.TestCase):
         )
         self.assertEqual(mapping[("英国|VRT-ART队列", 2)], "James")
 
+    def test_parse_channel_queue_map_missing_enabled_field(self):
+        """API 已 filter 启用行、未投影是否启用时，仍应解析进队列。"""
+        mapping = parse_channel_queue_map(
+            [
+                {
+                    "fields": {
+                        "队列Key": "印度|全系列队列",
+                        "顺位": 2,
+                        "业务员": "Nithin",
+                    }
+                }
+            ]
+        )
+        self.assertEqual(mapping[("印度|全系列队列", 2)], "Nithin")
+
     def test_pick_skips_stale_disabled_rank(self):
         pointers = {
             "英国|VRT-ART队列": QueuePointer(record_id="rec-p", current=3, max_rank=3),

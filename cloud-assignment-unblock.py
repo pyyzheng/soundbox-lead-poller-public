@@ -380,7 +380,7 @@ def _record_field_names() -> list[str]:
         FIELD_DUP_READY,
         FIELD_STATUS,
         FIELD_ASSIGNEE,
-        FIELD_MANUAL_ASSIGNEE,
+        # 勿投影 FIELD_MANUAL_ASSIGNEE：字段名 51 字符，超 OpenAPI field_names 单项 50 上限
         FIELD_SYSTEM,
         FIELD_EMAIL,
         FIELD_QUEUE_ASSIGNEE,

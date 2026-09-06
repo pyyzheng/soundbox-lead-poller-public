@@ -120,7 +120,8 @@ def _load_daily_counts(token: str) -> dict[str, int]:
                         },
                     ],
                 },
-                "field_names": [FIELD_ENTRY_TIME, FIELD_ASSIGNEE, FIELD_MANUAL_ASSIGNEE],
+                # 不投影 field_names：人工改派字段名超 OpenAPI 单项 50 字符上限
+                "page_size": 100,
             },
         )
     except Exception as exc:  # noqa: BLE001
@@ -224,7 +225,7 @@ def main() -> int:
                     "conjunction": "and",
                     "conditions": [{"field_name": "是否启用", "operator": "is", "value": ["启用"]}],
                 },
-                "field_names": ["队列Key", "顺位", "业务员"],
+                "field_names": ["队列Key", "顺位", "业务员", "是否启用"],
                 "page_size": 100,
             },
         )
