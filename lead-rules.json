@@ -506,11 +506,19 @@
     "short_mash_unique_ratio": 0.875
   },
   "supplier_outreach_patterns": {
-    "_comment": "供应商向我们推销原材料/配件；命中即硬拦截",
+    "_comment": "供应商/劳务中介向我们推销原材料、配件或人力；命中即硬拦截",
     "enabled": true,
     "patterns": [
       "we\\s+produce.*(?:OEM|MOQ|impaling|galvanized)",
-      "(?:manufacturer|supplier|factory).*(?:purchasing|procurement)\\s+department"
+      "(?:manufacturer|supplier|factory).*(?:purchasing|procurement)\\s+department",
+      "manpower\\s+recruitment",
+      "recruitment\\s+company",
+      "staffing\\s+(?:agency|company|services)",
+      "deploying\\s+skilled\\s+professionals",
+      "providing\\s+manpower",
+      "comprehensive\\s+range\\s+of\\s+positions",
+      "introduce.{0,100}(?:recruitment|manpower|staffing)\\s+(?:company|agency|services|jobs?)",
+      "skilled\\s+(?:workers|professionals).{0,60}(?:deploy|supply|provide|across\\s+(?:europe|gcc|industries))"
     ]
   },
   "irrelevant_business": [
@@ -525,7 +533,10 @@
     "loan",
     "financial",
     "crypto investment",
-    "gambling"
+    "gambling",
+    "manpower recruitment",
+    "staffing agency",
+    "recruitment company"
   ],
   "spam_content_patterns": {
     "_comment": "Semantic spam patterns — match against combined name+subject+message+company. Case-insensitive substring/regex match.",
@@ -603,7 +614,8 @@
       "job (?:application|opportunity|opening|position)",
       "apply (?:for|to) (?:the|a|this) (?:position|job|role|vacancy)",
       "CV|r[eé]sum[eé]",
-      "hiring|recruiting",
+      "hiring|recruit(?:ing|ment)|staffing\\s+(?:agency|company)",
+      "manpower\\s+recruitment|providing\\s+manpower|range\\s+of\\s+positions",
       "career (?:opportunity|growth)",
       "应聘|求职|招聘|加入.*团队|我能.*工作|简历",
       "your (?:site|website) looks",

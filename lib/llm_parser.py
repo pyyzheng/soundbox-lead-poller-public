@@ -60,6 +60,7 @@ LLM_SYSTEM_PROMPT = """你是线索解析助手。解析邮件表单内容，返
 - 推销自己的服务（SEO、广告投放、网站开发、营销工具、品牌推广）
 - 招商合作邀请（展会展位、广告位、赞助）
 - 求职/投递简历
+- 劳务/人力中介冷推销（manpower recruitment、staffing agency、deploying skilled professionals、列举 mason/electrician 等工种清单）——对方是卖劳动力给我们，不是买静音舱
 - 纯粹的社交寒暄，无任何产品相关内容
 - 邮件核心内容是"我能为你做什么"而非"我想买你的产品"
 - 测试提交：name 是 "test"/"testing"，或 message 是纯数字/占位符（如 "222"、"123"）
