@@ -408,9 +408,12 @@ test('eventually notifies deep uploaded file after transient subfolder scan fail
   assert.equal(sent.find((s) => s.kind === 'file').fileToken, IMG);
 });
 
-test('matchSkipTitleKeyword detects 禁止外发 and 禁止', () => {
+test('matchSkipTitleKeyword detects 禁止外发 / 不对外 and 禁止', () => {
   assert.equal(matchSkipTitleKeyword('产品手册-禁止外发.pdf'), '禁止外发');
   assert.equal(matchSkipTitleKeyword('内部/禁止分享资料'), '禁止分享');
+  assert.equal(matchSkipTitleKeyword('报价-不对外.pdf'), '不对外');
+  assert.equal(matchSkipTitleKeyword('方案-勿对外'), '勿对外');
+  assert.equal(matchSkipTitleKeyword('仅限内部资料.zip'), '仅限内部');
   assert.equal(matchSkipTitleKeyword('普通文件.pdf'), null);
   assert.equal(matchSkipTitleKeyword(['普通', '禁止外传.zip']), '禁止外传');
 });
