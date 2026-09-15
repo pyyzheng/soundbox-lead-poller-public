@@ -1,0 +1,44 @@
+name: Refresh Weekly Spend Defaults
+
+# 每天刷新表单日期默认值（本周）+ 看板「上周」筛选（上海自然周；花费周六统计）。
+# 依赖 CI secret LARK_CLI_USER_CONFIG（lark-cli user 会话）。
+on:
+  schedule:
+    # 每天 00:05 上海 = 前一天 16:05 UTC
+    - cron: "5 16 * * *"
+    # 额外：每天 12:05 上海再刷一次，降低跨周窗口空窗
+    - cron: "5 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: Refresh week date defaults
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install lark-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/larksuite/cli/main/install.sh | bash
+          echo "$HOME/.lark-cli/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.lark-cli/bin:$HOME/.local/bin:$PATH"
+          lark-cli --version
+      - name: Restore lark user session
+        env:
+          LARK_CLI_USER_CONFIG: ${{ secrets.LARK_CLI_USER_CONFIG }}
+        run: |
+          if [ -z "${LARK_CLI_USER_CONFIG:-}" ]; then
+            echo "Missing secret LARK_CLI_USER_CONFIG (lark-cli user auth JSON). Skip."
+            exit 1
+          fi
+          mkdir -p "$HOME/.lark-cli"
+          echo "$LARK_CLI_USER_CONFIG" > "$HOME/.lark-cli/config.json"
+      - name: Refresh defaults
+        run: python3 scripts/refresh_weekly_spend_defaults.py

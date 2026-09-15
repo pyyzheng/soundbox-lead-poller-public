@@ -1,0 +1,56 @@
+name: Facebook First-Contact
+
+# Facebook 历史人工分配线索首联 Worker
+# 新 Facebook 线索已直接写 分配方式=自动，并走 auto-reply-worker。
+# 本 workflow 仅保留给历史 分配方式=人工 的 Pending 冷线索补首联。
+on:
+  repository_dispatch:
+    types: [facebook-first-contact]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run（不实际发送邮件）"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: fb-first-contact
+  cancel-in-progress: false
+
+jobs:
+  first-contact:
+    name: Facebook First-Contact Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run facebook first-contact worker
+        env:
+          GMAIL_CLIENT_ID:          ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET:      ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN:      ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          FEISHU_APP_ID:            ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:        ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_ALERT_WEBHOOK:     ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          FEISHU_FOLLOWUP_TABLE:   ${{ secrets.FEISHU_FOLLOWUP_TABLE }}
+          # repository_dispatch（webhook 触发）默认真发；workflow_dispatch 手动测试默认 dry-run
+          FB_FIRST_CONTACT_DRY_RUN: ${{ github.event.client_payload.dry_run || inputs.dry_run || 'false' }}
+        run: python facebook-first-contact-worker.py

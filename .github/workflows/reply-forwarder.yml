@@ -1,0 +1,52 @@
+name: Reply Forwarder
+
+on:
+  schedule:
+    # 每 30 分钟运行一次
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run（不实际转发邮件）"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  forward-replies:
+    name: Forward Customer Replies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run reply forwarder
+        env:
+          GMAIL_CLIENT_ID:              ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET:          ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN:          ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          FEISHU_APP_ID:                ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:            ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_ALERT_WEBHOOK:         ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          FEISHU_FOLLOWUP_TABLE:       ${{ secrets.FEISHU_FOLLOWUP_TABLE }}
+          FEISHU_SALES_NOTIFY_TABLE:   ${{ secrets.FEISHU_SALES_NOTIFY_TABLE }}
+          FORWARDER_DRY_RUN:            ${{ inputs.dry_run || 'false' }}
+          FORWARDER_MAX_RECORDS:        "20"
+          SALES_EMAIL_MAP:              ${{ secrets.SALES_EMAIL_MAP }}
+        run: python cloud-reply-forwarder.py

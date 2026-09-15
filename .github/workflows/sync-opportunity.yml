@@ -1,0 +1,54 @@
+name: Sync Opportunity From Leads
+
+# 询盘 A2–A5 → 商机录入表（近实时 + 每2分钟兜底 + 手工/单条触发）
+on:
+  schedule:
+    - cron: "*/2 * * * *"
+  workflow_dispatch:
+    inputs:
+      record_id:
+        description: "源表 record_id（可选，指定则只同步一条）"
+        required: false
+        type: string
+      clue_id:
+        description: "Clue ID（可选）"
+        required: false
+        type: string
+  repository_dispatch:
+    types: [opportunity-sync]
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync A2-A5 to opportunity table
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install requests
+      - name: Sync
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID: ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_SALES_NOTIFY_TABLE: ${{ secrets.FEISHU_SALES_NOTIFY_TABLE }}
+          OPP_BASE_TOKEN: Ktddb4mhtaixgYs9CIkcNnXFngh
+          OPP_TABLE_ID: tblz7klQPWxg9H15
+          RECORD_ID: ${{ github.event.inputs.record_id || github.event.client_payload.record_id || '' }}
+          CLUE_ID: ${{ github.event.inputs.clue_id || github.event.client_payload.clue_id || '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "${RECORD_ID}" ]; then
+            python3 scripts/sync_opportunity_from_leads.py --record-id "${RECORD_ID}"
+          elif [ -n "${CLUE_ID}" ]; then
+            python3 scripts/sync_opportunity_from_leads.py --clue-id "${CLUE_ID}"
+          else
+            python3 scripts/sync_opportunity_from_leads.py --incremental
+          fi

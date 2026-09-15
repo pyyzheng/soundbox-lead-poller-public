@@ -1,0 +1,200 @@
+{
+  "title": "Urge Follow-up → notify salesperson",
+  "steps": [
+    {
+      "id": "trig",
+      "type": "ButtonTrigger",
+      "title": "Click Urge Follow-up button",
+      "next": "stamp",
+      "children": { "links": [] },
+      "data": {
+        "button_type": "buttonField",
+        "table_name": "线索总池 Case Database"
+      }
+    },
+    {
+      "id": "stamp",
+      "type": "SetRecordAction",
+      "title": "Stamp last urge time first",
+      "next": "find_user",
+      "children": { "links": [] },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": { "step_id": "trig" },
+        "field_values": [
+          {
+            "field_name": "Last urge time / 最近催办时间",
+            "value": [{ "value_type": "date", "value": "now" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": "find_user",
+      "type": "FindRecordAction",
+      "title": "Resolve user via 业务通知名单 (same as assignment notify)",
+      "next": "chk_found",
+      "children": { "links": [] },
+      "data": {
+        "table_name": "业务通知名单",
+        "field_names": ["业务名单", "对应业务", "邮箱"],
+        "should_proceed_when_no_results": true,
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "业务名单",
+              "operator": "is",
+              "value": [{ "value_type": "ref", "value": "$.trig.fldorF3W8M" }]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "chk_found",
+      "type": "IfElseBranch",
+      "title": "Notify-list user found?",
+      "next": null,
+      "children": {
+        "links": [
+          { "kind": "if_true", "to": "msg" },
+          { "kind": "if_false", "to": "chk_follower" }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conjunction": "or",
+          "conditions": [
+            {
+              "conjunction": "and",
+              "conditions": [
+                {
+                  "left_value": { "value_type": "ref", "value": "$.find_user.recordNum" },
+                  "operator": "isGreater",
+                  "right_value": [{ "value_type": "number", "value": 0 }]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "msg",
+      "type": "LarkMessageAction",
+      "title": "Send reminder to notify-list user",
+      "next": null,
+      "children": { "links": [] },
+      "data": {
+        "receiver": [
+          { "value_type": "ref", "value": "$.find_user.firstfieldsRecord.fldEVPOdP6" }
+        ],
+        "send_to_everyone": false,
+        "title": [
+          { "value_type": "text", "value": "⏰ Follow-up Reminder" }
+        ],
+        "content": [
+          { "value_type": "text", "value": "Please follow up this lead ASAP. The customer has reached out again.\n\nClue ID: " },
+          { "value_type": "ref", "value": "$.trig.flde0LY8qQ" },
+          { "value_type": "text", "value": "\nCustomer: " },
+          { "value_type": "ref", "value": "$.trig.flddqTlnEm" },
+          { "value_type": "text", "value": "\nPhone: " },
+          { "value_type": "ref", "value": "$.trig.fldc822WUz" },
+          { "value_type": "text", "value": "\nEmail: " },
+          { "value_type": "ref", "value": "$.trig.fldLlZgKLx" },
+          { "value_type": "text", "value": "\nChannel: " },
+          { "value_type": "ref", "value": "$.trig.fldfEGSf9r" },
+          { "value_type": "text", "value": "\nEnquiry details:\n" },
+          { "value_type": "ref", "value": "$.trig.fldNLj6Btg" },
+          { "value_type": "text", "value": "\n\nUrge note:\n" },
+          { "value_type": "ref", "value": "$.trig.fldPbqaEx1" },
+          { "value_type": "text", "value": "\n\nRecipient: " },
+          { "value_type": "ref", "value": "$.trig.fldorF3W8M" },
+          { "value_type": "text", "value": "\nTriggered by: " },
+          { "value_type": "ref", "value": "$.trig.user" }
+        ],
+        "btn_list": [
+          {
+            "text": "Open Lead",
+            "btn_action": "openLink",
+            "link": [{ "value_type": "ref", "value": "$.trig.recordLink" }]
+          }
+        ]
+      }
+    },
+    {
+      "id": "chk_follower",
+      "type": "IfElseBranch",
+      "title": "Fallback: has Follower user?",
+      "next": null,
+      "children": {
+        "links": [
+          { "kind": "if_true", "to": "msg_follower" },
+          { "kind": "if_false", "to": null }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conjunction": "or",
+          "conditions": [
+            {
+              "conjunction": "and",
+              "conditions": [
+                {
+                  "left_value": { "value_type": "ref", "value": "$.trig.fldyv3fLLI" },
+                  "operator": "isNotEmpty",
+                  "right_value": []
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "msg_follower",
+      "type": "LarkMessageAction",
+      "title": "Fallback notify Follower account",
+      "next": null,
+      "children": { "links": [] },
+      "data": {
+        "receiver": [
+          { "value_type": "ref", "value": "$.trig.fldyv3fLLI" }
+        ],
+        "send_to_everyone": false,
+        "title": [
+          { "value_type": "text", "value": "⏰ Follow-up Reminder" }
+        ],
+        "content": [
+          { "value_type": "text", "value": "Please follow up this lead ASAP. The customer has reached out again.\n\nClue ID: " },
+          { "value_type": "ref", "value": "$.trig.flde0LY8qQ" },
+          { "value_type": "text", "value": "\nCustomer: " },
+          { "value_type": "ref", "value": "$.trig.flddqTlnEm" },
+          { "value_type": "text", "value": "\nPhone: " },
+          { "value_type": "ref", "value": "$.trig.fldc822WUz" },
+          { "value_type": "text", "value": "\nEmail: " },
+          { "value_type": "ref", "value": "$.trig.fldLlZgKLx" },
+          { "value_type": "text", "value": "\nChannel: " },
+          { "value_type": "ref", "value": "$.trig.fldfEGSf9r" },
+          { "value_type": "text", "value": "\nEnquiry details:\n" },
+          { "value_type": "ref", "value": "$.trig.fldNLj6Btg" },
+          { "value_type": "text", "value": "\n\nUrge note:\n" },
+          { "value_type": "ref", "value": "$.trig.fldPbqaEx1" },
+          { "value_type": "text", "value": "\n\nRecipient: " },
+          { "value_type": "ref", "value": "$.trig.fldorF3W8M" },
+          { "value_type": "text", "value": "\nTriggered by: " },
+          { "value_type": "ref", "value": "$.trig.user" }
+        ],
+        "btn_list": [
+          {
+            "text": "Open Lead",
+            "btn_action": "openLink",
+            "link": [{ "value_type": "ref", "value": "$.trig.recordLink" }]
+          }
+        ]
+      }
+    }
+  ]
+}

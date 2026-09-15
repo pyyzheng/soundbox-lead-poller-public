@@ -1,0 +1,56 @@
+name: Lead Pipeline Health Check
+
+on:
+  schedule:
+    - cron: "0 2 * * *"   # 每天 1 次（UTC 02:00 = 北京 10:00）
+  workflow_dispatch:
+    inputs:
+      check_hours:
+        description: "检查最近 N 小时的记录"
+        required: false
+        default: "24"
+      dry_run:
+        description: "Dry run（不发告警）"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  health-check:
+    name: Pipeline Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run health check
+        env:
+          FEISHU_APP_ID:        ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:    ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_ALERT_WEBHOOK: ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          GITHUB_TOKEN:         ${{ secrets.GHA_PAT }}
+          GHA_PAT:              ${{ secrets.GHA_PAT }}
+          GITHUB_REPO:          ${{ github.repository }}
+          GMAIL_CLIENT_ID:      ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET:  ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN:  ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          CRONJOB_API_KEY:      ${{ secrets.CRONJOB_API_KEY }}
+          CRONJOB_JOB_ID:       ${{ secrets.CRONJOB_JOB_ID }}
+          CHECK_HOURS:          ${{ github.event.inputs.check_hours || '24' }}
+          DRY_RUN:              ${{ github.event.inputs.dry_run || 'false' }}
+        run: python cloud-health-check.py

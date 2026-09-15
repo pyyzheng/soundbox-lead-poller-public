@@ -1,0 +1,59 @@
+{
+  "chatId": "oc_f57656944eaa6b10c8c04fb385f3fc00",
+  "watchFolders": [
+    {
+      "token": "RsXZfdPMtlN6tjdCLI0c12munfc",
+      "name": "测试文件更新通知"
+    },
+    {
+      "token": "YYFCfwjMMley4md1SMgcPLvznEb",
+      "name": "C-产品画册&产品色卡_20260706-0355PM"
+    },
+    {
+      "token": "BGGMfON8vl4uHVdac7Bcv8HDnvf",
+      "name": "M-Marketing 品牌营销资料"
+    },
+    {
+      "token": "DUdufPTFZlAKcwdHy6ychCCBnGc",
+      "name": "A-Case Gallery案例（图片-视频)"
+    }
+  ],
+  "watchFiles": [
+    {
+      "token": "HubRbexqdo5VRqxh220c1TUpn0f",
+      "type": "file",
+      "name": "公司简介及产品及解决方案.md"
+    }
+  ],
+  "editDebounceMs": 15000,
+  "pollIntervalMs": 60000,
+  "maxFolderDepth": 8,
+  "folderScanBudget": 120,
+  "staleRescanSec": 180,
+  "staleRescanBudget": 300,
+  "recentUploadWindowSec": 21600,
+  "notifyDedupSec": 86400,
+  "maxFileBytes": 31457280,
+  "autoSubscribeNewFiles": true,
+  "skipTitleKeywords": [
+    "禁止外发",
+    "禁止外传",
+    "禁止分享",
+    "勿外发",
+    "勿外传",
+    "勿对外",
+    "不对外",
+    "仅限内部",
+    "内部专用",
+    "禁止"
+  ],
+  "captionPrefix": "【云盘更新】",
+  "captionAction": "麻烦安排超级图册更新。",
+  "notifyMode": "attachment",
+  "mentions": [
+    {
+      "name": "西米",
+      "openId": "ou_8f57357a0c3ce70ce30be90021bff676"
+    }
+  ]
+}

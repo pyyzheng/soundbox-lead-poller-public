@@ -1,0 +1,1732 @@
+{
+  "title": "成交金额→按国家自动回填币种",
+  "steps": [
+    {
+      "id": "trig",
+      "type": "SetRecordTrigger",
+      "title": "成交金额被填写时",
+      "next": "sw1",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "field_watch_info": [
+          {
+            "field_name": "Deal Amount / 成交金额",
+            "operator": "isNotEmpty",
+            "value": []
+          }
+        ],
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Deal Amount / 成交金额",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Currency / 币种",
+                "operator": "isEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Suggested Currency / 建议币种",
+                "operator": "isNotEmpty",
+                "value": []
+              }
+            ]
+          }
+        ],
+        "trigger_control_list": [
+          "pasteUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      }
+    },
+    {
+      "id": "sw1",
+      "type": "SwitchBranch",
+      "title": "按建议币种分组1",
+      "next": null,
+      "children": {
+        "links": [
+          {
+            "kind": "case",
+            "label": "branch_1",
+            "to": "set_CNY",
+            "desc": "CNY"
+          },
+          {
+            "kind": "case",
+            "label": "branch_2",
+            "to": "set_EUR",
+            "desc": "EUR"
+          },
+          {
+            "kind": "case",
+            "label": "branch_3",
+            "to": "set_GBP",
+            "desc": "GBP"
+          },
+          {
+            "kind": "case",
+            "label": "branch_4",
+            "to": "set_HKD",
+            "desc": "HKD"
+          },
+          {
+            "kind": "case",
+            "label": "branch_5",
+            "to": "set_AUD",
+            "desc": "AUD"
+          },
+          {
+            "kind": "case",
+            "label": "branch_6",
+            "to": "set_CAD",
+            "desc": "CAD"
+          },
+          {
+            "kind": "case",
+            "label": "branch_7",
+            "to": "set_JPY",
+            "desc": "JPY"
+          },
+          {
+            "kind": "case",
+            "label": "branch_8",
+            "to": "set_SGD",
+            "desc": "SGD"
+          },
+          {
+            "kind": "case",
+            "label": "branch_9",
+            "to": "set_TWD",
+            "desc": "TWD"
+          },
+          {
+            "kind": "case",
+            "label": "default",
+            "to": "sw2",
+            "desc": "其他"
+          }
+        ]
+      },
+      "data": {
+        "mode": "exclusive",
+        "no_match_action": "classifyToOther",
+        "child_branch_list": [
+          {
+            "name": "CNY",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "CNY"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "EUR",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "EUR"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "GBP",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "GBP"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "HKD",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "HKD"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "AUD",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "AUD"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "CAD",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "CAD"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "JPY",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "JPY"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "SGD",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "SGD"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "TWD",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "TWD"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "sw2",
+      "type": "SwitchBranch",
+      "title": "按建议币种分组2",
+      "next": null,
+      "children": {
+        "links": [
+          {
+            "kind": "case",
+            "label": "branch_1",
+            "to": "set_KRW",
+            "desc": "KRW"
+          },
+          {
+            "kind": "case",
+            "label": "branch_2",
+            "to": "set_MYR",
+            "desc": "MYR"
+          },
+          {
+            "kind": "case",
+            "label": "branch_3",
+            "to": "set_THB",
+            "desc": "THB"
+          },
+          {
+            "kind": "case",
+            "label": "branch_4",
+            "to": "set_INR",
+            "desc": "INR"
+          },
+          {
+            "kind": "case",
+            "label": "branch_5",
+            "to": "set_MXN",
+            "desc": "MXN"
+          },
+          {
+            "kind": "case",
+            "label": "branch_6",
+            "to": "set_BRL",
+            "desc": "BRL"
+          },
+          {
+            "kind": "case",
+            "label": "branch_7",
+            "to": "set_AED",
+            "desc": "AED"
+          },
+          {
+            "kind": "case",
+            "label": "branch_8",
+            "to": "set_SAR",
+            "desc": "SAR"
+          },
+          {
+            "kind": "case",
+            "label": "branch_9",
+            "to": "set_NZD",
+            "desc": "NZD"
+          },
+          {
+            "kind": "case",
+            "label": "default",
+            "to": "sw3",
+            "desc": "其他"
+          }
+        ]
+      },
+      "data": {
+        "mode": "exclusive",
+        "no_match_action": "classifyToOther",
+        "child_branch_list": [
+          {
+            "name": "KRW",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "KRW"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "MYR",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "MYR"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "THB",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "THB"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "INR",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "INR"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "MXN",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "MXN"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "BRL",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "BRL"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "AED",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "AED"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "SAR",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "SAR"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "NZD",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "NZD"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "sw3",
+      "type": "SwitchBranch",
+      "title": "按建议币种分组3",
+      "next": null,
+      "children": {
+        "links": [
+          {
+            "kind": "case",
+            "label": "branch_1",
+            "to": "set_CHF",
+            "desc": "CHF"
+          },
+          {
+            "kind": "case",
+            "label": "branch_2",
+            "to": "set_SEK",
+            "desc": "SEK"
+          },
+          {
+            "kind": "case",
+            "label": "branch_3",
+            "to": "set_NOK",
+            "desc": "NOK"
+          },
+          {
+            "kind": "case",
+            "label": "branch_4",
+            "to": "set_DKK",
+            "desc": "DKK"
+          },
+          {
+            "kind": "case",
+            "label": "branch_5",
+            "to": "set_RUB",
+            "desc": "RUB"
+          },
+          {
+            "kind": "case",
+            "label": "branch_6",
+            "to": "set_PHP",
+            "desc": "PHP"
+          },
+          {
+            "kind": "case",
+            "label": "branch_7",
+            "to": "set_IDR",
+            "desc": "IDR"
+          },
+          {
+            "kind": "case",
+            "label": "branch_8",
+            "to": "set_VND",
+            "desc": "VND"
+          },
+          {
+            "kind": "case",
+            "label": "default",
+            "to": "set_USD",
+            "desc": "其他"
+          }
+        ]
+      },
+      "data": {
+        "mode": "exclusive",
+        "no_match_action": "classifyToOther",
+        "child_branch_list": [
+          {
+            "name": "CHF",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "CHF"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "SEK",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "SEK"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "NOK",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "NOK"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "DKK",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "DKK"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "RUB",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "RUB"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "PHP",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "PHP"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "IDR",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "IDR"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "VND",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "left_value": {
+                        "value_type": "ref",
+                        "value": "$.trig.fld7utZlxC"
+                      },
+                      "operator": "is",
+                      "right_value": [
+                        {
+                          "value_type": "text",
+                          "value": "VND"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_CNY",
+      "type": "SetRecordAction",
+      "title": "回填 CNY",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "CNY"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_EUR",
+      "type": "SetRecordAction",
+      "title": "回填 EUR",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "EUR"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_GBP",
+      "type": "SetRecordAction",
+      "title": "回填 GBP",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "GBP"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_HKD",
+      "type": "SetRecordAction",
+      "title": "回填 HKD",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "HKD"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_AUD",
+      "type": "SetRecordAction",
+      "title": "回填 AUD",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "AUD"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_CAD",
+      "type": "SetRecordAction",
+      "title": "回填 CAD",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "CAD"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_JPY",
+      "type": "SetRecordAction",
+      "title": "回填 JPY",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "JPY"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_SGD",
+      "type": "SetRecordAction",
+      "title": "回填 SGD",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "SGD"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_TWD",
+      "type": "SetRecordAction",
+      "title": "回填 TWD",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "TWD"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_KRW",
+      "type": "SetRecordAction",
+      "title": "回填 KRW",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "KRW"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_MYR",
+      "type": "SetRecordAction",
+      "title": "回填 MYR",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "MYR"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_THB",
+      "type": "SetRecordAction",
+      "title": "回填 THB",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "THB"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_INR",
+      "type": "SetRecordAction",
+      "title": "回填 INR",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "INR"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_MXN",
+      "type": "SetRecordAction",
+      "title": "回填 MXN",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "MXN"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_BRL",
+      "type": "SetRecordAction",
+      "title": "回填 BRL",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "BRL"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_AED",
+      "type": "SetRecordAction",
+      "title": "回填 AED",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "AED"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_SAR",
+      "type": "SetRecordAction",
+      "title": "回填 SAR",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "SAR"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_NZD",
+      "type": "SetRecordAction",
+      "title": "回填 NZD",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "NZD"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_CHF",
+      "type": "SetRecordAction",
+      "title": "回填 CHF",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "CHF"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_SEK",
+      "type": "SetRecordAction",
+      "title": "回填 SEK",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "SEK"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_NOK",
+      "type": "SetRecordAction",
+      "title": "回填 NOK",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "NOK"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_DKK",
+      "type": "SetRecordAction",
+      "title": "回填 DKK",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "DKK"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_RUB",
+      "type": "SetRecordAction",
+      "title": "回填 RUB",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "RUB"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_PHP",
+      "type": "SetRecordAction",
+      "title": "回填 PHP",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "PHP"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_IDR",
+      "type": "SetRecordAction",
+      "title": "回填 IDR",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "IDR"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_VND",
+      "type": "SetRecordAction",
+      "title": "回填 VND",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "VND"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_USD",
+      "type": "SetRecordAction",
+      "title": "回填 USD",
+      "next": null,
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 1,
+        "ref_info": {
+          "step_id": "trig"
+        },
+        "field_values": [
+          {
+            "field_name": "Currency / 币种",
+            "value": [
+              {
+                "value_type": "option",
+                "value": {
+                  "name": "USD"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

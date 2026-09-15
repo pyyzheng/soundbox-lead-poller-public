@@ -1,0 +1,258 @@
+{
+  "client_token": "quick-followup-write-to-records-20260720-01",
+  "title": "Quick Follow-up→写入Follow-up Records",
+  "steps": [
+    {
+      "id": "trigger",
+      "type": "SetRecordTrigger",
+      "title": "Quick Follow-up 被编辑时",
+      "next": "ai_new",
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "field_watch_info": [
+          {
+            "field_name": "Quick Follow-up / 快捷跟进"
+          }
+        ],
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Quick Follow-up / 快捷跟进",
+                "operator": "isNotEmpty",
+                "value": []
+              }
+            ]
+          }
+        ],
+        "trigger_control_list": [
+          "pasteUpdate"
+        ]
+      }
+    },
+    {
+      "id": "ai_new",
+      "type": "GenerateAiTextAction",
+      "title": "识别新增跟进内容",
+      "next": "check_new",
+      "data": {
+        "prompt": [
+          {
+            "value_type": "text",
+            "value": "你是跟进记录增量识别器。\n\n系统已有跟进摘要（可能多条，逗号或换行分隔）：\n<<<SUMMARY>>>\n"
+          },
+          {
+            "value_type": "ref",
+            "value": "$.trigger.fld7nDKj4j"
+          },
+          {
+            "value_type": "text",
+            "value": "\n<<<END_SUMMARY>>>\n\n用户当前 Quick Follow-up 全文：\n<<<QUICK>>>\n"
+          },
+          {
+            "value_type": "ref",
+            "value": "$.trigger.fldW9YcWTZ"
+          },
+          {
+            "value_type": "text",
+            "value": "\n<<<END_QUICK>>>\n\n任务：找出用户新写的跟进内容（出现在 QUICK 中、但不属于 SUMMARY 的新增部分）。\n规则：\n1. 通常是最上方新起的一行/一段，且还没有「YYYY/MM/DD |」日期前缀\n2. 若只是微调已有内容、重排、或与 SUMMARY 实质相同，输出 NONE\n3. 若有新增，只输出新增正文本身（不要日期前缀，不要引号，不要解释）\n4. 禁止输出除 NONE 或跟进正文以外的任何文字\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "check_new",
+      "type": "IfElseBranch",
+      "title": "是否有新跟进",
+      "next": null,
+      "children": {
+        "links": [
+          {
+            "kind": "if_true",
+            "to": "add_followup",
+            "label": "has_new",
+            "desc": "识别到新跟进"
+          },
+          {
+            "kind": "if_false",
+            "to": "noop",
+            "label": "no_new",
+            "desc": "无新增"
+          }
+        ]
+      },
+      "data": {
+        "condition": {
+          "conjunction": "or",
+          "conditions": [
+            {
+              "conjunction": "and",
+              "conditions": [
+                {
+                  "left_value": {
+                    "value_type": "ref",
+                    "value": "$.ai_new"
+                  },
+                  "operator": "isNotEmpty",
+                  "right_value": []
+                },
+                {
+                  "left_value": {
+                    "value_type": "ref",
+                    "value": "$.ai_new"
+                  },
+                  "operator": "isNot",
+                  "right_value": [
+                    {
+                      "value_type": "text",
+                      "value": "NONE"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "noop",
+      "type": "GenerateAiTextAction",
+      "title": "无新增则跳过",
+      "next": null,
+      "data": {
+        "prompt": [
+          {
+            "value_type": "text",
+            "value": "skip"
+          }
+        ]
+      }
+    },
+    {
+      "id": "add_followup",
+      "type": "AddRecordAction",
+      "title": "写入 Follow-up Records",
+      "next": "ai_history",
+      "data": {
+        "table_name": "Follow-up Records",
+        "field_values": [
+          {
+            "field_name": "Related Lead",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.trigger.record"
+              }
+            ]
+          },
+          {
+            "field_name": "Follow-up Details",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.ai_new"
+              }
+            ]
+          },
+          {
+            "field_name": "Follow-up Time",
+            "value": [
+              {
+                "value_type": "date",
+                "value": "now"
+              }
+            ]
+          },
+          {
+            "field_name": "Entry Source",
+            "value": [
+              {
+                "value_type": "option",
+                "value": { "name": "Quick" }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ai_history",
+      "type": "GenerateAiTextAction",
+      "title": "生成去掉新增后的历史文本",
+      "next": "ai_line",
+      "data": {
+        "prompt": [
+          {
+            "value_type": "text",
+            "value": "从下面的 Quick 全文中删除「新增跟进」对应的那一段，只保留其余历史。\n要求：只输出保留后的文本；若删除后为空则输出空；不要解释。\n\n新增跟进：\n"
+          },
+          {
+            "value_type": "ref",
+            "value": "$.ai_new"
+          },
+          {
+            "value_type": "text",
+            "value": "\n\nQuick 全文：\n"
+          },
+          {
+            "value_type": "ref",
+            "value": "$.trigger.fldW9YcWTZ"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ai_line",
+      "type": "GenerateAiTextAction",
+      "title": "格式化新跟进行为日期摘要",
+      "next": "set_quick",
+      "data": {
+        "prompt": [
+          {
+            "value_type": "text",
+            "value": "把下面的跟进正文格式化成一行，格式严格为：YYYY/MM/DD | 正文\n日期用今天（亚洲/上海时区）。只输出这一行，不要其他文字。\n\n正文：\n"
+          },
+          {
+            "value_type": "ref",
+            "value": "$.ai_new"
+          }
+        ]
+      }
+    },
+    {
+      "id": "set_quick",
+      "type": "SetRecordAction",
+      "title": "回写 Quick Follow-up（新行在上）",
+      "next": null,
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "max_set_record_num": 10,
+        "ref_info": {
+          "step_id": "trigger"
+        },
+        "filter_info": null,
+        "field_values": [
+          {
+            "field_name": "Quick Follow-up / 快捷跟进",
+            "value": [
+              {
+                "value_type": "ref",
+                "value": "$.ai_line"
+              },
+              {
+                "value_type": "text",
+                "value": "\n"
+              },
+              {
+                "value_type": "ref",
+                "value": "$.ai_history"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

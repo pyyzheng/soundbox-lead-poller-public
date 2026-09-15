@@ -1,0 +1,110 @@
+{
+  "title": "跟进双向同步（Records→Quick）",
+  "status": "enabled",
+  "steps": [
+    {
+      "id": "trigger",
+      "type": "ChangeRecordTrigger",
+      "title": "Follow-up Records 新增或修改",
+      "next": "http_sync",
+      "data": {
+        "table_name": "Follow-up Records",
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Related Lead",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Entry Source",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value_type": "option",
+                    "value": { "name": "Quick" }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Related Lead",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "已删除",
+                "operator": "is",
+                "value": [
+                  {
+                    "value_type": "boolean",
+                    "value": true
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "trigger_control_list": []
+      }
+    },
+    {
+      "id": "http_sync",
+      "type": "HTTPClientAction",
+      "title": "调用同步引擎",
+      "next": null,
+      "data": {
+        "method": "POST",
+        "url": [
+          {
+            "value_type": "text",
+            "value": "https://webhook.soundboxbooth.com/sync-quick-followup"
+          }
+        ],
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": [
+              {
+                "value_type": "text",
+                "value": "application/json"
+              }
+            ]
+          },
+          {
+            "key": "Authorization",
+            "value": [
+              {
+                "value_type": "text",
+                "value": "Bearer <ADMIN_TOKEN>"
+              }
+            ]
+          }
+        ],
+        "body_type": "raw",
+        "raw_body": [
+          {
+            "value_type": "text",
+            "value": "{\n  \"direction\": \"from_record\",\n  \"followup_record_id\": \""
+          },
+          {
+            "value_type": "ref",
+            "value": "$.trigger.recordId"
+          },
+          {
+            "value_type": "text",
+            "value": "\"\n}"
+          }
+        ],
+        "response_type": "json",
+        "response_value": "{\"ok\":true}"
+      }
+    }
+  ]
+}

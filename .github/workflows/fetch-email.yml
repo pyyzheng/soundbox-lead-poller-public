@@ -1,0 +1,103 @@
+name: Fetch Email Content
+
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: "Gmail search query"
+        required: true
+        default: "from:enerwhere newer_than:7d"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+
+      - name: Fetch email
+        env:
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          SEARCH_QUERY: ${{ github.event.inputs.query }}
+        run: |
+          python3 -c "
+          import os, sys, json, base64, re
+          from google.oauth2.credentials import Credentials
+          from google.auth.transport.requests import Request
+          from googleapiclient.discovery import build
+
+          creds = Credentials.from_authorized_user_info({
+              'client_id': os.environ['GMAIL_CLIENT_ID'],
+              'client_secret': os.environ['GMAIL_CLIENT_SECRET'],
+              'refresh_token': os.environ['GMAIL_REFRESH_TOKEN'],
+          }, scopes=['https://www.googleapis.com/auth/gmail.modify'])
+          if creds.expired:
+              creds.refresh(Request())
+          service = build('gmail', 'v1', credentials=creds)
+
+          query = os.environ.get('SEARCH_QUERY', 'from:enerwhere newer_than:7d')
+          results = service.users().messages().list(userId='me', q=query, maxResults=5).execute()
+          messages = results.get('messages', [])
+          print(f'Found {len(messages)} messages for query: {query}')
+
+          for msg_info in messages:
+              msg = service.users().messages().get(userId='me', id=msg_info['id'], format='full').execute()
+              headers = {h['name']: h['value'] for h in msg['payload']['headers']}
+              print('=' * 60)
+              print(f'MSG_ID: {msg[\"id\"]}')
+              print(f'From: {headers.get(\"From\", \"\")}')
+              print(f'Subject: {headers.get(\"Subject\", \"\")}')
+              print(f'Date: {headers.get(\"Date\", \"\")}')
+              print(f'Labels: {msg.get(\"labelIds\", [])}')
+
+              # List-Unsubscribe
+              unsub = headers.get('List-Unsubscribe', '')
+              if unsub:
+                  print(f'List-Unsubscribe: {unsub}')
+
+              # Extract body
+              body = ''
+              payload = msg['payload']
+              if payload.get('body', {}).get('data'):
+                  body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8', errors='replace')
+              elif payload.get('parts'):
+                  for part in payload['parts']:
+                      if part.get('mimeType') == 'text/plain' and part.get('body', {}).get('data'):
+                          body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8', errors='replace')
+                          break
+                  if not body:
+                      for part in payload['parts']:
+                          if part.get('mimeType') == 'text/html' and part.get('body', {}).get('data'):
+                              body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8', errors='replace')
+                              break
+
+              # Attachments
+              attachments = []
+              def extract_atts(parts):
+                  for p in parts:
+                      if p.get('filename') and p.get('body', {}).get('attachmentId'):
+                          attachments.append({'filename': p['filename'], 'mime': p.get('mimeType', ''), 'size': p['body'].get('size', 0)})
+                      if p.get('parts'):
+                          extract_atts(p['parts'])
+              if payload.get('parts'):
+                  extract_atts(payload['parts'])
+
+              print(f'Attachments: {attachments}')
+              print()
+              print('--- BODY ---')
+              print(body[:5000] if body else '(empty)')
+              print('--- END BODY ---')
+              print()
+          "

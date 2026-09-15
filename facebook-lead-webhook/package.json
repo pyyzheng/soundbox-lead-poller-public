@@ -1,0 +1,9 @@
+{
+  "name": "facebook-lead-webhook",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dry-run": "wrangler deploy --dry-run"
+  }
+}

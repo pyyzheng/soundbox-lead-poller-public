@@ -1,0 +1,59 @@
+{
+  "_meta": {
+    "description": "41条 Google 渠道询盘的槽位级人工 ground truth",
+    "created": "2026-04-16",
+    "source": "询盘分配表_已清洗.xlsx Google渠道",
+    "usage": "用于独立评估每个槽位的准确率，避免只看最终 Level 准确率"
+  },
+  "slots": {
+    "1":  {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "2":  {"intent": "Quotation",  "scenario": "Project",  "level": "L2"},
+    "3":  {"intent": "Partnership","scenario": "Unknown",  "level": "L3"},
+    "4":  {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "5":  {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "6":  {"intent": "Quotation",  "scenario": "Unknown",  "level": "L4"},
+    "7":  {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "8":  {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "9":  {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "10": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "11": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "12": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "13": {"intent": "Partnership","scenario": "Project",  "level": "L1"},
+    "14": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "15": {"intent": "Quotation",  "scenario": "Studio",  "level": "L2"},
+    "16": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "17": {"intent": "Quotation",  "scenario": "Home",    "level": "L2"},
+    "18": {"intent": "Quotation",  "scenario": "Studio",  "level": "L2"},
+    "19": {"intent": "Quotation",  "scenario": "Office",  "level": "L2"},
+    "20": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L1"},
+    "21": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "22": {"intent": "Partnership","scenario": "Unknown",  "level": "L3"},
+    "23": {"intent": "Quotation",  "scenario": "Studio",  "level": "L2"},
+    "24": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "25": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "26": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "27": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "28": {"intent": "Quotation",  "scenario": "Project",  "level": "L2"},
+    "29": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "30": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "31": {"intent": "Quotation",  "scenario": "Office",  "level": "L2"},
+    "32": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "33": {"intent": "Quotation",  "scenario": "Office",  "level": "L2"},
+    "34": {"intent": "Partnership","scenario": "Unknown",  "level": "L1"},
+    "35": {"intent": "Partnership","scenario": "Unknown",  "level": "L3"},
+    "36": {"intent": "Quotation",  "scenario": "Office",  "level": "L2"},
+    "37": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "38": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L2"},
+    "39": {"intent": "Quotation",  "scenario": "Studio",  "level": "L2"},
+    "40": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"},
+    "41": {"intent": "Quotation",  "scenario": "Unknown",  "level": "L3"}
+  },
+  "holdout_set": {
+    "_note": "holdout 集约 25% (11条)，用于最终验证不参与 prompt 优化调参",
+    "ids": [3, 6, 9, 14, 17, 22, 26, 31, 35, 39, 41]
+  },
+  "training_set": {
+    "_note": "训练集约 75% (30条)，prompt 优化基于此集",
+    "ids": [1, 2, 4, 5, 7, 8, 10, 11, 12, 13, 15, 16, 18, 19, 20, 21, 23, 24, 25, 27, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40]
+  }
+}

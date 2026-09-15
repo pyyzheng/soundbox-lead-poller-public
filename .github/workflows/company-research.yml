@@ -1,0 +1,55 @@
+name: Company Research
+
+on:
+  repository_dispatch:
+    types: [company-research]
+  schedule:
+    - cron: "0 1 * * *"    # UTC 01:00 = 北京时间 09:00
+    - cron: "30 8 * * *"   # UTC 08:30 = 北京时间 16:30
+  workflow_dispatch:
+    inputs:
+      date_range:
+        description: "Date range (today/yesterday/YYYY-MM-DD or YYYY-MM-DD YYYY-MM-DD)"
+        default: "today"
+      dry_run:
+        description: "Dry run (no writes to Feishu)"
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+      record_id:
+        description: "Single record ID (optional, overrides date_range)"
+        default: ""
+
+concurrency:
+  group: company-research-${{ github.event.client_payload.record_id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run company research
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:             ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:              ${{ secrets.FEISHU_TABLE_ID }}
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          ZHIPU_MODEL: glm-4.5-air
+          FEISHU_ALERT_WEBHOOK: ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          DATE_RANGE: ${{ github.event.inputs.date_range || 'today' }}
+          RECORD_ID: ${{ github.event.client_payload.record_id || github.event.inputs.record_id || '' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: python cloud-company-research.py

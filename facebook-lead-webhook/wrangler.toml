@@ -1,0 +1,51 @@
+name = "facebook-lead-webhook"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+account_id = "571ae4df9706dddc901b2363f78ac7a6"
+
+# HTTP Worker：Meta Webhook / Messenger / Instagram 实时入口
+# + cron 安全网：飞书按 Facebook Leadgen ID 去重，可与 webhook 并存
+workers_dev = true
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+# 每 10 分钟补扫 Lead Ads（GHA cron 有延迟，Worker cron 更稳）
+[triggers]
+crons = ["*/10 * * * *"]
+
+[[kv_namespaces]]
+binding = "FAILED_LEADS"
+id = "416d70da325546f9a45bc63d2d951d6f"
+
+[[kv_namespaces]]
+binding = "MESSENGER_SESSIONS"
+id = "155ca1e0031b4aa7b8888852f408da28"
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "soundbox-kb-v2"
+
+[vars]
+FEISHU_APP_TOKEN = "ZpbUb7SP7azsNasniFjc0bWSnHg"
+FEISHU_TABLE_ID = "tbluuuXn9WexH8LV"
+GITHUB_REPO = "pyyzheng/soundbox-lead-poller-public"
+META_API_VERSION = "v21.0"
+META_PAGE_ID = "504816599699127"
+
+# 自定义域名：Meta App 回调 https://webhook.soundboxbooth.com/webhook
+[[routes]]
+pattern = "webhook.soundboxbooth.com"
+custom_domain = true
+
+# Secrets（wrangler secret put，勿写入本文件）：
+#   META_PAGE_ACCESS_TOKEN  META_APP_SECRET  META_WEBHOOK_VERIFY_TOKEN
+#   FEISHU_APP_ID  FEISHU_APP_SECRET  GITHUB_TOKEN  GLM_API_KEY  ADMIN_TOKEN
+#   IG_APP_SECRET（可选） WECOM_REMIND_WEBHOOK（可选）

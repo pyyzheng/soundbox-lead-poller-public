@@ -1,0 +1,37 @@
+name: Sync Customer Follow-up Memo
+
+# 同步客户推进备忘：电子表格 + 多维表格（近实时兜底）
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync memo sheet + bitable
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install requests
+      - name: Sync Feishu Sheet
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+          MEMO_SHEET_TOKEN: PDT2seQIDhuCoxt95zycirSKnFe
+          MEMO_SHEET_ID: 0xLmtT
+        run: python3 scripts/sync_customer_followup_memo_sheet.py
+      - name: Sync Feishu Bitable
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN: ${{ secrets.FEISHU_APP_TOKEN }}
+        run: python3 scripts/sync_customer_followup_memo_online.py

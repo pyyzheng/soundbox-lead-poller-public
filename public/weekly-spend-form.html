@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>周广告花费录入（自动本周）</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f7fb; color: #1f2329; }
+    .card { background: #fff; border-radius: 12px; padding: 28px 32px; box-shadow: 0 8px 24px rgba(31,35,41,.08); max-width: 420px; text-align: center; }
+    .muted { color: #646a73; font-size: 14px; margin-top: 8px; }
+    a { color: #3370ff; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 style="font-size:18px;margin:0 0 8px">正在打开表单…</h1>
+    <p class="muted" id="tip">按上海时区计算本周一起止，并预填开始/结束日期</p>
+    <p class="muted"><a id="manual" href="#">若未自动跳转，点这里</a></p>
+  </div>
+  <script>
+    (function () {
+      // Asia/Shanghai Monday-Sunday
+      const SHARE = "https://rcn1z5q6iyyc.feishu.cn/share/base/shrcnOEVTjlIOk0i4NrlA6mk3Nd";
+      const fmt = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Shanghai",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const nowParts = fmt.formatToParts(new Date());
+      const y = +nowParts.find((p) => p.type === "year").value;
+      const m = +nowParts.find((p) => p.type === "month").value;
+      const d = +nowParts.find((p) => p.type === "day").value;
+      // weekday in Shanghai: 0=Sun..6=Sat
+      const asUtc = Date.UTC(y, m - 1, d);
+      const wd = new Date(asUtc).getUTCDay();
+      const offsetToMon = (wd + 6) % 7; // Mon=0
+      const mon = new Date(asUtc - offsetToMon * 86400000);
+      const sun = new Date(mon.getTime() + 6 * 86400000);
+      const pad = (n) => String(n).padStart(2, "0");
+      const toSlash = (dt) =>
+        dt.getUTCFullYear() + "/" + pad(dt.getUTCMonth() + 1) + "/" + pad(dt.getUTCDate());
+      const start = toSlash(mon);
+      const end = toSlash(sun);
+      const url =
+        SHARE +
+        "?prefill_" + encodeURIComponent("开始日期") + "=" + encodeURIComponent(start) +
+        "&prefill_" + encodeURIComponent("结束日期") + "=" + encodeURIComponent(end);
+      document.getElementById("tip").textContent = "本周 " + start + " ~ " + end;
+      document.getElementById("manual").href = url;
+      location.replace(url);
+    })();
+  </script>
+</body>
+</html>

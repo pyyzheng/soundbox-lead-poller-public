@@ -1,0 +1,148 @@
+{
+  "client_token": "opp-sync-case-level-20260914",
+  "title": "Case Level A2–A5 → 同步商机录入表",
+  "steps": [
+    {
+      "id": "trig",
+      "type": "SetRecordTrigger",
+      "title": "Case Level 变为 A2–A5",
+      "next": "http_sync",
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "field_watch_info": [
+          {
+            "field_name": "🌟Case Level / 线索分级"
+          }
+        ],
+        "condition_list": [
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "🌟Case Level / 线索分级",
+                "operator": "is",
+                "value": [
+                  {
+                    "value_type": "option",
+                    "value": {
+                      "name": "A2-Requirement Clarification / 细节沟通"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "🌟Case Level / 线索分级",
+                "operator": "is",
+                "value": [
+                  {
+                    "value_type": "option",
+                    "value": {
+                      "name": "A3-High-Intent Lead / 高意向客户（真实需求)"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "🌟Case Level / 线索分级",
+                "operator": "is",
+                "value": [
+                  {
+                    "value_type": "option",
+                    "value": {
+                      "name": "A4-Won Customer / 成单客户 "
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "🌟Case Level / 线索分级",
+                "operator": "is",
+                "value": [
+                  {
+                    "value_type": "option",
+                    "value": {
+                      "name": "A5-Repeat Purchase Customer / 复购客户 "
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      }
+    },
+    {
+      "id": "http_sync",
+      "type": "HTTPClientAction",
+      "title": "触发 opportunity-sync",
+      "next": null,
+      "data": {
+        "method": "POST",
+        "url": [
+          {
+            "value_type": "text",
+            "value": "https://webhook.soundboxbooth.com/sync-opportunity"
+          }
+        ],
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": [
+              {
+                "value_type": "text",
+                "value": "application/json"
+              }
+            ]
+          },
+          {
+            "key": "Authorization",
+            "value": [
+              {
+                "value_type": "text",
+                "value": "Bearer <ADMIN_TOKEN>"
+              }
+            ]
+          }
+        ],
+        "body_type": "raw",
+        "raw_body": [
+          {
+            "value_type": "text",
+            "value": "{\n  \"record_id\": \""
+          },
+          {
+            "value_type": "ref",
+            "value": "$.trig.recordId"
+          },
+          {
+            "value_type": "text",
+            "value": "\"\n}"
+          }
+        ],
+        "response_type": "json",
+        "response_value": "{\"ok\":true}"
+      }
+    }
+  ]
+}

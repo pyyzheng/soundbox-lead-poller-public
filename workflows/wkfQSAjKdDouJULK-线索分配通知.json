@@ -1,0 +1,225 @@
+{
+  "title": "线索分配通知",
+  "steps": [
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "condition_list": [
+          {
+            "conditions": [
+              {
+                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "匹配错误请检查",
+                    "value_type": "text"
+                  }
+                ]
+              },
+              {
+                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "未命中规则",
+                    "value_type": "text"
+                  }
+                ]
+              },
+              {
+                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "公式计算异常",
+                    "value_type": "text"
+                  }
+                ]
+              },
+              {
+                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "匹配的业务员账号",
+                "operator": "isNotEmpty",
+                "value": []
+              }
+            ],
+            "conjunction": "and"
+          }
+        ],
+        "field_watch_info": [
+          {
+            "field_name": "The final assigned salesperson（最终分配的业务员）"
+          },
+          {
+            "field_name": "匹配的业务员账号"
+          }
+        ],
+        "table_name": "线索总池 Case Database",
+        "trigger_control_list": [
+          "pasteUpdate",
+          "automationBatchUpdate",
+          "appendImport",
+          "openAPIBatchUpdate"
+        ]
+      },
+      "id": "trig6WiWjH",
+      "next": "actNotifyLookup",
+      "title": "修改记录时",
+      "type": "SetRecordTrigger"
+    },
+    {
+      "id": "actNotifyLookup",
+      "type": "FindRecordAction",
+      "title": "查找记录",
+      "next": "actNotifySwitch",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "业务通知名单",
+        "field_names": [
+          "对应业务",
+          "业务名单"
+        ],
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "业务名单",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trig6WiWjH.fldOMcCv5Y",
+                  "value_type": "ref"
+                }
+              ]
+            }
+          ]
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true
+      }
+    },
+    {
+      "id": "actNotifySwitch",
+      "type": "SwitchBranch",
+      "title": "多分支（Switch）",
+      "children": {
+        "links": [
+          {
+            "desc": "分支 1",
+            "kind": "case",
+            "label": "branch_1",
+            "to": "actiMAP8ADF"
+          },
+          {
+            "desc": "默认分支",
+            "kind": "case",
+            "label": "default",
+            "to": ""
+          }
+        ]
+      },
+      "data": {
+        "mode": "exclusive",
+        "no_match_action": "classifyToOther",
+        "child_branch_list": [
+          {
+            "name": "分支 1",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "operator": "isGreater",
+                      "left_value": {
+                        "value": "$.actNotifyLookup.recordNum",
+                        "value_type": "ref"
+                      },
+                      "right_value": [
+                        {
+                          "value": 0,
+                          "value_type": "number"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "btn_list": [
+          {
+            "text": "打开线索",
+            "btn_action": "openLink",
+            "link": [
+              {
+                "value": "$.trig6WiWjH.recordLink",
+                "value_type": "ref"
+              }
+            ]
+          }
+        ],
+        "content": [
+          {
+            "value": "线索 ",
+            "value_type": "text"
+          },
+          {
+            "value": "$.trig6WiWjH.flde0LY8qQ",
+            "value_type": "ref"
+          },
+          {
+            "value": " 已分配给您，请及时跟进。\n客户：",
+            "value_type": "text"
+          },
+          {
+            "value": "$.trig6WiWjH.flddqTlnEm",
+            "value_type": "ref"
+          },
+          {
+            "value": "\n国家：",
+            "value_type": "text"
+          },
+          {
+            "value": "$.trig6WiWjH.fldAEhwYJU",
+            "value_type": "ref"
+          }
+        ],
+        "receiver": [
+          {
+            "value": "$.actNotifyLookup.firstfieldsRecord.fldEVPOdP6",
+            "value_type": "ref"
+          }
+        ],
+        "send_to_everyone": false,
+        "title": [
+          {
+            "value": "🚀 新线索分配提醒",
+            "value_type": "text"
+          }
+        ]
+      },
+      "id": "actiMAP8ADF",
+      "title": "发送飞书消息",
+      "type": "LarkMessageAction"
+    }
+  ]
+}
