@@ -123,14 +123,9 @@ class DailyLeastPoolTests(unittest.TestCase):
         # Cathy already in roster — align sets her to max of roster
         self.assertEqual(counts["Cathy"], 12)
 
-    def test_zoe_floor_equals_peers_then_least(self):
-        from daily_least_assign import apply_newcomer_floors
-
-        # 入池水位 3：启用后 Kevin=5 Rita=4 → Zoe 有效 3，待补 2，下一单给 Zoe
+    def test_newcomer_uses_actual_count_on_day_one(self):
+        # 新人当天按实计：Zoe=0，下一单给她，不设入池水位
         counts = {"Gigi": 2, "Cathy": 2, "Kevin": 5, "Rita": 4, "Zoe": 0}
-        raised = apply_newcomer_floors(counts)
-        self.assertEqual(raised, ["Zoe"])
-        self.assertEqual(counts["Zoe"], 3)
         pick = pick_daily_least_assignee("谷歌|亚洲区队列", counts, PUBLIC_REGION_ME)
         assert pick is not None
         self.assertEqual(pick.assignee, "Zoe")

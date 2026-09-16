@@ -78,7 +78,6 @@ from daily_least_assign import (  # noqa: E402
     PUBLIC_REGION_ME,
     PUBLIC_REGION_POINTER_KEY,
     TRACKED_ASSIGNEES,
-    apply_newcomer_floors,
     bump_count,
     counts_should_include,
     eligible_for_daily_least,
@@ -547,9 +546,6 @@ def _load_daily_least_counts(token: str) -> dict[str, int]:
         manual = extract_text(get_field(fields, FIELD_MANUAL_ASSIGNEE, "")).strip()
         if counts_should_include(final_assignee=final, manual_assignee=manual):
             bump_count(counts, final)
-    raised = apply_newcomer_floors(counts)
-    if raised:
-        log.info("新人累计对齐入池水位: %s", {n: counts[n] for n in raised})
     log.info(
         "按天累计(昨+今) %s",
         {k: v for k, v in sorted(counts.items()) if v},

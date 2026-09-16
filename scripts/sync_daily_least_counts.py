@@ -33,12 +33,10 @@ from assignment_fields import (  # noqa: E402
 from daily_least_assign import (  # noqa: E402
     ASIA_ROSTER,
     ME_ROSTER,
-    NEWCOMER_COUNT_FLOOR,
     PUBLIC_REGION_ME,
     PUBLIC_REGION_POINTER_KEY,
     TRACKED_ASSIGNEES,
     accumulate_split_count,
-    apply_newcomer_floors,
     debt_within_roster,
     empty_split_counts,
     normalize_public_region,
@@ -69,7 +67,7 @@ RULE_NOTE = (
     "计入=自动分配成功（中东/亚洲/公区/代理/查重）；"
     "不计=人工改派/Case handler 转接；"
     "公区代理不占区指针；欧洲仍顺序轮；"
-    "新人Zoe有效昨+今=max(实计,入池水位)，与同伴对齐后最少优先"
+    "新人入职当天按实计最少优先，不设入池水位"
 )
 
 
@@ -223,9 +221,6 @@ def existing_rows(token: str) -> dict[str, str]:
 def sync(token: str) -> int:
     split = load_split_counts(token)
     totals = totals_from_split(split)
-    raised = apply_newcomer_floors(totals)
-    if raised:
-        log.info("新人累计对齐入池水位（看板）: %s", {n: totals[n] for n in raised})
     public_region = load_public_region(token)
     public_label = public_region_label(public_region)
     details = person_details_from_split(split)
@@ -241,10 +236,6 @@ def sync(token: str) -> int:
         roster = ME_ROSTER if detail.name in ME_ROSTER else ASIA_ROSTER
         aligned_total = int(totals.get(detail.name, detail.total))
         debt = debt_within_roster(detail.name, totals, roster)
-        note = RULE_NOTE
-        floor = NEWCOMER_COUNT_FLOOR.get(detail.name)
-        if floor is not None and detail.total < int(floor):
-            note = f"{RULE_NOTE}；实计昨+今={detail.total}，入池水位={floor}"
         fields = {
             "业务员": detail.name,
             "所属区": detail.region,
@@ -255,7 +246,7 @@ def sync(token: str) -> int:
             "公区下一区指针状态": public_label,
             "统计日": today_ms,
             "刷新时间": now_ms,
-            "说明": note,
+            "说明": RULE_NOTE,
         }
         log.info(
             "%s %s y=%s t=%s sum=%s debt=%s public=%s",

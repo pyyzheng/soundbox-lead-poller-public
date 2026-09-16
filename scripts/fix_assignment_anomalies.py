@@ -49,7 +49,6 @@ from channel_queue_assign import (
 from daily_least_assign import (
     PUBLIC_REGION_ME,
     PUBLIC_REGION_POINTER_KEY,
-    apply_newcomer_floors,
     bump_count,
     counts_should_include,
     eligible_for_daily_least,
@@ -137,7 +136,6 @@ def _load_daily_counts(token: str) -> dict[str, int]:
         manual = extract_text(get_field(fields, FIELD_MANUAL_ASSIGNEE, "")).strip()
         if counts_should_include(final_assignee=final, manual_assignee=manual):
             bump_count(counts, final)
-    apply_newcomer_floors(counts)
     return counts
 
 

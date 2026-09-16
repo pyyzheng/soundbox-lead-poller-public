@@ -48,10 +48,6 @@ TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")
 ME_ROSTER: tuple[str, ...] = ("Gigi", "Cathy")
 ASIA_ROSTER: tuple[str, ...] = ("Kevin", "Rita", "Zoe")
 
-# Zoe 入池时同伴昨+今水位（启用前已产生的累计；启用后同伴新单不进水位）
-# 有效累计 = max(实计, 水位)，与入池时对齐，之后按最少优先补齐缺口
-NEWCOMER_COUNT_FLOOR: dict[str, int] = {"Zoe": 3}
-
 # 人级累计统计对象（Jannice 代理不进最少池，可不计入竞争；仍可统计但不参与选人）
 TRACKED_ASSIGNEES: frozenset[str] = frozenset(ME_ROSTER + ASIA_ROSTER)
 
@@ -117,19 +113,6 @@ def shanghai_day_bounds(now: datetime | None = None) -> tuple[datetime, datetime
 
 def to_utc_ms(dt: datetime) -> int:
     return int(dt.astimezone(ZoneInfo("UTC")).timestamp() * 1000)
-
-
-def apply_newcomer_floors(counts: dict[str, int]) -> list[str]:
-    """新人有效累计 = max(实计, 入池水位)，与同伴昨+今对齐；返回被抬升的姓名。"""
-    raised: list[str] = []
-    for name, floor in NEWCOMER_COUNT_FLOOR.items():
-        if name not in TRACKED_ASSIGNEES:
-            continue
-        raw = int(counts.get(name, 0))
-        if raw < int(floor):
-            counts[name] = int(floor)
-            raised.append(name)
-    return raised
 
 
 def eligible_for_daily_least(fields: dict[str, Any]) -> bool:
@@ -208,7 +191,7 @@ def bump_count(counts: dict[str, int], assignee: str) -> None:
 
 
 def align_newcomer_to_max(counts: dict[str, int], name: str, roster: Iterable[str]) -> None:
-    """工具函数：累计对齐当前花名册 max。亚洲区已改用入池时刻起算，分配主路径不再虚对齐。"""
+    """工具函数：累计对齐当前花名册 max。分配主路径不使用：新人当天按实计最少优先。"""
     peers = [int(counts.get(p, 0)) for p in roster]
     peak = max(peers) if peers else 0
     counts[name] = peak
