@@ -89,6 +89,8 @@ class AdvertisingSpamFilterTest(unittest.TestCase):
             "Sophie Letts", "", SOPHIE_MSG, "", self.rules
         )
         self.assertTrue(hit, reason)
+        self.assertTrue(reason.startswith("promotional(pattern:"), reason)
+        self.assertIn("guest article", reason)
 
     def test_real_product_inquiry_not_blocked(self):
         msg = (

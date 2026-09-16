@@ -29,6 +29,7 @@ from feishu_utils import (
     get_feishu_token, feishu_search_url, extract_text, FIELD_CONTENT, FIELD_DATE,
     FIELD_EMAIL, fetch_records_since, alert_webhook_url,
 )
+from spam_leak_alert import format_spam_leak_detail, leak_item
 
 TZ_SH = timezone(timedelta(hours=8))
 PAGE_SIZE = 100
@@ -95,38 +96,17 @@ def check_spam_leaked(records: list, rules: dict) -> list:
 
         ads, ads_reason = check_advertising_outreach(message, company, "", content, rules=rules)
         if ads:
-            leaked.append({
-                "record_id": rec.get("record_id", "?"),
-                "name": name[:30],
-                "email": email,
-                "message": message[:60],
-                "signals": [ads_reason],
-                "content_preview": content[:200],
-            })
+            leaked.append(leak_item(rec, name, email, message, content, [ads_reason]))
             continue
 
         seo, seo_reason = check_seo_outreach(message, company, "", content, rules=rules)
         if seo:
-            leaked.append({
-                "record_id": rec.get("record_id", "?"),
-                "name": name[:30],
-                "email": email,
-                "message": message[:60],
-                "signals": [seo_reason],
-                "content_preview": content[:200],
-            })
+            leaked.append(leak_item(rec, name, email, message, content, [seo_reason]))
             continue
 
         supplier, sup_reason = check_supplier_outreach(message, company, "", content, rules=rules)
         if supplier:
-            leaked.append({
-                "record_id": rec.get("record_id", "?"),
-                "name": name[:30],
-                "email": email,
-                "message": message[:60],
-                "signals": [sup_reason],
-                "content_preview": content[:200],
-            })
+            leaked.append(leak_item(rec, name, email, message, content, [sup_reason]))
             continue
 
         # 运行过滤链
@@ -145,15 +125,7 @@ def check_spam_leaked(records: list, rules: dict) -> list:
             signals.append(kwr)
 
         if len(signals) >= 2:
-            record_id = rec.get("record_id", "?")
-            leaked.append({
-                "record_id": record_id,
-                "name": name[:30],
-                "email": email,
-                "message": message[:60],
-                "signals": signals,
-                "content_preview": content[:200],
-            })
+            leaked.append(leak_item(rec, name, email, message, content, signals))
 
     return leaked
 

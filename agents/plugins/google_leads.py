@@ -124,7 +124,7 @@ async def health_check_detector(project: str, scope: dict) -> list[Anomaly]:
         anomalies.append(Anomaly(
             type="spam_leaked",
             severity="high",
-            description=f"垃圾线索漏网: {item.get('name', '')} <{item.get('email', '')}>",
+            description=f"垃圾线索漏网: {item.get('name', '')} <{item.get('email', '')}> reason={'+'.join(item.get('signals') or [])}",
             evidence=item,
             source="health-detector",
         ))
