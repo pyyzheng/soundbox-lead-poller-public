@@ -77,7 +77,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         self.assertEqual(pick_least_assignee(ME_ROSTER, counts), "Gigi")
         counts = {"Kevin": 5, "Rita": 4, "Zoe": 5}
         self.assertEqual(pick_least_assignee(ASIA_ROSTER, counts), "Rita")
-        self.assertIn("Zoe", ASIA_ROSTER)
+        self.assertEqual(pick_least_assignee(ASIA_ROSTER, {"Kevin": 2, "Rita": 2, "Zoe": 2}), "Zoe")
 
     def test_me_picks_lower_count(self):
         counts = {"Gigi": 10, "Cathy": 7, "Kevin": 0, "Rita": 0, "Zoe": 0}
@@ -161,17 +161,17 @@ class DailyLeastPoolTests(unittest.TestCase):
         totals = totals_from_split(split)
         pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
         assert pick is not None
-        self.assertEqual(pick.assignee, "Kevin")
+        self.assertEqual(pick.assignee, "Zoe")
 
-        bump_count(totals, "Kevin")
+        bump_count(totals, "Zoe")
         pick2 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
         assert pick2 is not None
-        self.assertEqual(pick2.assignee, "Rita")
+        self.assertEqual(pick2.assignee, "Kevin")
 
-        bump_count(totals, "Rita")
+        bump_count(totals, "Kevin")
         pick3 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
         assert pick3 is not None
-        self.assertEqual(pick3.assignee, "Zoe")
+        self.assertEqual(pick3.assignee, "Rita")
 
     def test_newcomer_start_line_does_not_follow_peer_today_after_join_day(self):
         from datetime import date
@@ -191,11 +191,11 @@ class DailyLeastPoolTests(unittest.TestCase):
         totals = totals_from_split(split)
         pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
         assert pick is not None
-        self.assertEqual(pick.assignee, "Rita")
-        bump_count(totals, "Rita")
+        self.assertEqual(pick.assignee, "Zoe")
+        bump_count(totals, "Zoe")
         pick2 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
         assert pick2 is not None
-        self.assertEqual(pick2.assignee, "Zoe")
+        self.assertEqual(pick2.assignee, "Rita")
 
     def test_newcomer_start_line_does_not_double_pad_after_real_leads(self):
         from datetime import date
