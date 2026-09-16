@@ -24,6 +24,7 @@ from workflow_bilingual import migrate_workflow_document  # noqa: E402
 WORKFLOW_ID = "wkfOCCVMcXBjbp4F"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
 ERROR_ASSIGNEES = ("未命中规则", "匹配错误请检查", "公式计算异常")
+FIELD_MATCHED_ACCOUNT = "Assigned Salesperson（匹配的业务员账号）"
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -150,7 +151,7 @@ def patch_workflow(data: dict) -> dict:
             "conjunction": "and",
             "conditions": [
                 {
-                    "field_name": "匹配的业务员账号",
+                    "field_name": FIELD_MATCHED_ACCOUNT,
                     "operator": "isNotEmpty",
                     "value": [],
                 },
@@ -174,6 +175,24 @@ def patch_workflow(data: dict) -> dict:
     msg = steps["act36Vyyk"]
     msg["data"]["receiver"] = [
         {"value": "$.actEnquiryLookup.firstfieldsRecord.fldEVPOdP6", "value_type": "ref"},
+    ]
+    # 2026-09-16: 不再嵌入 Enquiry details 全文。
+    # 根因：通知快照与现网内容易不一致（字段被改写/并发更新），Gigi 004906 误收到
+    # 004908 SEO 正文。改为只发线索ID+客户名，强制打开记录查看最新询盘。
+    msg["data"]["content"] = [
+        {
+            "value": (
+                "您好，您负责的线索询盘内容已更新，请点击下方按钮打开记录查看"
+                "最新内容（以表格为准，勿以本消息正文为准）。\n线索ID："
+            ),
+            "value_type": "text",
+        },
+        {"value": "$.trigEvBreo.flde0LY8qQ", "value_type": "ref"},
+        {"value": "\n客户：", "value_type": "text"},
+        {"value": "$.trigEvBreo.flddqTlnEm", "value_type": "ref"},
+    ]
+    msg["data"]["title"] = [
+        {"value": "询盘内容更新提醒", "value_type": "text"},
     ]
     msg["data"]["btn_list"] = [
         {

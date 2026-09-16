@@ -525,6 +525,27 @@
       "run ads for (?:you|your (?:company|business|brand|website))"
     ]
   },
+  "seo_outreach_patterns": {
+    "_comment": "SEO/排名/上首页冷推销（004908 漏网：主题带 Quotation 会骗过询盘关键词，且旧 promo 规则匹配不到）。命中即硬拦截。",
+    "enabled": true,
+    "patterns": [
+      "not\\s+ranking\\s+(?:in|on)\\s+(?:the\\s+)?top",
+      "ranking\\s+in\\s+top\\s+on\\s+google",
+      "help\\s+you\\s+to\\s+place\\s+your\\s+website",
+      "place\\s+your\\s+website",
+      "appears?\\s+on\\s+google'?s?\\s+(?:1st|first)\\s+page",
+      "google'?s?\\s+(?:1st|first)\\s+page",
+      "on\\s+google'?s?\\s+(?:1st|first)\\s+page",
+      "first\\s+page\\s+(?:of\\s+)?(?:google|yahoo)",
+      "page\\s+one\\s+of\\s+google",
+      "get\\s+(?:you\\s+)?(?:to\\s+)?(?:the\\s+)?top\\s+of\\s+(?:google|search)",
+      "rank(?:ing)?\\s+(?:your\\s+)?(?:site|website|page).{0,40}google",
+      "improve\\s+your\\s+(?:google\\s+)?(?:ranking|serp|search\\s+visibility)",
+      "seo\\s+(?:service|services|audit|package|quote|agency)",
+      "organic\\s+(?:traffic|ranking|search)",
+      "search\\s+engine\\s+optimiz"
+    ]
+  },
   "supplier_outreach_patterns": {
     "_comment": "供应商/劳务中介向我们推销原材料、配件或人力；命中即硬拦截",
     "enabled": true,
@@ -645,7 +666,11 @@
       "quick fix (?:ideas|suggestions|tips)",
       "(?:web|site) optimization",
       "(?:noticed|spotted|found).*(?:issue|error|bug|problem|opportunity) on (?:your|the) (?:site|website|page)",
-      "can (?:help|fix|improve|optimize) your (?:site|website|page|ranking)"
+      "can (?:help|fix|improve|optimize) your (?:site|website|page|ranking)",
+      "not ranking (?:in|on) (?:the )?top",
+      "place your website",
+      "google'?s? (?:1st|first) page",
+      "appears on google'?s? (?:1st|first) page"
     ]
   },
   "feishu": {

@@ -49,6 +49,7 @@ from lead_filter_common import (
     check_form_spam_submission,
     check_supplier_outreach,
     check_advertising_outreach,
+    check_seo_outreach,
     check_system_notification,
 )
 from lead_fallback_parser import (
@@ -207,6 +208,12 @@ def run_filter_chain(from_addr: str, subject: str, name: str, email: str,
         message, company, subject, body, rules=rules,
     )
     if ads:
+        return "reject", [reason]
+
+    seo, reason = check_seo_outreach(
+        message, company, subject, body, rules=rules,
+    )
+    if seo:
         return "reject", [reason]
 
     trivial, reason = check_trivial_content(name, message, rules)

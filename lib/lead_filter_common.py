@@ -496,16 +496,22 @@ def _outreach_search_text(
     return " ".join(parts)
 
 
-def _first_rule_pattern_hit(
+def _match_rule_patterns(
     text: str,
     config: Dict[str, Any],
     reason_prefix: str,
+    *,
+    min_matches: int | None = None,
+    max_shown: int = 1,
+    pattern_limit: int | None = 40,
 ) -> Tuple[bool, str]:
-    """命中 lead-rules.json 中第一段可用正则/子串。"""
+    """命中 lead-rules.json 中的正则/子串列表。"""
     if not (text or "").strip():
         return False, ""
-    if config.get("enabled", True) is False:
+    if not config or config.get("enabled", True) is False:
         return False, ""
+    need = int(min_matches if min_matches is not None else config.get("min_matches", 1))
+    matches: list[str] = []
     for pattern in config.get("patterns", []):
         if not pattern or str(pattern).startswith("_"):
             continue
@@ -514,9 +520,24 @@ def _first_rule_pattern_hit(
             hit = bool(re.search(pat, text, re.IGNORECASE))
         except re.error:
             hit = pat.lower() in text.lower()
-        if hit:
-            return True, f"{reason_prefix}(pattern:{pat[:40]})"
+        if not hit:
+            continue
+        matches.append(pat)
+        if len(matches) >= need:
+            shown = matches[:max_shown]
+            if pattern_limit:
+                shown = [p[:pattern_limit] for p in shown]
+            return True, f"{reason_prefix}(pattern:{'+'.join(shown)})"
     return False, ""
+
+
+def _first_rule_pattern_hit(
+    text: str,
+    config: Dict[str, Any],
+    reason_prefix: str,
+) -> Tuple[bool, str]:
+    """命中 lead-rules.json 中第一段可用正则/子串。"""
+    return _match_rule_patterns(text, config, reason_prefix)
 
 
 # ─── Supplier / Vendor Outreach (selling TO us) ───────────────
@@ -584,6 +605,52 @@ def check_advertising_outreach(
     )
 
 
+# ─── SEO / Ranking Outreach (selling ranking TO us) ───────────
+
+_SEO_OUTREACH_HARD = re.compile(
+    r"(?:"
+    r"not\s+ranking\s+(?:in|on)\s+(?:the\s+)?top|"
+    r"ranking\s+in\s+top\s+on\s+google|"
+    r"help\s+you\s+to\s+place\s+your\s+website|"
+    r"\bplace\s+your\s+website\b|"
+    r"appears?\s+on\s+google'?s?\s+(?:1st|first)\s+page|"
+    r"google'?s?\s+(?:1st|first)\s+page|"
+    r"first\s+page\s+(?:of\s+)?(?:google|yahoo)|"
+    r"page\s+one\s+of\s+google|"
+    r"get\s+(?:you\s+)?(?:to\s+)?(?:the\s+)?top\s+of\s+(?:google|search)|"
+    r"improve\s+your\s+(?:google\s+)?(?:ranking|serp|search\s+visibility)|"
+    r"\bseo\s+(?:service|services|audit|package|quote|agency)\b|"
+    r"organic\s+(?:traffic|ranking|search)|"
+    r"search\s+engine\s+optimiz"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def check_seo_outreach(
+    message: str,
+    company: str = "",
+    subject: str = "",
+    raw_body: str = "",
+    rules: Dict[str, Any] | None = None,
+) -> Tuple[bool, str]:
+    """硬拦截：SEO/排名/上首页冷推销（不是买静音舱）。
+
+    004908 漏网根因：主题含 Quotation 使 inquiry keyword 通过，而旧 promotional
+    规则匹配不到 “not ranking / place your website / Google's 1st page” 句式。
+    """
+    text = _outreach_search_text(message, company, subject, raw_body)
+    if not text.strip():
+        return False, ""
+    if _SEO_OUTREACH_HARD.search(text):
+        return True, "seo_outreach(hard_pattern)"
+    return _first_rule_pattern_hit(
+        text,
+        (rules or {}).get("seo_outreach_patterns", {}),
+        "seo_outreach",
+    )
+
+
 # ─── Semantic Spam Content Detection ─────────────────────────
 
 _PROMO_ACTION = re.compile(
@@ -611,23 +678,15 @@ def check_promotional_content(name: str, subject: str, message: str, company: st
     if not full_text.strip():
         return False, ""
 
-    # 机制 1: spam_content_patterns（配置驱动）
-    config = rules.get("spam_content_patterns", {})
-    if config.get("enabled", True):
-        min_matches = config.get("min_matches", 1)
-        matches = []
-        for pattern in config.get("patterns", []):
-            if not pattern or pattern.startswith("_"):
-                continue
-            pat_lower = pattern.lower()
-            try:
-                if re.search(pat_lower, full_text):
-                    matches.append(pattern)
-            except re.error:
-                if pat_lower in full_text:
-                    matches.append(pattern)
-        if len(matches) >= min_matches:
-            return True, f"promotional(pattern:{'+'.join(matches[:3])})"
+    promo, reason = _match_rule_patterns(
+        full_text,
+        rules.get("spam_content_patterns", {}),
+        "promotional",
+        max_shown=3,
+        pattern_limit=None,
+    )
+    if promo:
+        return True, reason
 
     if _PROMO_ACTION.search(full_text) and _PROMO_TARGET.search(full_text):
         return True, "promotional(action+target)"
@@ -674,21 +733,25 @@ _INQUIRY_SUBJECT_PRODUCT_ENQUIRY = re.compile(
     re.IGNORECASE,
 )
 _SEO_NON_INQUIRY_BLOCK = re.compile(
-    r"\b("
-    r"search\s+ranking|top\s+of\s+search|organic\s+traffic|boost.{0,24}traffic|"
+    r"("
+    r"\b(?:search\s+ranking|top\s+of\s+search|organic\s+traffic|boost.{0,24}traffic|"
     r"keyword\s+options?|seo\s|digital\s+marketing|web\s+design\s+service|"
     r"all-in-one\s+sales\s+platform|schedule\s+(a\s+)?(call|demo|meeting)|"
     r"book\s+(a\s+)?(call|demo|meeting)|free\s+(consultation|audit|strategy)\s+(call|session)|"
     r"put\s+your\s+banner\s+at\s+the\s+top|seen\s+first\s+and\s+chosen\s+first|"
-    r"page\s+one\s+of\s+google|rank.*first\s+on.*google|"
+    r"page\s+one\s+of\s+google|rank(?:ing)?.{0,40}(?:first|1st|top).{0,20}google|"
     r"search\s+assessment|website.{0,20}review|enhancing.{0,30}search|"
     r"guest\s+article\s+submissions?|guest\s+post\s+submissions?|"
     r"accepting\s+guest\s+(?:articles?|posts?)|"
     r"interest your readers|tailor my writing|"
     r"easy for AI to recommend|"
     r"google\s+ads\s+(?:campaign|account|management|service)|"
-    r"manage your (?:google|facebook|meta) ads"
-    r")\b",
+    r"manage your (?:google|facebook|meta) ads)\b|"
+    r"not\s+ranking\s+(?:in|on)\s+(?:the\s+)?top|"
+    r"help\s+you\s+to\s+place\s+your\s+website|"
+    r"place\s+your\s+website|"
+    r"google'?s?\s+(?:1st|first)\s+page"
+    r")",
     re.IGNORECASE,
 )
 
@@ -734,6 +797,10 @@ def should_force_inquiry_intent(subject: str, message: str, name: str = "",
 
     ads, _ = check_advertising_outreach(message, company, subject, body, rules=rules)
     if ads:
+        return False
+
+    seo, _ = check_seo_outreach(message, company, subject, body, rules=rules)
+    if seo:
         return False
 
     if _SEO_NON_INQUIRY_BLOCK.search(combined):

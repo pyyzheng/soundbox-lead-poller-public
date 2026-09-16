@@ -11,7 +11,7 @@
             "conjunction": "and",
             "conditions": [
               {
-                "field_name": "匹配的业务员账号",
+                "field_name": "Assigned Salesperson（匹配的业务员账号）",
                 "operator": "isNotEmpty",
                 "value": []
               },
@@ -176,7 +176,7 @@
         ],
         "content": [
           {
-            "value": "您好，您负责的线索询盘内容已更新，请及时查看。\n线索ID：",
+            "value": "您好，您负责的线索询盘内容已更新，请点击下方按钮打开记录查看最新内容（以表格为准，勿以本消息正文为准）。\n线索ID：",
             "value_type": "text"
           },
           {
@@ -184,11 +184,11 @@
             "value_type": "ref"
           },
           {
-            "value": "\n询盘内容：",
+            "value": "\n客户：",
             "value_type": "text"
           },
           {
-            "value": "$.trigEvBreo.fldNLj6Btg",
+            "value": "$.trigEvBreo.flddqTlnEm",
             "value_type": "ref"
           }
         ],

@@ -12,7 +12,8 @@ from lead_filter_common import (
     check_spam, check_placeholder, check_promotional_content,
     check_gibberish_message, body_has_message_field,
     check_irrelevant_business, check_inquiry_keywords,
-    check_supplier_outreach, check_advertising_outreach, check_trivial_content, check_short_message,
+    check_supplier_outreach, check_advertising_outreach, check_seo_outreach,
+    check_trivial_content, check_short_message,
 )
 
 
@@ -63,6 +64,13 @@ def main():
         message, company, subject, raw_body, rules=rules,
     )
     if is_ads:
+        json.dump({"action": "reject", "score": 1, "signals": [reason]}, sys.stdout, ensure_ascii=False)
+        return
+
+    is_seo, reason = check_seo_outreach(
+        message, company, subject, raw_body, rules=rules,
+    )
+    if is_seo:
         json.dump({"action": "reject", "score": 1, "signals": [reason]}, sys.stdout, ensure_ascii=False)
         return
 

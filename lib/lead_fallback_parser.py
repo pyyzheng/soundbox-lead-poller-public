@@ -26,7 +26,8 @@ from lead_filter_common import (
     extract_email_address,
     check_skip_sender, check_skip_subject,
     check_spam, check_gibberish_message, check_promotional_content,
-    check_supplier_outreach, check_advertising_outreach, check_trivial_content, check_short_message,
+    check_supplier_outreach, check_advertising_outreach, check_seo_outreach,
+    check_trivial_content, check_short_message,
     body_has_message_field,
     check_irrelevant_business, check_inquiry_keywords
 )
@@ -877,6 +878,17 @@ def main():
     )
     if ads:
         print(json.dumps({"status": "skipped", "reason": ads_reason, "_parser": "fallback-rule"}, ensure_ascii=False))
+        sys.exit(0)
+
+    seo, seo_reason = check_seo_outreach(
+        fields_pre.get("message", ""),
+        fields_pre.get("company", ""),
+        subject,
+        body,
+        rules=filter_rules,
+    )
+    if seo:
+        print(json.dumps({"status": "skipped", "reason": seo_reason, "_parser": "fallback-rule"}, ensure_ascii=False))
         sys.exit(0)
 
     trivial, trivial_reason = check_trivial_content(

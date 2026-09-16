@@ -78,7 +78,7 @@ def check_spam_leaked(records: list, rules: dict) -> list:
     from lead_filter_common import (
         check_spam, check_placeholder, check_promotional_content,
         check_irrelevant_business, check_inquiry_keywords,
-        check_advertising_outreach, check_supplier_outreach,
+        check_advertising_outreach, check_supplier_outreach, check_seo_outreach,
     )
 
     leaked = []
@@ -101,6 +101,18 @@ def check_spam_leaked(records: list, rules: dict) -> list:
                 "email": email,
                 "message": message[:60],
                 "signals": [ads_reason],
+                "content_preview": content[:200],
+            })
+            continue
+
+        seo, seo_reason = check_seo_outreach(message, company, "", content, rules=rules)
+        if seo:
+            leaked.append({
+                "record_id": rec.get("record_id", "?"),
+                "name": name[:30],
+                "email": email,
+                "message": message[:60],
+                "signals": [seo_reason],
                 "content_preview": content[:200],
             })
             continue
@@ -242,14 +254,15 @@ REMEDY_MAP = {
         "meta": {
             "异常环节": "邮件过滤 → 飞书写入",
             "初步判断": "过滤链阈值不适用于新型垃圾模式",
-            "排查顺序": "1. 查飞书记录 Enquiry details 确认垃圾特征 → 2. 检查 lead_filter_common.py 对应规则 → 3. 调整阈值并用 QA-RULES 回归",
+            "排查顺序": "1. 对照告警 reason=advertising_outreach/supplier_outreach/seo_outreach → 2. 非消费邮箱域名写入 lead-rules.json skip_senders → 3. 新句式写入对应 *_outreach_patterns → 4. 回归 tests/test_advertising_spam_filter.py",
             "是否可自动修复": "需业务确认后可由 Claude 修改配置",
             "建议处理角色": "业务确认 + Claude执行",
         },
         "fix": [
-            "1. 在 lib/lead_filter_common.py has_random_chars() 中调整阈值",
-            "2. 用 QA-RULES.md 第五节回归用例验证修改",
-            "3. git push 到 main，等待下次定时运行生效",
+            "1. 对照告警 reason=advertising_outreach(...) 确认约稿/广告句式",
+            "2. 按 skip_senders={\"pattern\": \"*@domain\"} 提示补内容农场域名",
+            "3. 新句式写入 lead-rules.json advertising_outreach_patterns / seo_outreach_patterns",
+            "4. 运行 tests/test_advertising_spam_filter.py 回归",
         ],
     },
     "github_consecutive_failures": {
@@ -534,7 +547,7 @@ def main():
         leaked = check_spam_leaked(records, rules)
         if leaked:
             print(f"  ⚠️ 发现 {len(leaked)} 条漏网垃圾")
-            details = [f"record={l['record_id']} | name={l['name']} | signals={'+'.join(l['signals'][:2])}" for l in leaked[:5]]
+            details = [format_spam_leak_detail(item) for item in leaked[:5]]
             issues.append({
                 **REMEDY_MAP["spam_leaked"],
                 "alert_key": "spam_leaked",
