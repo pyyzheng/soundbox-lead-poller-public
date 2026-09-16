@@ -67,14 +67,59 @@
         ]
       },
       "id": "trigEvBreo",
-      "next": "actEnquiryLookup",
+      "next": "actEnquiryDelay",
       "title": "修改记录时",
       "type": "SetRecordTrigger"
     },
     {
+      "id": "actEnquiryDelay",
+      "type": "Delay",
+      "title": "延迟1分钟（过滤秒级误粘贴回滚）",
+      "next": "actEnquiryFresh",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "duration": 1
+      }
+    },
+    {
+      "id": "actEnquiryFresh",
+      "type": "FindRecordAction",
+      "title": "重读线索询盘",
+      "next": "actEnquiryLookup",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "field_names": [
+          "Clue ID",
+          "Enquiry details（询盘内容）"
+        ],
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "Clue ID",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigEvBreo.flde0LY8qQ",
+                  "value_type": "ref"
+                }
+              ]
+            }
+          ]
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true
+      }
+    },
+    {
       "id": "actEnquiryLookup",
       "type": "FindRecordAction",
-      "title": "查找记录",
+      "title": "查找业务通知名单",
       "next": "actEnquirySwitch",
       "children": {
         "links": []
@@ -148,6 +193,19 @@
                           "value_type": "number"
                         }
                       ]
+                    },
+                    {
+                      "operator": "isGreater",
+                      "left_value": {
+                        "value": "$.actEnquiryFresh.recordNum",
+                        "value_type": "ref"
+                      },
+                      "right_value": [
+                        {
+                          "value": 0,
+                          "value_type": "number"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -176,19 +234,19 @@
         ],
         "content": [
           {
-            "value": "您好，您负责的线索询盘内容已更新，请点击下方按钮打开记录查看最新内容（以表格为准，勿以本消息正文为准）。\n线索ID：",
+            "value": "您好，您负责的线索询盘内容已更新，请及时查看。\n线索ID：",
             "value_type": "text"
           },
           {
-            "value": "$.trigEvBreo.flde0LY8qQ",
+            "value": "$.actEnquiryFresh.firstfieldsRecord.flde0LY8qQ",
             "value_type": "ref"
           },
           {
-            "value": "\n客户：",
+            "value": "\n询盘内容：",
             "value_type": "text"
           },
           {
-            "value": "$.trigEvBreo.flddqTlnEm",
+            "value": "$.actEnquiryFresh.firstfieldsRecord.fldNLj6Btg",
             "value_type": "ref"
           }
         ],

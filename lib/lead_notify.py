@@ -93,11 +93,11 @@ def build_assign_card(lead_id: str, customer: str, country: str, assignee: str, 
 def build_enquiry_update_card(
     lead_id: str, customer: str, snippet: str, url: str,
 ) -> dict:
-    content = f"线索 **{lead_id or '—'}** 的询盘内容已更新，请打开记录查看最新内容（以表格为准）。"
+    content = f"线索 **{lead_id or '—'}** 的询盘内容已更新，请及时查看。"
     if customer:
         content += f"\n客户：{customer}"
     if snippet:
-        content += f"\n\n更新摘要（仅供参考）：\n{snippet}"
+        content += f"\n\n更新摘要：\n{snippet}"
     return {
         "config": {"wide_screen_mode": True},
         "header": {

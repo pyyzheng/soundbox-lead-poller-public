@@ -1,30 +1,36 @@
 #!/usr/bin/env python3
 """启用并修复询盘内容更新通知工作流 wkfOCCVMcXBjbp4F。
 
-根因（2026-07-11）：收件人直接引用 lookup 字段「匹配的业务员账号」会在
-LarkMessageAction 报「字段类型不匹配」；必须通过业务通知名单二次查找，
-取原生 user 字段「对应业务」作为收件人。
-
-保留：监听 Enquiry details 变更，且最终分配业务员有效时再通知。
+历史修复：
+- 2026-07-11：收件人必须经「业务通知名单」取原生 user 字段「对应业务」。
+- 2026-09-16：004906 通知错乱 —— 非字段绑错，而是人为把 004908 SEO 询盘
+  误粘进 004906 后约 5 秒改回；工作流按触发瞬间快照发出全文，业务员打开时
+  已是改回后的内容。保留原文「线索ID + 询盘全文」模板，增加：
+  1) Delay 1 分钟（平台最小单位）挡住秒级误操作；
+  2) 按线索ID 重读当前 Enquiry details，消息正文嵌入重读后的全文
+     （与业务员打开记录一致，不再用易过期的触发瞬间快照）。
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
-import sys
 import sys
 from copy import deepcopy
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
-from assignment_fields import FIELD_ASSIGNEE  # noqa: E402
+from assignment_fields import FIELD_ASSIGNEE, FIELD_ENQUIRY, FIELD_LEAD_ID  # noqa: E402
 from workflow_bilingual import migrate_workflow_document  # noqa: E402
 
 WORKFLOW_ID = "wkfOCCVMcXBjbp4F"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
 ERROR_ASSIGNEES = ("未命中规则", "匹配错误请检查", "公式计算异常")
 FIELD_MATCHED_ACCOUNT = "Assigned Salesperson（匹配的业务员账号）"
+FIELD_ID_CLUE = "flde0LY8qQ"
+FIELD_ID_ENQUIRY = "fldNLj6Btg"
+DELAY_MINUTES = 1
 
 
 def _fetch_live(base_token: str) -> dict:
@@ -56,11 +62,54 @@ def _strip_option_ids(node) -> None:
         _strip_option_ids(child)
 
 
+def _delay_step() -> dict:
+    return {
+        "id": "actEnquiryDelay",
+        "type": "Delay",
+        "title": "延迟1分钟（过滤秒级误粘贴回滚）",
+        "next": "actEnquiryFresh",
+        "children": {"links": []},
+        "data": {"duration": DELAY_MINUTES},
+    }
+
+
+def _fresh_enquiry_step() -> dict:
+    """延迟后按线索ID重读，取发送时刻的询盘全文。"""
+    return {
+        "id": "actEnquiryFresh",
+        "type": "FindRecordAction",
+        "title": "重读线索询盘",
+        "next": "actEnquiryLookup",
+        "children": {"links": []},
+        "data": {
+            "table_name": "线索总池 Case Database",
+            "field_names": [FIELD_LEAD_ID, FIELD_ENQUIRY],
+            "filter_info": {
+                "conjunction": "and",
+                "conditions": [
+                    {
+                        "field_name": FIELD_LEAD_ID,
+                        "operator": "is",
+                        "value": [
+                            {
+                                "value": f"$.trigEvBreo.{FIELD_ID_CLUE}",
+                                "value_type": "ref",
+                            }
+                        ],
+                    }
+                ],
+            },
+            "ref_info": None,
+            "should_proceed_when_no_results": True,
+        },
+    }
+
+
 def _lookup_step() -> dict:
     return {
         "id": "actEnquiryLookup",
         "type": "FindRecordAction",
-        "title": "查找记录",
+        "title": "查找业务通知名单",
         "next": "actEnquirySwitch",
         "children": {"links": []},
         "data": {
@@ -88,6 +137,12 @@ def _lookup_step() -> dict:
 
 
 def _switch_step() -> dict:
+    """有收件人 + 重读成功才发。
+
+    不在此比较询盘全文是否等于触发快照：长文本 ref==ref 会在工作流校验/
+    migrate 时被拍扁导致部署失败。秒级误粘贴回滚靠 Delay(1min)+重读消化：
+    发出去的是发送时刻表内全文，与业务员打开记录一致。
+    """
     return {
         "id": "actEnquirySwitch",
         "type": "SwitchBranch",
@@ -129,7 +184,17 @@ def _switch_step() -> dict:
                                         "right_value": [
                                             {"value": 0, "value_type": "number"}
                                         ],
-                                    }
+                                    },
+                                    {
+                                        "operator": "isGreater",
+                                        "left_value": {
+                                            "value": "$.actEnquiryFresh.recordNum",
+                                            "value_type": "ref",
+                                        },
+                                        "right_value": [
+                                            {"value": 0, "value_type": "number"}
+                                        ],
+                                    },
                                 ],
                             }
                         ],
@@ -140,12 +205,31 @@ def _switch_step() -> dict:
     }
 
 
+def _message_content() -> list[dict]:
+    """恢复原文模板：线索ID + 询盘全文（取延迟后重读值）。"""
+    return [
+        {
+            "value": "您好，您负责的线索询盘内容已更新，请及时查看。\n线索ID：",
+            "value_type": "text",
+        },
+        {
+            "value": f"$.actEnquiryFresh.firstfieldsRecord.{FIELD_ID_CLUE}",
+            "value_type": "ref",
+        },
+        {"value": "\n询盘内容：", "value_type": "text"},
+        {
+            "value": f"$.actEnquiryFresh.firstfieldsRecord.{FIELD_ID_ENQUIRY}",
+            "value_type": "ref",
+        },
+    ]
+
+
 def patch_workflow(data: dict) -> dict:
     out = deepcopy(data)
     steps = {s["id"]: s for s in out["steps"]}
 
     trigger = steps["trigEvBreo"]
-    trigger["next"] = "actEnquiryLookup"
+    trigger["next"] = "actEnquiryDelay"
     trigger["data"]["condition_list"] = [
         {
             "conjunction": "and",
@@ -176,21 +260,7 @@ def patch_workflow(data: dict) -> dict:
     msg["data"]["receiver"] = [
         {"value": "$.actEnquiryLookup.firstfieldsRecord.fldEVPOdP6", "value_type": "ref"},
     ]
-    # 2026-09-16: 不再嵌入 Enquiry details 全文。
-    # 根因：通知快照与现网内容易不一致（字段被改写/并发更新），Gigi 004906 误收到
-    # 004908 SEO 正文。改为只发线索ID+客户名，强制打开记录查看最新询盘。
-    msg["data"]["content"] = [
-        {
-            "value": (
-                "您好，您负责的线索询盘内容已更新，请点击下方按钮打开记录查看"
-                "最新内容（以表格为准，勿以本消息正文为准）。\n线索ID："
-            ),
-            "value_type": "text",
-        },
-        {"value": "$.trigEvBreo.flde0LY8qQ", "value_type": "ref"},
-        {"value": "\n客户：", "value_type": "text"},
-        {"value": "$.trigEvBreo.flddqTlnEm", "value_type": "ref"},
-    ]
+    msg["data"]["content"] = _message_content()
     msg["data"]["title"] = [
         {"value": "询盘内容更新提醒", "value_type": "text"},
     ]
@@ -202,15 +272,20 @@ def patch_workflow(data: dict) -> dict:
         }
     ]
 
-    out["steps"] = [trigger, _lookup_step(), _switch_step(), msg]
+    out["steps"] = [
+        trigger,
+        _delay_step(),
+        _fresh_enquiry_step(),
+        _lookup_step(),
+        _switch_step(),
+        msg,
+    ]
 
     _strip_option_ids(out["steps"])
     return migrate_workflow_document({"title": out["title"], "steps": out["steps"]})
 
 
 def main() -> int:
-    import os
-
     base_token = os.environ.get(BASE_TOKEN_ENV, "ZpbUb7SP7azsNasniFjc0bWSnHg")
     live = _fetch_live(base_token)
     body = patch_workflow(live)
