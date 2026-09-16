@@ -137,7 +137,8 @@ class DailyLeastPoolTests(unittest.TestCase):
         }
         raised = apply_newcomer_start_line(split, today=date(2026, 9, 15))
         self.assertEqual(raised, ["Zoe"])
-        self.assertEqual(split["Zoe"], {"yesterday": 3, "today": 2})
+        self.assertEqual(split["Zoe"]["yesterday"] + split["Zoe"]["today"], 5)
+        self.assertEqual(split["Zoe"]["today"], 0)
         totals = totals_from_split(split)
         pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
         assert pick is not None
@@ -195,6 +196,26 @@ class DailyLeastPoolTests(unittest.TestCase):
         pick2 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
         assert pick2 is not None
         self.assertEqual(pick2.assignee, "Zoe")
+
+    def test_newcomer_start_line_does_not_double_pad_after_real_leads(self):
+        from datetime import date
+
+        from daily_least_assign import apply_newcomer_start_line, totals_from_split
+
+        # 次日已实接到与昨日存量相同的单，不再把昨日再垫一层
+        split = {
+            "Gigi": {"yesterday": 1, "today": 0},
+            "Cathy": {"yesterday": 1, "today": 0},
+            "Kevin": {"yesterday": 2, "today": 0},
+            "Rita": {"yesterday": 2, "today": 0},
+            "Zoe": {"yesterday": 0, "today": 2},
+        }
+        raised = apply_newcomer_start_line(split, today=date(2026, 9, 16))
+        self.assertEqual(raised, [])
+        self.assertEqual(split["Zoe"], {"yesterday": 0, "today": 2})
+        totals = totals_from_split(split)
+        self.assertEqual(totals["Zoe"], 2)
+        self.assertEqual(totals["Kevin"], 2)
 
     def test_newcomer_start_line_expires_after_two_days(self):
         from datetime import date

@@ -152,17 +152,22 @@ def apply_newcomer_start_line(
         if not peers:
             continue
         row = split.setdefault(name, {"yesterday": 0, "today": 0})
-        y_max = max(int(split.get(p, {}).get("yesterday", 0)) for p in peers)
-        t_max = max(int(split.get(p, {}).get("today", 0)) for p in peers)
-        before_y = int(row.get("yesterday", 0))
-        before_t = int(row.get("today", 0))
+        actual_y = int(row.get("yesterday", 0))
+        actual_t = int(row.get("today", 0))
+        actual_total = actual_y + actual_t
         if today == joined:
-            row["yesterday"] = max(before_y, y_max)
-            row["today"] = max(before_t, t_max)
+            start_line = max(
+                int(split.get(p, {}).get("yesterday", 0)) + int(split.get(p, {}).get("today", 0))
+                for p in peers
+            )
         elif today == joined + timedelta(days=1):
-            row["yesterday"] = max(before_y, y_max)
-        if int(row["yesterday"]) != before_y or int(row["today"]) != before_t:
-            raised.append(name)
+            start_line = max(int(split.get(p, {}).get("yesterday", 0)) for p in peers)
+        else:
+            continue
+        if actual_total >= start_line:
+            continue
+        row["yesterday"] = actual_y + (start_line - actual_total)
+        raised.append(name)
     return raised
 
 
