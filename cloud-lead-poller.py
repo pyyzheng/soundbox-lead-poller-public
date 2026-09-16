@@ -835,12 +835,12 @@ def process_email(service, msg_data: dict, label_id: str, feishu_token: str, rul
         product_model=structured.get("Product model（具体型号）", ""),
         customer_name=(
             (llm_result.get("name") if llm_result and llm_result.get("status") == "parsed" else None)
-            or fields.get("name")
+            or fields_pre.get("name")
             or ""
         ),
         customer_unit=(
             (llm_result.get("company") if llm_result and llm_result.get("status") == "parsed" else None)
-            or fields.get("company")
+            or fields_pre.get("company")
             or ""
         ),
     )

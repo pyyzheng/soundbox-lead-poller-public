@@ -72,8 +72,9 @@ jobs:
           [ -n "$SINCE" ] && ARGS="$ARGS --since $SINCE"
           python facebook-lead-poller.py $ARGS
 
+      # poller 失败（如 Meta token 过期）时主表仍可能有 webhook 写入的待分配单，必须继续兜底
       - name: Trigger assignment unblock
-        if: success() && (github.event.inputs.dry_run || 'false') != 'true'
+        if: ${{ !cancelled() && (github.event.inputs.dry_run || 'false') != 'true' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}

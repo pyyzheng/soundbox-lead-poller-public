@@ -2,7 +2,7 @@ name: Assignment Unblock
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  # GitHub 常有漂移；近实时靠 repository_dispatch
+    - cron: "*/3 * * * *"  # GitHub 常有漂移；近实时靠 repository_dispatch / poller 完成后触发
   workflow_dispatch:
     inputs:
       dry_run:
@@ -36,7 +36,8 @@ jobs:
     name: Unblock Assignment
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    # 轮询失败也要跑兜底：主表里已有未分配线索，不能被 poller 失败连带跳过。
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion != 'cancelled' }}
 
     steps:
       - uses: actions/checkout@v4

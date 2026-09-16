@@ -70,8 +70,9 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
         run: python cloud-lead-poller.py
 
+      # Gmail poller 失败时，主表仍可能已有待分配线索（含 webhook/人工录入），不能跳过兜底
       - name: Trigger assignment unblock
-        if: success() && (github.event.inputs.dry_run || 'false') != 'true'
+        if: ${{ !cancelled() && (github.event.inputs.dry_run || 'false') != 'true' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
