@@ -123,10 +123,95 @@ class DailyLeastPoolTests(unittest.TestCase):
         # Cathy already in roster — align sets her to max of roster
         self.assertEqual(counts["Cathy"], 12)
 
-    def test_newcomer_uses_actual_count_on_day_one(self):
-        # 新人当天按实计：Zoe=0，下一单给她，不设入池水位
-        counts = {"Gigi": 2, "Cathy": 2, "Kevin": 5, "Rita": 4, "Zoe": 0}
-        pick = pick_daily_least_assignee("谷歌|亚洲区队列", counts, PUBLIC_REGION_ME)
+    def test_newcomer_start_line_join_day_matches_peer_stock(self):
+        from datetime import date
+
+        from daily_least_assign import apply_newcomer_start_line, totals_from_split
+
+        split = {
+            "Gigi": {"yesterday": 1, "today": 1},
+            "Cathy": {"yesterday": 1, "today": 0},
+            "Kevin": {"yesterday": 3, "today": 2},
+            "Rita": {"yesterday": 3, "today": 1},
+            "Zoe": {"yesterday": 0, "today": 0},
+        }
+        raised = apply_newcomer_start_line(split, today=date(2026, 9, 15))
+        self.assertEqual(raised, ["Zoe"])
+        self.assertEqual(split["Zoe"], {"yesterday": 3, "today": 2})
+        totals = totals_from_split(split)
+        pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
+        assert pick is not None
+        self.assertEqual(pick.assignee, "Rita")
+
+    def test_newcomer_start_line_next_day_pads_yesterday_only(self):
+        from datetime import date
+
+        from daily_least_assign import apply_newcomer_start_line, bump_count, totals_from_split
+
+        split = {
+            "Gigi": {"yesterday": 1, "today": 1},
+            "Cathy": {"yesterday": 1, "today": 0},
+            "Kevin": {"yesterday": 2, "today": 0},
+            "Rita": {"yesterday": 2, "today": 0},
+            "Zoe": {"yesterday": 0, "today": 0},
+        }
+        apply_newcomer_start_line(split, today=date(2026, 9, 16))
+        self.assertEqual(split["Zoe"], {"yesterday": 2, "today": 0})
+        totals = totals_from_split(split)
+        pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
+        assert pick is not None
+        self.assertEqual(pick.assignee, "Kevin")
+
+        bump_count(totals, "Kevin")
+        pick2 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
+        assert pick2 is not None
+        self.assertEqual(pick2.assignee, "Rita")
+
+        bump_count(totals, "Rita")
+        pick3 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
+        assert pick3 is not None
+        self.assertEqual(pick3.assignee, "Zoe")
+
+    def test_newcomer_start_line_does_not_follow_peer_today_after_join_day(self):
+        from datetime import date
+
+        from daily_least_assign import apply_newcomer_start_line, bump_count, totals_from_split
+
+        split = {
+            "Gigi": {"yesterday": 1, "today": 0},
+            "Cathy": {"yesterday": 1, "today": 0},
+            "Kevin": {"yesterday": 2, "today": 1},
+            "Rita": {"yesterday": 2, "today": 0},
+            "Zoe": {"yesterday": 0, "today": 0},
+        }
+        apply_newcomer_start_line(split, today=date(2026, 9, 16))
+        self.assertEqual(split["Zoe"]["yesterday"], 2)
+        self.assertEqual(split["Zoe"]["today"], 0)
+        totals = totals_from_split(split)
+        pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
+        assert pick is not None
+        self.assertEqual(pick.assignee, "Rita")
+        bump_count(totals, "Rita")
+        pick2 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
+        assert pick2 is not None
+        self.assertEqual(pick2.assignee, "Zoe")
+
+    def test_newcomer_start_line_expires_after_two_days(self):
+        from datetime import date
+
+        from daily_least_assign import apply_newcomer_start_line, totals_from_split
+
+        split = {
+            "Gigi": {"yesterday": 0, "today": 0},
+            "Cathy": {"yesterday": 0, "today": 0},
+            "Kevin": {"yesterday": 2, "today": 0},
+            "Rita": {"yesterday": 2, "today": 0},
+            "Zoe": {"yesterday": 0, "today": 0},
+        }
+        raised = apply_newcomer_start_line(split, today=date(2026, 9, 17))
+        self.assertEqual(raised, [])
+        self.assertEqual(split["Zoe"], {"yesterday": 0, "today": 0})
+        pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals_from_split(split), PUBLIC_REGION_ME)
         assert pick is not None
         self.assertEqual(pick.assignee, "Zoe")
 

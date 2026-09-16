@@ -49,15 +49,18 @@ from channel_queue_assign import (
 from daily_least_assign import (
     PUBLIC_REGION_ME,
     PUBLIC_REGION_POINTER_KEY,
+    TRACKED_ASSIGNEES,
+    accumulate_split_count,
+    apply_newcomer_start_line,
     bump_count,
-    counts_should_include,
+    empty_split_counts,
     eligible_for_daily_least,
     is_daily_least_queue,
     normalize_public_region,
     pick_daily_least_assignee,
     shanghai_day_bounds,
     to_utc_ms,
-    TRACKED_ASSIGNEES,
+    totals_from_split,
 )
 from feishu_utils import (
     FEISHU_APP_TOKEN,
@@ -100,9 +103,11 @@ def _search(token: str, table_id: str, body: dict) -> list[dict]:
 
 
 def _load_daily_counts(token: str) -> dict[str, int]:
-    counts = {name: 0 for name in TRACKED_ASSIGNEES}
-    yesterday_start, _, tomorrow_start = shanghai_day_bounds()
-    from_ms = to_utc_ms(yesterday_start)
+    split = empty_split_counts()
+    yesterday_start, today_start, tomorrow_start = shanghai_day_bounds()
+    y_ms = to_utc_ms(yesterday_start)
+    t_ms = to_utc_ms(today_start)
+    n_ms = to_utc_ms(tomorrow_start)
     try:
         items = _search(
             token,
@@ -114,12 +119,12 @@ def _load_daily_counts(token: str) -> dict[str, int]:
                         {
                             "field_name": FIELD_ENTRY_TIME,
                             "operator": "isGreater",
-                            "value": ["ExactDate", str(from_ms - 1)],
+                            "value": ["ExactDate", str(y_ms - 1)],
                         },
                         {
                             "field_name": FIELD_ENTRY_TIME,
                             "operator": "isLess",
-                            "value": ["ExactDate", str(to_utc_ms(tomorrow_start))],
+                            "value": ["ExactDate", str(n_ms)],
                         },
                     ],
                 },
@@ -129,14 +134,23 @@ def _load_daily_counts(token: str) -> dict[str, int]:
         )
     except Exception as exc:  # noqa: BLE001
         log.warning("加载按天累计失败: %s", exc)
-        return counts
+        return {name: 0 for name in TRACKED_ASSIGNEES}
     for item in items:
         fields = item.get("fields", {}) or {}
+        entry_ms = int(fields.get(FIELD_ENTRY_TIME, 0) or 0)
         final = extract_text(get_field(fields, FIELD_ASSIGNEE, "")).strip()
         manual = extract_text(get_field(fields, FIELD_MANUAL_ASSIGNEE, "")).strip()
-        if counts_should_include(final_assignee=final, manual_assignee=manual):
-            bump_count(counts, final)
-    return counts
+        accumulate_split_count(
+            split,
+            assignee=final,
+            entry_ms=entry_ms,
+            manual_assignee=manual,
+            yesterday_start_ms=y_ms,
+            today_start_ms=t_ms,
+            tomorrow_start_ms=n_ms,
+        )
+    apply_newcomer_start_line(split)
+    return totals_from_split(split)
 
 
 def _load_public_region(token: str) -> tuple[int, str]:

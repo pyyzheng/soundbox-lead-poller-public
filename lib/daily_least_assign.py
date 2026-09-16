@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
@@ -50,6 +50,9 @@ ASIA_ROSTER: tuple[str, ...] = ("Kevin", "Rita", "Zoe")
 
 # 人级累计统计对象（Jannice 代理不进最少池，可不计入竞争；仍可统计但不参与选人）
 TRACKED_ASSIGNEES: frozenset[str] = frozenset(ME_ROSTER + ASIA_ROSTER)
+
+# 新人入职日（上海日历）：当天对齐同伴已有累计，次日只垫昨日存量，之后完全实计
+NEWCOMER_JOIN_DATE: dict[str, date] = {"Zoe": date(2026, 9, 15)}
 
 POOL_ME = "ME"
 POOL_ASIA = "ASIA"
@@ -113,6 +116,54 @@ def shanghai_day_bounds(now: datetime | None = None) -> tuple[datetime, datetime
 
 def to_utc_ms(dt: datetime) -> int:
     return int(dt.astimezone(ZoneInfo("UTC")).timestamp() * 1000)
+
+
+def _roster_for_assignee(name: str) -> tuple[str, ...]:
+    if name in ME_ROSTER:
+        return ME_ROSTER
+    if name in ASIA_ROSTER:
+        return ASIA_ROSTER
+    return ()
+
+
+def apply_newcomer_start_line(
+    split: dict[str, dict[str, int]],
+    *,
+    today: date | None = None,
+) -> list[str]:
+    """同一起跑线：垫高新人分桶，使其选人累计等于入职时已有存量。
+
+    - 入职当天：昨日+今日都对齐同伴 max（已有累计不连补）
+    - 入职次日：只垫昨日（切日后存量仍在窗口内）；今日新单按最少优先
+    - 入职两日后：不垫，完全实计
+
+    今日新单不纳入垫高，避免每次加载按当前 max 再抬、新人永远分不到。
+    就地修改 split，返回被垫高的姓名。
+    """
+    today = today or datetime.now(TZ_SHANGHAI).date()
+    raised: list[str] = []
+    for name, joined in NEWCOMER_JOIN_DATE.items():
+        if name not in TRACKED_ASSIGNEES:
+            continue
+        if today < joined:
+            continue
+        roster = _roster_for_assignee(name)
+        peers = [p for p in roster if p != name]
+        if not peers:
+            continue
+        row = split.setdefault(name, {"yesterday": 0, "today": 0})
+        y_max = max(int(split.get(p, {}).get("yesterday", 0)) for p in peers)
+        t_max = max(int(split.get(p, {}).get("today", 0)) for p in peers)
+        before_y = int(row.get("yesterday", 0))
+        before_t = int(row.get("today", 0))
+        if today == joined:
+            row["yesterday"] = max(before_y, y_max)
+            row["today"] = max(before_t, t_max)
+        elif today == joined + timedelta(days=1):
+            row["yesterday"] = max(before_y, y_max)
+        if int(row["yesterday"]) != before_y or int(row["today"]) != before_t:
+            raised.append(name)
+    return raised
 
 
 def eligible_for_daily_least(fields: dict[str, Any]) -> bool:
@@ -191,7 +242,7 @@ def bump_count(counts: dict[str, int], assignee: str) -> None:
 
 
 def align_newcomer_to_max(counts: dict[str, int], name: str, roster: Iterable[str]) -> None:
-    """工具函数：累计对齐当前花名册 max。分配主路径不使用：新人当天按实计最少优先。"""
+    """工具函数：累计对齐当前花名册 max。主路径用 apply_newcomer_start_line（分桶起跑线）。"""
     peers = [int(counts.get(p, 0)) for p in roster]
     peak = max(peers) if peers else 0
     counts[name] = peak

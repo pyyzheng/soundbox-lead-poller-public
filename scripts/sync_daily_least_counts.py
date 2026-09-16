@@ -37,6 +37,7 @@ from daily_least_assign import (  # noqa: E402
     PUBLIC_REGION_POINTER_KEY,
     TRACKED_ASSIGNEES,
     accumulate_split_count,
+    apply_newcomer_start_line,
     debt_within_roster,
     empty_split_counts,
     normalize_public_region,
@@ -67,7 +68,7 @@ RULE_NOTE = (
     "计入=自动分配成功（中东/亚洲/公区/代理/查重）；"
     "不计=人工改派/Case handler 转接；"
     "公区代理不占区指针；欧洲仍顺序轮；"
-    "新人入职当天按实计最少优先，不设入池水位"
+    "新人入职当天对齐同伴已有累计（同一起跑线）；次日只垫昨日存量，今日新单最少优先；入职两日后完全实计"
 )
 
 
@@ -220,7 +221,15 @@ def existing_rows(token: str) -> dict[str, str]:
 
 def sync(token: str) -> int:
     split = load_split_counts(token)
-    totals = totals_from_split(split)
+    actual_totals = totals_from_split(split)
+    aligned_split = {name: dict(row) for name, row in split.items()}
+    raised = apply_newcomer_start_line(aligned_split)
+    if raised:
+        log.info(
+            "新人起跑线对齐（看板）: %s",
+            {n: totals_from_split(aligned_split)[n] for n in raised},
+        )
+    totals = totals_from_split(aligned_split)
     public_region = load_public_region(token)
     public_label = public_region_label(public_region)
     details = person_details_from_split(split)
@@ -236,6 +245,10 @@ def sync(token: str) -> int:
         roster = ME_ROSTER if detail.name in ME_ROSTER else ASIA_ROSTER
         aligned_total = int(totals.get(detail.name, detail.total))
         debt = debt_within_roster(detail.name, totals, roster)
+        note = RULE_NOTE
+        actual_total = int(actual_totals.get(detail.name, detail.total))
+        if aligned_total != actual_total:
+            note = f"{RULE_NOTE}；实计昨+今={actual_total}，起跑线对齐后选人累计={aligned_total}"
         fields = {
             "业务员": detail.name,
             "所属区": detail.region,
@@ -246,7 +259,7 @@ def sync(token: str) -> int:
             "公区下一区指针状态": public_label,
             "统计日": today_ms,
             "刷新时间": now_ms,
-            "说明": RULE_NOTE,
+            "说明": note,
         }
         log.info(
             "%s %s y=%s t=%s sum=%s debt=%s public=%s",

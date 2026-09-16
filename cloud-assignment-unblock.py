@@ -78,14 +78,18 @@ from daily_least_assign import (  # noqa: E402
     PUBLIC_REGION_ME,
     PUBLIC_REGION_POINTER_KEY,
     TRACKED_ASSIGNEES,
+    accumulate_split_count,
+    apply_newcomer_start_line,
     bump_count,
     counts_should_include,
+    empty_split_counts,
     eligible_for_daily_least,
     is_daily_least_queue,
     normalize_public_region,
     pick_daily_least_assignee,
     shanghai_day_bounds,
     to_utc_ms,
+    totals_from_split,
 )
 from feishu_utils import (  # noqa: E402
     FEISHU_APP_TOKEN,
@@ -504,11 +508,12 @@ def _load_queue_pointers(token: str) -> dict:
 
 
 def _load_daily_least_counts(token: str) -> dict[str, int]:
-    """从主表统计昨+今自动分配次数（人工改派不计入）。"""
-    counts = {name: 0 for name in TRACKED_ASSIGNEES}
-    yesterday_start, _, tomorrow_start = shanghai_day_bounds()
-    from_ms = to_utc_ms(yesterday_start)
-    # ExactDate 用毫秒；isGreater 为严格大于「昨天 0 点前一刻」用 isGreaterEqual 更稳——飞书用 isGreater + 昨日0点-1ms
+    """从主表统计昨+今自动分配次数（人工改派不计入）；新人按入职起跑线垫高。"""
+    split = empty_split_counts()
+    yesterday_start, today_start, tomorrow_start = shanghai_day_bounds()
+    y_ms = to_utc_ms(yesterday_start)
+    t_ms = to_utc_ms(today_start)
+    n_ms = to_utc_ms(tomorrow_start)
     try:
         items = _search_records(
             token,
@@ -520,12 +525,12 @@ def _load_daily_least_counts(token: str) -> dict[str, int]:
                         {
                             "field_name": FIELD_ENTRY_TIME,
                             "operator": "isGreater",
-                            "value": ["ExactDate", str(from_ms - 1)],
+                            "value": ["ExactDate", str(y_ms - 1)],
                         },
                         {
                             "field_name": FIELD_ENTRY_TIME,
                             "operator": "isLess",
-                            "value": ["ExactDate", str(to_utc_ms(tomorrow_start))],
+                            "value": ["ExactDate", str(n_ms)],
                         },
                     ],
                 },
@@ -535,17 +540,26 @@ def _load_daily_least_counts(token: str) -> dict[str, int]:
         )
     except Exception as exc:  # noqa: BLE001 — 计数失败时降级为空，避免阻断分配
         log.warning("加载按天累计失败，降级为空计数: %s", exc)
-        return counts
+        return {name: 0 for name in TRACKED_ASSIGNEES}
 
     for item in items:
         fields = item.get("fields", {}) or {}
-        entry_ms = fields.get(FIELD_ENTRY_TIME, 0) or 0
-        if entry_ms and (entry_ms < from_ms or entry_ms >= to_utc_ms(tomorrow_start)):
-            continue
+        entry_ms = int(fields.get(FIELD_ENTRY_TIME, 0) or 0)
         final = extract_text(get_field(fields, FIELD_ASSIGNEE, "")).strip()
         manual = extract_text(get_field(fields, FIELD_MANUAL_ASSIGNEE, "")).strip()
-        if counts_should_include(final_assignee=final, manual_assignee=manual):
-            bump_count(counts, final)
+        accumulate_split_count(
+            split,
+            assignee=final,
+            entry_ms=entry_ms,
+            manual_assignee=manual,
+            yesterday_start_ms=y_ms,
+            today_start_ms=t_ms,
+            tomorrow_start_ms=n_ms,
+        )
+    raised = apply_newcomer_start_line(split)
+    if raised:
+        log.info("新人起跑线对齐: %s", {n: totals_from_split(split)[n] for n in raised})
+    counts = totals_from_split(split)
     log.info(
         "按天累计(昨+今) %s",
         {k: v for k, v in sorted(counts.items()) if v},
