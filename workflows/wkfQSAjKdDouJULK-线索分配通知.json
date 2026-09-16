@@ -8,16 +8,17 @@
       "data": {
         "condition_list": [
           {
+            "conjunction": "and",
             "conditions": [
               {
                 "field_name": "The final assigned salesperson（最终分配的业务员）",
-                "operator": "isNot",
-                "value": [
-                  {
-                    "value": "匹配错误请检查",
-                    "value_type": "text"
-                  }
-                ]
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Assigned Salesperson（匹配的业务员账号）",
+                "operator": "isNotEmpty",
+                "value": []
               },
               {
                 "field_name": "The final assigned salesperson（最终分配的业务员）",
@@ -34,31 +35,27 @@
                 "operator": "isNot",
                 "value": [
                   {
-                    "value": "公式计算异常",
+                    "value": "匹配错误请检查",
                     "value_type": "text"
                   }
                 ]
               },
               {
                 "field_name": "The final assigned salesperson（最终分配的业务员）",
-                "operator": "isNotEmpty",
-                "value": []
-              },
-              {
-                "field_name": "匹配的业务员账号",
-                "operator": "isNotEmpty",
-                "value": []
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "公式计算异常",
+                    "value_type": "text"
+                  }
+                ]
               }
-            ],
-            "conjunction": "and"
+            ]
           }
         ],
         "field_watch_info": [
           {
             "field_name": "The final assigned salesperson（最终分配的业务员）"
-          },
-          {
-            "field_name": "匹配的业务员账号"
           }
         ],
         "table_name": "线索总池 Case Database",
@@ -70,14 +67,61 @@
         ]
       },
       "id": "trig6WiWjH",
-      "next": "actNotifyLookup",
+      "next": "actNotifyDelay",
       "title": "修改记录时",
       "type": "SetRecordTrigger"
     },
     {
+      "id": "actNotifyDelay",
+      "type": "Delay",
+      "title": "延迟1分钟（过滤Case handler清空空窗）",
+      "next": "actNotifyFresh",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "duration": 1
+      }
+    },
+    {
+      "id": "actNotifyFresh",
+      "type": "FindRecordAction",
+      "title": "重读线索最终分配",
+      "next": "actNotifyLookup",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "线索总池 Case Database",
+        "field_names": [
+          "Clue ID",
+          "The final assigned salesperson（最终分配的业务员）",
+          "Customer Name（客户名称）",
+          "Country（国家）"
+        ],
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "Clue ID",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trig6WiWjH.flde0LY8qQ",
+                  "value_type": "ref"
+                }
+              ]
+            }
+          ]
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true
+      }
+    },
+    {
       "id": "actNotifyLookup",
       "type": "FindRecordAction",
-      "title": "查找记录",
+      "title": "查找业务通知名单",
       "next": "actNotifySwitch",
       "children": {
         "links": []
@@ -96,7 +140,7 @@
               "operator": "is",
               "value": [
                 {
-                  "value": "$.trig6WiWjH.fldOMcCv5Y",
+                  "value": "$.actNotifyFresh.firstfieldsRecord.fldOMcCv5Y",
                   "value_type": "ref"
                 }
               ]
@@ -151,6 +195,32 @@
                           "value_type": "number"
                         }
                       ]
+                    },
+                    {
+                      "operator": "isGreater",
+                      "left_value": {
+                        "value": "$.actNotifyFresh.recordNum",
+                        "value_type": "ref"
+                      },
+                      "right_value": [
+                        {
+                          "value": 0,
+                          "value_type": "number"
+                        }
+                      ]
+                    },
+                    {
+                      "operator": "is",
+                      "left_value": {
+                        "value": "$.actNotifyFresh.firstfieldsRecord.fldOMcCv5Y",
+                        "value_type": "ref"
+                      },
+                      "right_value": [
+                        {
+                          "value": "$.trig6WiWjH.fldOMcCv5Y",
+                          "value_type": "ref"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -183,7 +253,7 @@
             "value_type": "text"
           },
           {
-            "value": "$.trig6WiWjH.flde0LY8qQ",
+            "value": "$.actNotifyFresh.firstfieldsRecord.flde0LY8qQ",
             "value_type": "ref"
           },
           {
@@ -191,7 +261,7 @@
             "value_type": "text"
           },
           {
-            "value": "$.trig6WiWjH.flddqTlnEm",
+            "value": "$.actNotifyFresh.firstfieldsRecord.flddqTlnEm",
             "value_type": "ref"
           },
           {
@@ -199,7 +269,7 @@
             "value_type": "text"
           },
           {
-            "value": "$.trig6WiWjH.fldAEhwYJU",
+            "value": "$.actNotifyFresh.firstfieldsRecord.fldAEhwYJU",
             "value_type": "ref"
           }
         ],
