@@ -48,6 +48,7 @@ from lead_filter_common import (
     check_trivial_content,
     check_form_spam_submission,
     check_supplier_outreach,
+    check_advertising_outreach,
     check_system_notification,
 )
 from lead_fallback_parser import (
@@ -200,6 +201,12 @@ def run_filter_chain(from_addr: str, subject: str, name: str, email: str,
         message, company, subject, body, rules=rules,
     )
     if supplier:
+        return "reject", [reason]
+
+    ads, reason = check_advertising_outreach(
+        message, company, subject, body, rules=rules,
+    )
+    if ads:
         return "reject", [reason]
 
     trivial, reason = check_trivial_content(name, message, rules)
@@ -557,6 +564,17 @@ def process_email(service, msg_data: dict, label_id: str, feishu_token: str, rul
         if supplier:
             log.info("post-LLM 供应商推销拦截: %s", sup_reason)
             return _skip_and_label(service, msg_id, label_id, "skipped", sup_reason)
+
+        ads, ads_reason = check_advertising_outreach(
+            strip_html(llm_result.get("message", "")),
+            llm_result.get("company", ""),
+            subject,
+            body,
+            rules=rules,
+        )
+        if ads:
+            log.info("post-LLM 广告/约稿拦截: %s", ads_reason)
+            return _skip_and_label(service, msg_id, label_id, "skipped", ads_reason)
 
         # 网站表单 HTML 里的邮箱常被 LLM 漏提；用规则引擎结果补上
         llm_result = overlay_form_fields(llm_result, fields_pre)

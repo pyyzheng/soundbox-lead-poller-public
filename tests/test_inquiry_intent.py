@@ -57,6 +57,15 @@ class TestInquiryIntentOverride(unittest.TestCase):
             should_force_inquiry_intent("Quote request", msg, rules=self.rules)
         )
 
+    def test_guest_article_pitch_not_forced_inquiry(self):
+        msg = (
+            "Are you currently accepting guest article submissions? If so, I have "
+            "a topic I'd like to address for your readers."
+        )
+        self.assertFalse(
+            should_force_inquiry_intent("Message from SoundBox", msg, rules=self.rules)
+        )
+
     def test_walmart_seller_support_blocked(self):
         subj = "RE: 我们收到了您的 CN Case #15318594!"
         body = "感谢您联系沃尔玛卖家支持。please provide reference documents."

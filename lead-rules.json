@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated": "2026-04-01",
+  "updated": "2026-09-16",
   "comment": "线索处理规则配置 - 修改此文件即可调整规则，无需改 SOUL.md",
   "account": "soundboxbooth@gmail.com",
   "channels": {
@@ -73,6 +73,7 @@
     {"pattern": "*@yuguo.com"},
     {"pattern": "*@creatify.ai"},
     {"pattern": "*@mails.creatify.ai"},
+    {"pattern": "*@meditationhelp.net"},
     "wordpress@soundboxbooth.com",
     "soundboxbooth@gmail.com",
     "system@soundbox.com",
@@ -504,6 +505,25 @@
     "short_mash_min_length": 8,
     "short_mash_max_length": 20,
     "short_mash_unique_ratio": 0.875
+  },
+  "advertising_outreach_patterns": {
+    "_comment": "客座文章/约稿/广告投放冷推销；命中即硬拦截。不要用孤立的 guest article，以免误杀“看到客座文章后来询价”的真实客户",
+    "enabled": true,
+    "patterns": [
+      "guest\\s+article\\s+submissions?",
+      "guest\\s+post\\s+submissions?",
+      "accepting\\s+guest\\s+(?:articles?|posts?)",
+      "submit(?:ting)?\\s+a\\s+guest\\s+(?:article|post)",
+      "write\\s+(?:a\\s+|an\\s+)?(?:guest\\s+)?(?:article|post)\\s+for\\s+(?:your|the)\\s+(?:site|website|blog|readers)",
+      "topic.{0,40}(?:address|pitch)\\s+for\\s+your\\s+readers",
+      "would this topic interest your readers",
+      "tailor my writing to suit your website",
+      "easy for AI to recommend",
+      "sponsored\\s+(?:post|article|content)\\s+(?:on|for)\\s+(?:your|the)\\s+(?:site|website|blog)",
+      "(?:google|facebook|meta)\\s+ads\\s+(?:campaign|account|management|service)",
+      "manage your (?:google|facebook|meta) ads",
+      "run ads for (?:you|your (?:company|business|brand|website))"
+    ]
   },
   "supplier_outreach_patterns": {
     "_comment": "供应商/劳务中介向我们推销原材料、配件或人力；命中即硬拦截",

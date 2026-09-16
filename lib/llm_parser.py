@@ -55,9 +55,11 @@ LLM_SYSTEM_PROMPT = """你是线索解析助手。解析邮件表单内容，返
 - 表达采购/代理/合作意向（interested in your products, want to distribute）
   注意："interested in your products" 后跟服务推销（如"we can help you market them"）≠ 采购意向，是 non_inquiry
 - 来自网站产品页面的表单提交（有 Page URL 指向产品页）
+  例外：正文是客座文章约稿、广告投放、SEO/营销服务推销时，即使有产品页 URL 也是 non_inquiry
 
 ### non_inquiry（非询盘）特征：
 - 推销自己的服务（SEO、广告投放、网站开发、营销工具、品牌推广）
+- 客座文章/约稿（accepting guest article submissions、write for your readers、tailor my writing to your website、easy for AI to recommend）——对方要在我们网站发文或投广告，不是买静音舱
 - 招商合作邀请（展会展位、广告位、赞助）
 - 求职/投递简历
 - 劳务/人力中介冷推销（manpower recruitment、staffing agency、deploying skilled professionals、列举 mason/electrician 等工种清单）——对方是卖劳动力给我们，不是买静音舱
@@ -84,6 +86,8 @@ non_inquiry 示例（必须拦截）：
   → 原因：推销设计服务 + 约会议
 - "We've built an all-in-one sales platform that helps businesses find and close more leads. Can I show you how it works?"
   → 原因：推销 SaaS 工具
+- "Are you currently accepting guest article submissions? I have a topic I'd like to address for your readers..."
+  → 原因：客座文章约稿/内容营销广告，不是产品询盘
 
 inquiry 示例（必须放行）：
 - "I'm looking for a soundproof booth for our new office in Berlin. Can you send me a quote for the SR-M model?"
@@ -100,6 +104,7 @@ inquiry 示例（必须放行）：
 non_inquiry 与 inquiry 主题对比：
 - "quiet pods enquiry" + 询问报价/目录 → inquiry
 - "Message from SoundBox" + "We put your banner at the top of search results" → non_inquiry（SEO 服务推销）
+- "Message from SoundBox" + "accepting guest article submissions" / "for your readers" → non_inquiry（约稿广告）
 
 ## 渠道识别（channel + sub_channel）
 优先发件人邮箱；仅当邮件本身来自该平台（不是官网表单里随口提到）才改渠道。只输出选项名。

@@ -75,7 +75,11 @@ def parse_tag_line(content: str) -> dict:
 
 def check_spam_leaked(records: list, rules: dict) -> list:
     """用过滤链重验飞书记录，找出应被拦截但漏网的"""
-    from lead_filter_common import check_spam, check_placeholder, check_promotional_content, check_irrelevant_business, check_inquiry_keywords
+    from lead_filter_common import (
+        check_spam, check_placeholder, check_promotional_content,
+        check_irrelevant_business, check_inquiry_keywords,
+        check_advertising_outreach, check_supplier_outreach,
+    )
 
     leaked = []
     for rec in records:
@@ -88,6 +92,30 @@ def check_spam_leaked(records: list, rules: dict) -> list:
         message = parsed["message"]
         phone = parsed["phone"]
         company = parsed["company"]
+
+        ads, ads_reason = check_advertising_outreach(message, company, "", content, rules=rules)
+        if ads:
+            leaked.append({
+                "record_id": rec.get("record_id", "?"),
+                "name": name[:30],
+                "email": email,
+                "message": message[:60],
+                "signals": [ads_reason],
+                "content_preview": content[:200],
+            })
+            continue
+
+        supplier, sup_reason = check_supplier_outreach(message, company, "", content, rules=rules)
+        if supplier:
+            leaked.append({
+                "record_id": rec.get("record_id", "?"),
+                "name": name[:30],
+                "email": email,
+                "message": message[:60],
+                "signals": [sup_reason],
+                "content_preview": content[:200],
+            })
+            continue
 
         # 运行过滤链
         signals = []

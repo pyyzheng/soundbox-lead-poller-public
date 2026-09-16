@@ -482,6 +482,43 @@ def check_placeholder(name: str, email: str, phone: str, company: str) -> Tuple[
     return False, ""
 
 
+# ─── Hard outreach helpers (supplier / advertising) ───────────
+
+def _outreach_search_text(
+    message: str,
+    company: str = "",
+    subject: str = "",
+    raw_body: str = "",
+) -> str:
+    parts = [message or "", company or "", subject or ""]
+    if raw_body:
+        parts.append(raw_body)
+    return " ".join(parts)
+
+
+def _first_rule_pattern_hit(
+    text: str,
+    config: Dict[str, Any],
+    reason_prefix: str,
+) -> Tuple[bool, str]:
+    """命中 lead-rules.json 中第一段可用正则/子串。"""
+    if not (text or "").strip():
+        return False, ""
+    if config.get("enabled", True) is False:
+        return False, ""
+    for pattern in config.get("patterns", []):
+        if not pattern or str(pattern).startswith("_"):
+            continue
+        pat = str(pattern)
+        try:
+            hit = bool(re.search(pat, text, re.IGNORECASE))
+        except re.error:
+            hit = pat.lower() in text.lower()
+        if hit:
+            return True, f"{reason_prefix}(pattern:{pat[:40]})"
+    return False, ""
+
+
 # ─── Supplier / Vendor Outreach (selling TO us) ───────────────
 
 _SUPPLIER_VENDOR_PITCH = re.compile(
@@ -514,10 +551,7 @@ def check_supplier_outreach(
     rules: Dict[str, Any] | None = None,
 ) -> Tuple[bool, str]:
     """硬拦截：供应商/厂商向我们推销原材料、配件或服务（非采购询盘）。"""
-    parts = [message or "", company or "", subject or ""]
-    if raw_body:
-        parts.append(raw_body)
-    text = " ".join(parts)
+    text = _outreach_search_text(message, company, subject, raw_body)
     if not text.strip():
         return False, ""
 
@@ -526,19 +560,28 @@ def check_supplier_outreach(
     if has_pitch and asks_buyer:
         return True, "supplier_outreach(vendor_pitch+asks_purchasing)"
 
-    config = (rules or {}).get("supplier_outreach_patterns", {})
-    if config.get("enabled", True):
-        for pattern in config.get("patterns", []):
-            if not pattern or str(pattern).startswith("_"):
-                continue
-            try:
-                if re.search(str(pattern), text, re.IGNORECASE):
-                    return True, f"supplier_outreach(pattern:{pattern[:40]})"
-            except re.error:
-                if str(pattern).lower() in text.lower():
-                    return True, f"supplier_outreach(pattern:{pattern[:40]})"
+    return _first_rule_pattern_hit(
+        text,
+        (rules or {}).get("supplier_outreach_patterns", {}),
+        "supplier_outreach",
+    )
 
-    return False, ""
+
+# ─── Advertising / Guest-post Outreach (selling exposure TO us) ─
+
+def check_advertising_outreach(
+    message: str,
+    company: str = "",
+    subject: str = "",
+    raw_body: str = "",
+    rules: Dict[str, Any] | None = None,
+) -> Tuple[bool, str]:
+    """硬拦截：客座文章/约稿/广告投放冷推销（对方要曝光，不是买产品）。"""
+    return _first_rule_pattern_hit(
+        _outreach_search_text(message, company, subject, raw_body),
+        (rules or {}).get("advertising_outreach_patterns", {}),
+        "advertising_outreach",
+    )
 
 
 # ─── Semantic Spam Content Detection ─────────────────────────
@@ -638,7 +681,13 @@ _SEO_NON_INQUIRY_BLOCK = re.compile(
     r"book\s+(a\s+)?(call|demo|meeting)|free\s+(consultation|audit|strategy)\s+(call|session)|"
     r"put\s+your\s+banner\s+at\s+the\s+top|seen\s+first\s+and\s+chosen\s+first|"
     r"page\s+one\s+of\s+google|rank.*first\s+on.*google|"
-    r"search\s+assessment|website.{0,20}review|enhancing.{0,30}search"
+    r"search\s+assessment|website.{0,20}review|enhancing.{0,30}search|"
+    r"guest\s+article\s+submissions?|guest\s+post\s+submissions?|"
+    r"accepting\s+guest\s+(?:articles?|posts?)|"
+    r"interest your readers|tailor my writing|"
+    r"easy for AI to recommend|"
+    r"google\s+ads\s+(?:campaign|account|management|service)|"
+    r"manage your (?:google|facebook|meta) ads"
     r")\b",
     re.IGNORECASE,
 )
@@ -681,6 +730,10 @@ def should_force_inquiry_intent(subject: str, message: str, name: str = "",
 
     plat, _ = check_platform_marketplace_notification("", subject, body or message)
     if plat:
+        return False
+
+    ads, _ = check_advertising_outreach(message, company, subject, body, rules=rules)
+    if ads:
         return False
 
     if _SEO_NON_INQUIRY_BLOCK.search(combined):
