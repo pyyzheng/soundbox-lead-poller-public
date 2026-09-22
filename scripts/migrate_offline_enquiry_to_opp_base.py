@@ -163,11 +163,12 @@ def create_enquiry_table() -> str:
     levels = list_select_options(SRC_BASE, SRC_ENQ, "fld1WVFJPo")
     ctypes = list_select_options(SRC_BASE, SRC_ENQ, "fldrPEs8eh")
 
+    # 首字段即主字段：必须用 Clue ID，不能用客户名
     fields = [
-        {"name": "Customer Name 客戶單位", "type": "text"},
+        {"name": "Clue ID 线索ID", "type": "text"},
         {"name": SRC_REC_FIELD, "type": "text"},
         {"name": SRC_CLUE_FIELD, "type": "text"},
-        {"name": "Clue ID 线索ID", "type": "text"},
+        {"name": "Customer Name 客戶單位", "type": "text"},
         {"name": "Contact 对接人", "type": "text"},
         {"name": "Contact Info 联系方式", "type": "text"},
         {"name": "Lead Source 商机来源", "type": "text"},
