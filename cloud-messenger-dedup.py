@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-cloud-messenger-dedup.py — 删除 Facebook-Messenger 与 Lead Ad 表单重复线索
+cloud-messenger-dedup.py — 清理历史 Messenger 与 Lead Ad 表单重复线索
 
-根因：facebook-lead-webhook 的 writeMessengerLead 与 writeLead 对同一客户各写一条
-（Channels=Facebook-Messenger vs Facebook），间隔通常 < 1 分钟。
+背景：旧版 webhook 曾把私信写成 Channels=Facebook-Messenger、表单写成 Facebook，
+同一客户可能双写（间隔通常 < 1 分钟）。现网已统一为 Channels=Facebook，
+且 writeMessengerLead 写前会跳过已有 Lead Ad；本脚本仅兜底清理历史残留。
 
-策略：若同邮箱在时间窗内已有 Channels=Facebook 的表单线索，则删除 Messenger 副本。
-仅 Messenger-only（无表单兄弟）的线索保留。
+策略：若同邮箱在时间窗内已有 Channels=Facebook 的表单线索，则删除
+Channels=Facebook-Messenger / Instagram 的 Messenger 副本。
 """
 
 from __future__ import annotations

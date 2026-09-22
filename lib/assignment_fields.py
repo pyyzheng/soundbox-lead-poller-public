@@ -54,7 +54,7 @@ SUB_CHANNEL_TO_CHANNEL: dict[str, str] = {
     "Facebook": "Facebook",
     "Instagram": "Facebook",
     "Facebook messager": "Facebook",
-    "Facebook-Messenger": "Facebook-Messenger",
+    "Facebook-Messenger": "Facebook",  # 历史值；现网统一写 Facebook
     "LinkedIn": "LinkedIn",
     "Linkedln": "LinkedIn",  # 常见拼写
     "领英": "LinkedIn",
@@ -88,7 +88,6 @@ FALLBACK_QUEUE_CHANNELS: tuple[str, ...] = (
     "LinkedIn",
     "阿里国际站",
     "国内渠道",
-    "Facebook-Messenger",
 )
 
 FIELD_ENQUIRY = "Enquiry details（询盘内容）"
@@ -145,6 +144,14 @@ ASSIGN_SOURCE_BLOCKED = frozenset(
 ASSIGN_STATUS_ASSIGNED = frozenset({"✅ 已分配", "optpspV6LA"})
 ASSIGN_STATUS_EXCEPTION = frozenset({"❌ 分配异常", "optqgb587m"})
 ASSIGN_STATUS_BLOCKED = frozenset({"⏳ 分配中/阻塞", "optIZkcgkB"})
+ASSIGN_STATUS_ASSIGNING = frozenset({"🔄 正在匹配规则", "正在分配"})
+# 兜底脚本应捞起：真实异常 + 刚录入等待规则匹配 + 账号映射阻塞。
+ASSIGN_STATUS_NEEDS_UNBLOCK = (
+    ASSIGN_STATUS_EXCEPTION | ASSIGN_STATUS_ASSIGNING | ASSIGN_STATUS_BLOCKED
+)
+WRITE_STATUS_ASSIGNING = "🔄 正在匹配规则"
+WRITE_STATUS_EXCEPTION = "❌ 分配异常"
+WRITE_STATUS_BLOCKED = "⏳ 分配中/阻塞"
 
 # 静态审计：禁止在 OpenAPI / 工作流写入中继续使用的旧主表字段名。
 DEPRECATED_FIELD_LITERALS: frozenset[str] = frozenset(

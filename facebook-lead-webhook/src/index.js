@@ -728,9 +728,11 @@ var FEISHU_FIELDS = {
 };
 function messengerChannelLabels(channel) {
   if (channel === "ig") {
-    return { channels: "Instagram", subChannel: "Instagram" };
+    // 主渠道与 Facebook 统一；细分渠道保留 Instagram 便于统计
+    return { channels: "Facebook", subChannel: "Instagram" };
   }
-  return { channels: "Facebook-Messenger", subChannel: "Facebook" };
+  // Messenger 私信与 Lead Ad 表单统一写 Channels=Facebook（不再区分 Facebook-Messenger）
+  return { channels: "Facebook", subChannel: "Facebook" };
 }
 __name(messengerChannelLabels, "messengerChannelLabels");
 function buildMessengerTranscript(session) {
