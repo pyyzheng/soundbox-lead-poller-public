@@ -13,8 +13,9 @@ PRODUCT_MODEL_SHORT_TO_WRITE: dict[str, str] = {
     "平顶": "Flat top（平顶）",
     "全系列": "Full range（全系列）",
     "无法识别": "Unrecognized（无法识别）",
-    "无可用选项": "No options available（无可用选项）",
-    "No options available": "No options available（无可用选项）",
+    "无可用选项": "Unrecognized（无法识别）",
+    "No options available": "Unrecognized（无法识别）",
+    "No options available（无可用选项）": "Unrecognized（无法识别）",
     "隔音门": "Soundproof door（隔音门）",
     "吸音板": "Acoustic panel（吸音板）",
     "扩散体": "Diffuser（扩散体）",
@@ -36,7 +37,7 @@ PRODUCT_MODEL_SHORT_TO_WRITE: dict[str, str] = {
 
 _WRITE_TO_SHORT: dict[str, str] = {v: k for k, v in PRODUCT_MODEL_SHORT_TO_WRITE.items()}
 # 两个 option id 都映射到同一双语名
-_WRITE_TO_SHORT["No options available（无可用选项）"] = "无可用选项"
+_WRITE_TO_SHORT["No options available（无可用选项）"] = "无法识别"
 
 _PAREN_RE = re.compile(r"（([^）]+)）")
 
@@ -76,8 +77,6 @@ INVALID_PRODUCT_MODEL_VALUES = frozenset({
     "无法识别",
     "Unrecognized",
     "Unrecognized（无法识别）",
-    "无可用选项",
-    "No options available",
     "No options available（无可用选项）",
     "N/A",
 })

@@ -252,10 +252,15 @@ def _match_agent_rule(rules: list[dict], country: str, category: str, model: str
     from country_labels import normalize_country_short
     from product_model_labels import normalize_product_model_short
 
+    from product_category_labels import normalize_product_category_short
+
     country_n = normalize_country_short(country)
+    category_n = normalize_product_category_short(category)
     model_n = normalize_product_model_short(model)
     for rule in rules:
-        if normalize_country_short(rule["country"]) != country_n or rule["category"] != category:
+        if normalize_country_short(rule["country"]) != country_n:
+            continue
+        if normalize_product_category_short(rule["category"]) != category_n:
             continue
         rule_model = normalize_product_model_short(rule["model"])
         if rule_model in (model_n, "全系列"):

@@ -25,6 +25,7 @@ from assignment_fields import (
     to_write_sub_channel,
 )
 from country_labels import to_write_country
+from product_category_labels import to_write_product_category
 from product_model_labels import to_write_product_model
 
 log = logging.getLogger("lead-poller")
@@ -360,7 +361,7 @@ def create_feishu_record(token: str, inquiry_content: str, clue_level: str = "",
     if country:
         fields[FIELD_COUNTRY] = to_write_country(country)
     if product_category:
-        fields[FIELD_PRODUCT_CAT] = product_category
+        fields[FIELD_PRODUCT_CAT] = to_write_product_category(product_category)
     if product_model and product_model != "无法识别":
         fields[FIELD_PRODUCT_MODEL] = to_write_product_model(product_model)
     fields[FEISHU_FOLLOWUP_PRIORITY] = "Pending"

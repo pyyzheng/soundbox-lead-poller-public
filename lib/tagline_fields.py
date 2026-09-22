@@ -26,13 +26,8 @@ from assignment_fields import (  # noqa: E402
     to_write_sub_channel,
 )
 from country_labels import INVALID_COUNTRY_VALUES, to_write_country  # noqa: E402
+from product_category_labels import to_write_product_category  # noqa: E402
 from product_model_labels import to_write_product_model  # noqa: E402
-
-CATEGORY_TO_FEISHU = {
-    "静音舱": "Silence Booth 静音舱",
-    "家居舱": "Homepod 家居舱",
-    "声学产品": "Acoustic products 声学产品",
-}
 
 SUB_CHANNEL_TO_CHANNEL = dict(_SHARED_SUB_CHANNEL_TO_CHANNEL)
 
@@ -153,7 +148,7 @@ def is_valid_tag_line(tag: str) -> bool:
 
 
 def feishu_product_category(category: str) -> str:
-    return CATEGORY_TO_FEISHU.get(category, category)
+    return to_write_product_category(category)
 
 
 def build_feishu_fields_from_content(
@@ -254,6 +249,8 @@ def build_feishu_fields_from_content(
         updates[FIELD_SUB_CHANNEL] = to_write_sub_channel(updates[FIELD_SUB_CHANNEL])
     if updates.get(FIELD_COUNTRY) and updates[FIELD_COUNTRY] not in INVALID_COUNTRY_VALUES:
         updates[FIELD_COUNTRY] = to_write_country(updates[FIELD_COUNTRY])
+    if updates.get(FIELD_PRODUCT_CAT):
+        updates[FIELD_PRODUCT_CAT] = to_write_product_category(updates[FIELD_PRODUCT_CAT])
     if updates.get(FIELD_PRODUCT_MODEL) and updates[FIELD_PRODUCT_MODEL] != "无法识别":
         updates[FIELD_PRODUCT_MODEL] = to_write_product_model(updates[FIELD_PRODUCT_MODEL])
     return updates
