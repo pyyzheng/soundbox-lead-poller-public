@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""把询盘主表 A2–A5 线索同步到商机录入表。
+"""把询盘主表 A1–A5 线索同步到商机录入表。
 
 源 Base: ZpbUb7SP7azsNasniFjc0bWSnHg / 线索总池 tbluuuXn9WexH8LV
 目标 Base: Ktddb4mhtaixgYs9CIkcNnXFngh / 商机录入表 tblz7klQPWxg9H15
 业务员映射: 业务通知名单 tblXq1rE7OQCrSgJ（业务名单 → 对应业务 User）
 
-幂等键: 源线索ID ← Clue ID
+幂等键: Source Lead ID / 源线索ID ← Clue ID
 
 用法:
   source .env && python3 scripts/sync_opportunity_from_leads.py --full
@@ -36,6 +36,7 @@ TARGET_TABLE = os.environ.get("OPP_TABLE_ID") or "tblz7klQPWxg9H15"
 
 CASE_LEVEL_FIELD = "🌟Case Level / 线索分级"
 SYNC_LEVELS = {
+    "A1-Initial Contact / 初次沟通",
     "A2-Requirement Clarification / 细节沟通",
     "A3-High-Intent Lead / 高意向客户（真实需求)",
     "A4-Won Customer / 成单客户 ",
@@ -44,32 +45,53 @@ SYNC_LEVELS = {
 # tolerate trimmed variants
 SYNC_LEVELS_NORM = {s.strip() for s in SYNC_LEVELS}
 
+# 目标表「Opportunity Stage / 商机阶段」选项（双语全名）
 STAGE_MAP = {
-    "A2-Requirement Clarification / 细节沟通": "意向沟通",
-    "A3-High-Intent Lead / 高意向客户（真实需求)": "方案沟通",
-    "A4-Won Customer / 成单客户 ": "已赢单",
-    "A5-Repeat Purchase Customer / 复购客户 ": "已赢单",
+    "A1-Initial Contact / 初次沟通": "Initial Interest / 意向沟通",
+    "A2-Requirement Clarification / 细节沟通": "Initial Interest / 意向沟通",
+    "A3-High-Intent Lead / 高意向客户（真实需求)": "Proposal Discussion / 方案沟通",
+    "A4-Won Customer / 成单客户 ": "Won / 已赢单",
+    "A5-Repeat Purchase Customer / 复购客户 ": "Won / 已赢单",
 }
 
+# 目标表「Opportunity Source / 商机来源」选项（双语全名）
 CHANNEL_TO_SOURCE = {
-    "谷歌": "官网询盘",
-    "Google": "官网询盘",
-    "Google（谷歌）": "官网询盘",
-    "Facebook": "社交平台",
-    "Facebook（脸书）": "社交平台",
-    "Instagram": "社交平台",
-    "LinkedIn": "社交平台",
-    "LinkedIn（领英）": "社交平台",
-    "Facebook-Messenger": "社交平台",
-    "阿里国际站": "其他",
-    "Alibaba International（阿里国际站）": "其他",
-    "国内渠道": "其他",
-    "Domestic Channel（国内渠道）": "其他",
-    "Outbound渠道": "其他",
-    "Outbound Channel（出站渠道）": "其他",
-    "无法识别": "其他",
-    "Unrecognized（无法识别）": "其他",
+    "谷歌": "Website Inquiry / 官网询盘",
+    "Google": "Website Inquiry / 官网询盘",
+    "Google（谷歌）": "Website Inquiry / 官网询盘",
+    "Facebook": "Social Media / 社交平台",
+    "Facebook（脸书）": "Social Media / 社交平台",
+    "Instagram": "Social Media / 社交平台",
+    "LinkedIn": "Social Media / 社交平台",
+    "LinkedIn（领英）": "Social Media / 社交平台",
+    "Facebook-Messenger": "Social Media / 社交平台",
+    "阿里国际站": "Other / 其他",
+    "Alibaba International（阿里国际站）": "Other / 其他",
+    "国内渠道": "Other / 其他",
+    "Domestic Channel（国内渠道）": "Other / 其他",
+    "Outbound渠道": "Other / 其他",
+    "Outbound Channel（出站渠道）": "Other / 其他",
+    "无法识别": "Other / 其他",
+    "Unrecognized（无法识别）": "Other / 其他",
 }
+
+# 目标表写字段（双语名）
+F_SOURCE_LEAD_ID = "Source Lead ID / 源线索ID"
+F_SOURCE_CASE_LEVEL = "Source Case Level / 源Case Level"
+F_CUSTOMER_NAME = "Customer Name / 客户名称"
+F_CONTACT_NAME = "Contact Name / 联系人姓名"
+F_CUSTOMER_EMAIL = "Customer Email / 客户邮箱"
+F_PHONE = "Phone / 联系电话"
+F_COMPANY_ADDR = "Company Address / 公司地址"
+F_CUSTOMER_TYPE = "Customer Type / 客户类型"
+F_OPP_DESC = "Opportunity Description / 商机描述"
+F_ONE_LINE = "One-line Progress / 一句话进展"
+F_OPP_STAGE = "Opportunity Stage / 商机阶段"
+F_OPP_SOURCE = "Opportunity Source / 商机来源"
+F_INTENDED_PRODUCT = "Intended Product / 意向产品"
+F_EXPECTED_AMT = "Expected Amount (CNY) / 预计成交金额（元）"
+F_ACTUAL_AMT = "Actual Amount (CNY) / 实际成交金额（元）"
+F_SALESPERSON = "Salesperson / 业务员"
 
 PRODUCT_CAT_ALLOWED = {
     "Homepod 家居舱",
@@ -306,7 +328,7 @@ def map_stage(level: str) -> str | None:
 
 
 def map_channel_source(channel: str) -> str:
-    return CHANNEL_TO_SOURCE.get(channel, "其他" if channel else "其他")
+    return CHANNEL_TO_SOURCE.get(channel, "Other / 其他")
 
 
 def build_fields(src: dict[str, Any], roster: dict[str, str]) -> dict[str, Any] | None:
@@ -330,32 +352,32 @@ def build_fields(src: dict[str, Any], roster: dict[str, str]) -> dict[str, Any] 
     deal_amt = _cell_number(src.get("Deal Amount / 成交金额"))
 
     out: dict[str, Any] = {
-        "源线索ID": clue_id,
-        "源Case Level": level.strip(),
-        "客户名称": unit or contact,
-        "联系人姓名": contact,
-        "客户邮箱": _cell_text(src.get("Email（客户邮箱）")),
-        "联系电话": _cell_text(src.get("Phone（客户电话）")),
-        "公司地址": _cell_text(src.get("单位地址 Address")),
-        "客户类型": _option_name(src.get("Customer type")),
-        "商机描述": _cell_text(src.get("Enquiry details（询盘内容）")),
-        "一句话进展": next_step,
-        "商机阶段": map_stage(level),
-        "商机来源": map_channel_source(channel),
+        F_SOURCE_LEAD_ID: clue_id,
+        F_SOURCE_CASE_LEVEL: level.strip(),
+        F_CUSTOMER_NAME: unit or contact,
+        F_CONTACT_NAME: contact,
+        F_CUSTOMER_EMAIL: _cell_text(src.get("Email（客户邮箱）")),
+        F_PHONE: _cell_text(src.get("Phone（客户电话）")),
+        F_COMPANY_ADDR: _cell_text(src.get("单位地址 Address")),
+        F_CUSTOMER_TYPE: _option_name(src.get("Customer type")),
+        F_OPP_DESC: _cell_text(src.get("Enquiry details（询盘内容）")),
+        F_ONE_LINE: next_step,
+        F_OPP_STAGE: map_stage(level),
+        F_OPP_SOURCE: map_channel_source(channel),
     }
 
     if product in PRODUCT_CAT_ALLOWED:
-        out["意向产品"] = [product]
+        out[F_INTENDED_PRODUCT] = [product]
 
     if value is not None:
-        out["预计成交金额（元）"] = value
+        out[F_EXPECTED_AMT] = value
     if deal_amt is not None:
-        out["实际成交金额（元）"] = str(deal_amt)
+        out[F_ACTUAL_AMT] = str(deal_amt)
 
     if assignee:
         ou = roster.get(assignee)
         if ou:
-            out["业务员"] = [{"id": ou}]
+            out[F_SALESPERSON] = [{"id": ou}]
         else:
             log.warning("Clue %s 业务员 %s 未在业务通知名单找到飞书账号", clue_id, assignee)
 
@@ -368,7 +390,9 @@ def load_target_index(token: str) -> dict[str, str]:
     index: dict[str, str] = {}
     for rec in _list_records(token, TARGET_BASE, TARGET_TABLE):
         fields = rec.get("fields") or {}
-        clue = _cell_text(fields.get("源线索ID"))
+        clue = _cell_text(fields.get(F_SOURCE_LEAD_ID)) or _cell_text(
+            fields.get("源线索ID")
+        )
         rid = rec.get("record_id") or rec.get("id")
         if clue and rid:
             index[clue] = rid
@@ -379,7 +403,7 @@ def load_target_index(token: str) -> dict[str, str]:
 def upsert(
     token: str, fields: dict[str, Any], index: dict[str, str]
 ) -> tuple[str, str]:
-    clue = fields["源线索ID"]
+    clue = fields[F_SOURCE_LEAD_ID]
     rid = index.get(clue)
     if rid:
         _api(
@@ -401,7 +425,7 @@ def upsert(
 
 
 def iter_source_a2a5(token: str) -> list[dict]:
-    """拉取主表全量后本地过滤 A2–A5。"""
+    """拉取主表全量后本地过滤 A1–A5。"""
     matched: list[dict] = []
     page_token = None
     total = 0
@@ -421,7 +445,7 @@ def iter_source_a2a5(token: str) -> list[dict]:
             level = _option_name((rec.get("fields") or {}).get(CASE_LEVEL_FIELD))
             if case_level_ok(level):
                 matched.append(rec)
-        log.info("…主表已扫 %s，命中 A2–A5 %s", total, len(matched))
+        log.info("…主表已扫 %s，命中 A1–A5 %s", total, len(matched))
         if not data.get("data", {}).get("has_more"):
             break
         page_token = data["data"].get("page_token")
@@ -446,7 +470,7 @@ def sync_full(token: str) -> dict[str, int]:
     index = load_target_index(token)
     stats = {"created": 0, "updated": 0, "skipped": 0, "error": 0}
     records = iter_source_a2a5(token)
-    log.info("源 A2–A5 共 %s 条", len(records))
+    log.info("源 A1–A5 共 %s 条", len(records))
     for i, rec in enumerate(records, 1):
         try:
             action = sync_record_dict(token, rec, roster, index)
@@ -484,7 +508,7 @@ def sync_one_clue_id(token: str, clue_id: str) -> str:
 
 
 def sync_incremental(token: str) -> dict[str, int]:
-    """全量扫描 A2–A5 并 upsert（幂等，适合 cron）。"""
+    """全量扫描 A1–A5 并 upsert（幂等，适合 cron）。"""
     return sync_full(token)
 
 
@@ -493,9 +517,9 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
-    parser = argparse.ArgumentParser(description="同步询盘 A2–A5 → 商机录入表")
+    parser = argparse.ArgumentParser(description="同步询盘 A1–A5 → 商机录入表")
     g = parser.add_mutually_exclusive_group(required=True)
-    g.add_argument("--full", action="store_true", help="全量灌入 A2–A5")
+    g.add_argument("--full", action="store_true", help="全量灌入 A1–A5")
     g.add_argument("--incremental", action="store_true", help="增量/cron 幂等同步")
     g.add_argument("--record-id", help="同步单条源 record_id")
     g.add_argument("--clue-id", help="同步单个 Clue ID")

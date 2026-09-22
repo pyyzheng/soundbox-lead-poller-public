@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """把询盘 Follow-up Records 同步到商机侧「客户推进记录」。
 
-仅同步：Related Lead 已在商机录入表（源线索ID）存在的跟进。
-幂等键：源Follow-up ID ← Follow-up ID
+仅同步：Related Lead 已在商机录入表（Source Lead ID / 源线索ID）存在的跟进。
+幂等键：Source Follow-up ID / 源Follow-up ID ← Follow-up ID
 
 用法:
   source .env && python3 scripts/sync_followup_to_opportunity.py --full
@@ -80,6 +80,29 @@ METHOD_FALLBACK = {
     "Email,Whatsapp": "Email",
     "Phone Call, Email": "Phone Call",
 }
+
+# 目标表写字段（双语名）
+TF_SOURCE_FU_ID = "Source Follow-up ID / 源Follow-up ID"
+TF_SOURCE_LEAD_ID = "Source Lead ID / 源线索ID"
+TF_FOLLOW_TITLE = "Follow-up Title / 跟进标题"
+TF_RELATED_OPP = "Related Opportunity / 关联商机"
+TF_CUSTOMER_NAME = "Customer Name / 客户名称"
+TF_LOCATION = "Location / 地點"
+TF_INTENDED_PRODUCT = "Intended Product / 意向产品"
+TF_REGION = "Region / 合作區域"
+TF_QUOTE = "Quote/Discount / 報價折扣"
+TF_DETAILS_TEXT = "Follow-up Records (Text) / 跟进记录.文本"
+TF_GIFTS = "Gifts / 贈送禮品"
+TF_NEXT_STEP = "Next Step / 推進計劃"
+TF_ONE_LINE = "One-line Progress / 一句话进展"
+TF_ATTENDEES_TEXT = "Attendees (Text) / 参会人文本"
+TF_ATTENDEES = "Attendees / 參會人"
+TF_METHOD = "Method / 方式"
+TF_DATE = "Date / 時間"
+TF_SALESPERSON = "Salesperson / 业务员"
+
+# 商机表读键
+OPP_SOURCE_LEAD_ID = "Source Lead ID / 源线索ID"
 
 
 def _token() -> str:
@@ -342,7 +365,9 @@ def load_opp_index(token: str) -> dict[str, str]:
     index: dict[str, str] = {}
     for rec in _list_all(token, OPP_BASE, OPP_TABLE):
         fields = rec.get("fields") or {}
-        clue = _cell_text(fields.get("源线索ID"))
+        clue = _cell_text(fields.get(OPP_SOURCE_LEAD_ID)) or _cell_text(
+            fields.get("源线索ID")
+        )
         rid = rec.get("record_id") or rec.get("id")
         if clue and rid:
             index[clue] = rid
@@ -368,7 +393,9 @@ def load_target_index(token: str) -> dict[str, str]:
     index: dict[str, str] = {}
     for rec in _list_all(token, OPP_BASE, TARGET_TABLE):
         fields = rec.get("fields") or {}
-        fid = _cell_text(fields.get("源Follow-up ID"))
+        fid = _cell_text(fields.get(TF_SOURCE_FU_ID)) or _cell_text(
+            fields.get("源Follow-up ID")
+        )
         rid = rec.get("record_id") or rec.get("id")
         if fid and rid:
             index[fid] = rid
@@ -449,44 +476,44 @@ def build_fields(
     follow_title = " · ".join(title_parts) or fu_id
 
     out: dict[str, Any] = {
-        "源Follow-up ID": fu_id,
-        "源线索ID": clue_id,
-        "跟进标题": follow_title,
-        "关联商机": [opp_id],
-        "客户名称": customer,
-        "地點 Location": _cell_text(src.get(FU_LOCATION)),
-        "意向产品": _cell_text(src.get(FU_PRODUCTS)),
-        "合作區域 Region": _cell_text(src.get(FU_REGION)),
-        "報價折扣 Quote/Disc.": _cell_text(src.get(FU_QUOTE)),
-        "Follow-up Records/跟进记录.文本": details,
-        "贈送禮品 Gifts": _cell_text(src.get(FU_GIFTS)),
-        "推進計劃 Next Step": next_step,
-        "One-line Progress/一句话进展": next_step,
+        TF_SOURCE_FU_ID: fu_id,
+        TF_SOURCE_LEAD_ID: clue_id,
+        TF_FOLLOW_TITLE: follow_title,
+        TF_RELATED_OPP: [opp_id],
+        TF_CUSTOMER_NAME: customer,
+        TF_LOCATION: _cell_text(src.get(FU_LOCATION)),
+        TF_INTENDED_PRODUCT: _cell_text(src.get(FU_PRODUCTS)),
+        TF_REGION: _cell_text(src.get(FU_REGION)),
+        TF_QUOTE: _cell_text(src.get(FU_QUOTE)),
+        TF_DETAILS_TEXT: details,
+        TF_GIFTS: _cell_text(src.get(FU_GIFTS)),
+        TF_NEXT_STEP: next_step,
+        TF_ONE_LINE: next_step,
     }
     if attendees:
-        out["参会人文本 Attendees"] = attendees
+        out[TF_ATTENDEES_TEXT] = attendees
     if attendee_ids:
-        out["參會人 Attendees"] = [{"id": uid} for uid in attendee_ids]
+        out[TF_ATTENDEES] = [{"id": uid} for uid in attendee_ids]
     if method:
-        out["方式 Method"] = method
+        out[TF_METHOD] = method
     if ts is not None:
-        out["時間 Date"] = ts
+        out[TF_DATE] = ts
 
     # salesperson: lookup may already be user objects or names
     sales_users = _user_ids(src.get(FU_SALES))
     if sales_users:
-        out["业务员"] = [{"id": sales_users[0]}]
+        out[TF_SALESPERSON] = [{"id": sales_users[0]}]
     else:
         sales_name = _cell_text(src.get(FU_SALES))
         uid = roster.get(sales_name) or roster.get(sales_name.lower()) if sales_name else None
         if uid:
-            out["业务员"] = [{"id": uid}]
+            out[TF_SALESPERSON] = [{"id": uid}]
 
     return {k: v for k, v in out.items() if v not in (None, "", [])}
 
 
 def upsert(token: str, fields: dict[str, Any], index: dict[str, str]) -> str:
-    fu_id = fields["源Follow-up ID"]
+    fu_id = fields[TF_SOURCE_FU_ID]
     rid = index.get(fu_id)
     if rid:
         _api(

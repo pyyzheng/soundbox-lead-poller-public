@@ -1,6 +1,6 @@
 name: Sync Opportunity From Leads
 
-# 询盘 A2–A5 → 商机录入表（近实时 + 每2分钟兜底 + 手工/单条触发）
+# 询盘 A1–A5 → 商机录入表（近实时 + 每2分钟兜底 + 手工/单条触发）
 on:
   schedule:
     - cron: "*/2 * * * *"
@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   sync:
-    name: Sync A2-A5 to opportunity table
+    name: Sync A1-A5 to opportunity table
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
