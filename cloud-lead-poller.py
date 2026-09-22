@@ -83,6 +83,7 @@ from assignment_fields import (  # noqa: E402
     to_write_sub_channel,
 )
 from country_labels import to_write_country  # noqa: E402
+from product_model_labels import to_write_product_model  # noqa: E402
 from tagline_fields import feishu_product_category  # noqa: E402
 from llm_parser import (
     call_llm_parse, normalize_llm_output,
@@ -135,7 +136,7 @@ def _structured_write_fields(
     if product_category and product_category not in {"", "无法识别"}:
         fields["Product Categories（产品大类）"] = feishu_product_category(product_category)
     if product_model and product_model not in {"", "无法识别"}:
-        fields["Product model（具体型号）"] = product_model
+        fields["Product model（具体型号）"] = to_write_product_model(product_model)
     return fields
 
 

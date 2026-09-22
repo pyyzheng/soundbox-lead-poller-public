@@ -250,12 +250,15 @@ def _load_agent_rules(token: str) -> list[dict]:
 
 def _match_agent_rule(rules: list[dict], country: str, category: str, model: str) -> str | None:
     from country_labels import normalize_country_short
+    from product_model_labels import normalize_product_model_short
 
     country_n = normalize_country_short(country)
+    model_n = normalize_product_model_short(model)
     for rule in rules:
         if normalize_country_short(rule["country"]) != country_n or rule["category"] != category:
             continue
-        if rule["model"] in (model, "全系列"):
+        rule_model = normalize_product_model_short(rule["model"])
+        if rule_model in (model_n, "全系列"):
             return rule["assignee"]
     return None
 

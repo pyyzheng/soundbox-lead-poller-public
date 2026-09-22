@@ -75,6 +75,7 @@ FIELD_FB_LEADGEN = "Facebook Leadgen ID"
 
 from assignment_fields import FIELD_ASSIGN_METHOD, WRITE_ASSIGN_AUTO  # noqa: E402
 from country_labels import to_write_country  # noqa: E402
+from product_model_labels import to_write_product_model  # noqa: E402
 from tagline_fields import feishu_product_category  # noqa: E402
 from feishu_writer import (  # noqa: E402
     check_feishu_fb_contact_duplicate,
@@ -544,7 +545,7 @@ def build_feishu_write_fields(parsed: dict, clue_level: str = "") -> dict:
     if parsed.get("product_category"):
         write_fields[FIELD_PRODUCT_CAT] = feishu_product_category(parsed["product_category"])
     if parsed.get("product_model"):
-        write_fields[FIELD_PRODUCT_MODEL] = parsed["product_model"]
+        write_fields[FIELD_PRODUCT_MODEL] = to_write_product_model(parsed["product_model"])
     if parsed.get("full_name"):
         write_fields[FIELD_CUSTOMER_NAME] = parsed["full_name"]
     if parsed.get("phone_number"):

@@ -25,6 +25,7 @@ from assignment_fields import (
     to_write_sub_channel,
 )
 from country_labels import to_write_country
+from product_model_labels import to_write_product_model
 
 log = logging.getLogger("lead-poller")
 
@@ -361,7 +362,7 @@ def create_feishu_record(token: str, inquiry_content: str, clue_level: str = "",
     if product_category:
         fields[FIELD_PRODUCT_CAT] = product_category
     if product_model and product_model != "无法识别":
-        fields[FIELD_PRODUCT_MODEL] = product_model
+        fields[FIELD_PRODUCT_MODEL] = to_write_product_model(product_model)
     fields[FEISHU_FOLLOWUP_PRIORITY] = "Pending"
     fields[FEISHU_AUTOREPLY_STATUS] = "Pending"
     # 与 Facebook 一致：写入分配触发前置字段，避免公式就绪后工作流因缺省值不再触发

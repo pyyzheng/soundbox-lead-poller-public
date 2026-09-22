@@ -149,7 +149,9 @@ def infer_product_updates(
         updates[FIELD_PRODUCT_CAT] = feishu_product_category(inferred_cat_cn)
 
     if need_model and inferred_model and not is_invalid_product_value(inferred_model):
-        updates[FIELD_PRODUCT_MODEL] = inferred_model
+        from product_model_labels import to_write_product_model
+
+        updates[FIELD_PRODUCT_MODEL] = to_write_product_model(inferred_model)
         if need_cat and FIELD_PRODUCT_CAT not in updates:
             if inferred_model.split("-", 1)[0] in _BOOTH_SERIES:
                 updates[FIELD_PRODUCT_CAT] = feishu_product_category("静音舱")
