@@ -53,22 +53,22 @@ FU_SALES = "Salesperson"
 FU_CUSTOMER = "Customer Name"
 
 METHOD_OPTIONS = {
+    "Online / 線上",
+    "Offline / 線下",
+    "Phone / 電話",
+    "Video Meeting / 視頻會議",
+    "Email / 郵件",
     "Email",
     "Phone Call",
     "Whatsapp",
     "Wechat",
     "Online Meeting",
     "Email / Meeting",
-    "阿里在线",
-    "电商社媒（TK, B2C的FB,INS等）",
-    "商城 （B2C谷歌）",
+    "Alibaba Online / 阿里在线",
+    "E-commerce Social Media (TK, FB, INS) / 电商社媒",
+    "B2C Google Store / 商城（B2C谷歌）",
     "Other",
     "Meeting",
-    "線上 Online",
-    "線下 Offline",
-    "電話 Phone",
-    "視頻會議 Video Meeting",
-    "郵件 Email",
 }
 
 METHOD_FALLBACK = {
@@ -79,6 +79,16 @@ METHOD_FALLBACK = {
     "Email, Whatsapp": "Email",
     "Email,Whatsapp": "Email",
     "Phone Call, Email": "Phone Call",
+    # 源表旧选项 → 目标表双语选项
+    "線上 Online": "Online / 線上",
+    "線下 Offline": "Offline / 線下",
+    "電話 Phone": "Phone / 電話",
+    "視頻會議 Video Meeting": "Video Meeting / 視頻會議",
+    "郵件 Email": "Email / 郵件",
+    "阿里在线": "Alibaba Online / 阿里在线",
+    "电商社媒（TK, B2C的FB,INS等）": "E-commerce Social Media (TK, FB, INS) / 电商社媒",
+    "商城 （B2C谷歌）": "B2C Google Store / 商城（B2C谷歌）",
+    "商城（B2C谷歌）": "B2C Google Store / 商城（B2C谷歌）",
 }
 
 # 目标表写字段（双语名）
@@ -132,7 +142,11 @@ def _api(method: str, url: str, token: str, **kwargs) -> dict:
         data = resp.json()
         if data.get("code") == 0:
             return data
-        if resp.status_code in (429, 500, 502, 503) or data.get("code") in (1254291, 99991400):
+        if resp.status_code in (429, 500, 502, 503) or data.get("code") in (
+            1254291,
+            99991400,
+            1254607,
+        ):
             delay = 2 ** attempt
             log.warning("retry %s after %ss: %s", attempt + 1, delay, data.get("msg"))
             time.sleep(delay)
@@ -414,6 +428,10 @@ def map_method(raw: str) -> str | None:
     first = re.split(r"[,/]", raw)[0].strip()
     if first in METHOD_OPTIONS:
         return first
+    if first in METHOD_FALLBACK:
+        return METHOD_FALLBACK[first]
+    # 未知选项直接丢弃，避免写入非法单选导致 Permission denied
+    log.warning("未知 Method 选项，已跳过: %r", raw)
     return None
 
 
@@ -533,6 +551,119 @@ def upsert(token: str, fields: dict[str, Any], index: dict[str, str]) -> str:
     return "created"
 
 
+BATCH_SIZE = 100
+
+
+def _batch_create(token: str, records: list[dict[str, Any]]) -> list[dict]:
+    """批量创建；整批失败时二分拆批，最终降级到单条。"""
+    created: list[dict] = []
+
+    def _create_chunk(chunk: list[dict[str, Any]], depth: int = 0) -> None:
+        if not chunk:
+            return
+        try:
+            data = _api(
+                "POST",
+                f"https://open.feishu.cn/open-apis/bitable/v1/apps/{OPP_BASE}/tables/{TARGET_TABLE}/records/batch_create",
+                token,
+                json={"records": [{"fields": r} for r in chunk]},
+            )
+            created.extend((data.get("data") or {}).get("records") or [])
+            return
+        except Exception as exc:
+            if len(chunk) == 1:
+                fields = chunk[0]
+                # 非法单选等常表现为 Permission denied：去掉 Method 再试一次
+                if TF_METHOD in fields:
+                    slim = {k: v for k, v in fields.items() if k != TF_METHOD}
+                    try:
+                        data = _api(
+                            "POST",
+                            f"https://open.feishu.cn/open-apis/bitable/v1/apps/{OPP_BASE}/tables/{TARGET_TABLE}/records/batch_create",
+                            token,
+                            json={"records": [{"fields": slim}]},
+                        )
+                        created.extend((data.get("data") or {}).get("records") or [])
+                        log.warning(
+                            "batch_create fu=%s 去掉 Method 后成功",
+                            fields.get(TF_SOURCE_FU_ID),
+                        )
+                        return
+                    except Exception as exc2:
+                        log.error(
+                            "batch_create 单条失败 fu=%s: %s / retry=%s",
+                            fields.get(TF_SOURCE_FU_ID),
+                            exc,
+                            exc2,
+                        )
+                        return
+                log.error(
+                    "batch_create 单条失败 fu=%s: %s",
+                    fields.get(TF_SOURCE_FU_ID),
+                    exc,
+                )
+                return
+            mid = len(chunk) // 2
+            log.warning(
+                "batch_create %s 失败，拆半重试 (depth=%s): %s",
+                len(chunk),
+                depth,
+                exc,
+            )
+            time.sleep(0.2)
+            _create_chunk(chunk[:mid], depth + 1)
+            _create_chunk(chunk[mid:], depth + 1)
+
+    for i in range(0, len(records), BATCH_SIZE):
+        chunk = records[i : i + BATCH_SIZE]
+        _create_chunk(chunk)
+        log.info("…batch_create %s/%s (ok=%s)", min(i + BATCH_SIZE, len(records)), len(records), len(created))
+        time.sleep(0.12)
+    return created
+
+
+def _batch_update(token: str, records: list[dict[str, Any]]) -> int:
+    updated = 0
+
+    def _update_chunk(chunk: list[dict[str, Any]], depth: int = 0) -> int:
+        if not chunk:
+            return 0
+        try:
+            _api(
+                "POST",
+                f"https://open.feishu.cn/open-apis/bitable/v1/apps/{OPP_BASE}/tables/{TARGET_TABLE}/records/batch_update",
+                token,
+                json={"records": chunk},
+            )
+            return len(chunk)
+        except Exception as exc:
+            if len(chunk) == 1:
+                log.error(
+                    "batch_update 单条失败 rid=%s: %s",
+                    chunk[0].get("record_id"),
+                    exc,
+                )
+                return 0
+            mid = len(chunk) // 2
+            log.warning(
+                "batch_update %s 失败，拆半重试 (depth=%s): %s",
+                len(chunk),
+                depth,
+                exc,
+            )
+            time.sleep(0.2)
+            return _update_chunk(chunk[:mid], depth + 1) + _update_chunk(
+                chunk[mid:], depth + 1
+            )
+
+    for i in range(0, len(records), BATCH_SIZE):
+        chunk = records[i : i + BATCH_SIZE]
+        updated += _update_chunk(chunk)
+        log.info("…batch_update %s/%s", min(i + BATCH_SIZE, len(records)), len(records))
+        time.sleep(0.12)
+    return updated
+
+
 def sync_one(
     token: str,
     rec: dict,
@@ -554,6 +685,7 @@ def sync_one(
 
 
 def sync_full(token: str) -> dict[str, int]:
+    """批量 upsert 跟进记录。"""
     roster = load_roster(token)
     opp_index = load_opp_index(token)
     clue_map = load_case_clue_map(token)
@@ -561,23 +693,63 @@ def sync_full(token: str) -> dict[str, int]:
     stats = {"created": 0, "updated": 0, "skipped": 0, "error": 0}
     records = _list_all(token, SOURCE_BASE, FOLLOWUP_TABLE)
     log.info("源跟进共 %s 条；商机 %s", len(records), len(opp_index))
-    for i, rec in enumerate(records, 1):
+
+    creates: list[dict[str, Any]] = []
+    updates: list[dict[str, Any]] = []
+    for rec in records:
         try:
-            action = sync_one(
-                token,
-                rec,
+            fields = build_fields(
+                rec.get("fields") or {},
                 clue_map=clue_map,
                 opp_index=opp_index,
                 roster=roster,
-                target_index=target_index,
             )
-            stats[action] = stats.get(action, 0) + 1
+            if not fields:
+                stats["skipped"] += 1
+                continue
+            fu_id = fields[TF_SOURCE_FU_ID]
+            rid = target_index.get(fu_id)
+            if rid:
+                patch = {k: v for k, v in fields.items() if k != TF_SOURCE_FU_ID}
+                updates.append({"record_id": rid, "fields": patch})
+            else:
+                creates.append(fields)
         except Exception as exc:
             stats["error"] += 1
-            log.exception("同步失败 %s: %s", rec.get("record_id"), exc)
-        if i % 100 == 0:
-            log.info("进度 %s/%s %s", i, len(records), stats)
-        time.sleep(0.03)
+            log.exception("映射失败 %s: %s", rec.get("record_id"), exc)
+
+    log.info("待创建 %s，待更新 %s，跳过 %s", len(creates), len(updates), stats["skipped"])
+
+    if creates:
+        try:
+            created_recs = _batch_create(token, creates)
+            stats["created"] = len(created_recs) or len(creates)
+            for r in created_recs:
+                f = r.get("fields") or {}
+                fu = _cell_text(f.get(TF_SOURCE_FU_ID))
+                rid = r.get("record_id") or r.get("id")
+                if fu and rid:
+                    target_index[fu] = rid
+            log.info("batch_create 完成 %s", stats["created"])
+        except Exception as exc:
+            log.exception("batch_create 失败，降级逐条: %s", exc)
+            for fields in creates:
+                try:
+                    action = upsert(token, fields, target_index)
+                    stats[action] = stats.get(action, 0) + 1
+                except Exception as e2:
+                    stats["error"] += 1
+                    log.error("create %s failed: %s", fields.get(TF_SOURCE_FU_ID), e2)
+
+    if updates:
+        try:
+            n = _batch_update(token, updates)
+            stats["updated"] = n
+            log.info("batch_update 完成 %s", n)
+        except Exception as exc:
+            log.exception("batch_update 失败: %s", exc)
+            stats["error"] += 1
+
     return stats
 
 

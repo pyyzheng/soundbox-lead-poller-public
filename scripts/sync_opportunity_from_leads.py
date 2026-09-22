@@ -152,7 +152,11 @@ def _api(method: str, url: str, token: str, **kwargs) -> dict:
         code = data.get("code")
         if code == 0:
             return data
-        if resp.status_code in (429, 500, 502, 503) or code in (1254291, 99991400):
+        if resp.status_code in (429, 500, 502, 503) or code in (
+            1254291,
+            99991400,
+            1254607,
+        ):
             delay = 2 ** attempt
             log.warning("retry %s after %ss: %s", attempt + 1, delay, data.get("msg"))
             time.sleep(delay)
@@ -424,6 +428,100 @@ def upsert(
     return "created", new_id
 
 
+BATCH_SIZE = 100  # 飞书上限 500；100 兼顾吞吐与稳定性
+
+
+def _batch_create(token: str, records: list[dict[str, Any]]) -> list[dict]:
+    """批量创建；整批失败时二分拆批。"""
+    created: list[dict] = []
+
+    def _create_chunk(chunk: list[dict[str, Any]], depth: int = 0) -> None:
+        if not chunk:
+            return
+        try:
+            data = _api(
+                "POST",
+                f"https://open.feishu.cn/open-apis/bitable/v1/apps/{TARGET_BASE}/tables/{TARGET_TABLE}/records/batch_create",
+                token,
+                json={"records": [{"fields": r} for r in chunk]},
+            )
+            created.extend((data.get("data") or {}).get("records") or [])
+            return
+        except Exception as exc:
+            if len(chunk) == 1:
+                log.error(
+                    "batch_create 单条失败 clue=%s: %s",
+                    chunk[0].get(F_SOURCE_LEAD_ID),
+                    exc,
+                )
+                return
+            mid = len(chunk) // 2
+            log.warning(
+                "batch_create %s 失败，拆半重试 (depth=%s): %s",
+                len(chunk),
+                depth,
+                exc,
+            )
+            time.sleep(0.2)
+            _create_chunk(chunk[:mid], depth + 1)
+            _create_chunk(chunk[mid:], depth + 1)
+
+    for i in range(0, len(records), BATCH_SIZE):
+        chunk = records[i : i + BATCH_SIZE]
+        _create_chunk(chunk)
+        log.info(
+            "…batch_create %s/%s (ok=%s)",
+            min(i + BATCH_SIZE, len(records)),
+            len(records),
+            len(created),
+        )
+        time.sleep(0.12)
+    return created
+
+
+def _batch_update(token: str, records: list[dict[str, Any]]) -> int:
+    """批量更新；失败时二分拆批。"""
+    updated = 0
+
+    def _update_chunk(chunk: list[dict[str, Any]], depth: int = 0) -> int:
+        if not chunk:
+            return 0
+        try:
+            _api(
+                "POST",
+                f"https://open.feishu.cn/open-apis/bitable/v1/apps/{TARGET_BASE}/tables/{TARGET_TABLE}/records/batch_update",
+                token,
+                json={"records": chunk},
+            )
+            return len(chunk)
+        except Exception as exc:
+            if len(chunk) == 1:
+                log.error(
+                    "batch_update 单条失败 rid=%s: %s",
+                    chunk[0].get("record_id"),
+                    exc,
+                )
+                return 0
+            mid = len(chunk) // 2
+            log.warning(
+                "batch_update %s 失败，拆半重试 (depth=%s): %s",
+                len(chunk),
+                depth,
+                exc,
+            )
+            time.sleep(0.2)
+            return _update_chunk(chunk[:mid], depth + 1) + _update_chunk(
+                chunk[mid:], depth + 1
+            )
+
+    for i in range(0, len(records), BATCH_SIZE):
+        chunk = records[i : i + BATCH_SIZE]
+        updated += _update_chunk(chunk)
+        log.info("…batch_update %s/%s", min(i + BATCH_SIZE, len(records)), len(records))
+        time.sleep(0.12)
+    return updated
+
+
 def iter_source_a2a5(token: str) -> list[dict]:
     """拉取主表全量后本地过滤 A1–A5。"""
     matched: list[dict] = []
@@ -466,22 +564,66 @@ def sync_record_dict(
 
 
 def sync_full(token: str) -> dict[str, int]:
+    """批量 upsert：先映射全量，再 batch_create / batch_update。"""
     roster = load_roster(token)
     index = load_target_index(token)
     stats = {"created": 0, "updated": 0, "skipped": 0, "error": 0}
     records = iter_source_a2a5(token)
     log.info("源 A1–A5 共 %s 条", len(records))
-    for i, rec in enumerate(records, 1):
+
+    creates: list[dict[str, Any]] = []
+    updates: list[dict[str, Any]] = []
+    for rec in records:
         try:
-            action = sync_record_dict(token, rec, roster, index)
-            stats[action] = stats.get(action, 0) + 1
+            mapped = build_fields(rec.get("fields") or {}, roster)
+            if not mapped:
+                stats["skipped"] += 1
+                continue
+            clue = mapped[F_SOURCE_LEAD_ID]
+            rid = index.get(clue)
+            if rid:
+                # 更新不写主键，降低主字段权限/冲突风险
+                patch = {k: v for k, v in mapped.items() if k != F_SOURCE_LEAD_ID}
+                updates.append({"record_id": rid, "fields": patch})
+            else:
+                creates.append(mapped)
         except Exception as exc:
             stats["error"] += 1
             rid = rec.get("record_id") or rec.get("id")
-            log.exception("同步失败 record=%s: %s", rid, exc)
-        if i % 50 == 0:
-            log.info("进度 %s/%s %s", i, len(records), stats)
-        time.sleep(0.05)
+            log.exception("映射失败 record=%s: %s", rid, exc)
+
+    log.info("待创建 %s，待更新 %s，跳过 %s", len(creates), len(updates), stats["skipped"])
+
+    if creates:
+        try:
+            created_recs = _batch_create(token, creates)
+            stats["created"] = len(created_recs) or len(creates)
+            for r in created_recs:
+                fields = r.get("fields") or {}
+                clue = _cell_text(fields.get(F_SOURCE_LEAD_ID))
+                rid = r.get("record_id") or r.get("id")
+                if clue and rid:
+                    index[clue] = rid
+            log.info("batch_create 完成 %s", stats["created"])
+        except Exception as exc:
+            log.exception("batch_create 失败，降级逐条: %s", exc)
+            for fields in creates:
+                try:
+                    action, _ = upsert(token, fields, index)
+                    stats[action] = stats.get(action, 0) + 1
+                except Exception as e2:
+                    stats["error"] += 1
+                    log.error("create %s failed: %s", fields.get(F_SOURCE_LEAD_ID), e2)
+
+    if updates:
+        try:
+            n = _batch_update(token, updates)
+            stats["updated"] = n
+            log.info("batch_update 完成 %s", n)
+        except Exception as exc:
+            log.exception("batch_update 失败: %s", exc)
+            stats["error"] += 1
+
     return stats
 
 
