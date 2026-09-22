@@ -6,8 +6,8 @@ Source Base: ZpbUb7SP7azsNasniFjc0bWSnHg
 Target Base: Ktddb4mhtaixgYs9CIkcNnXFngh
 
 Idempotent keys:
-  enquiry  -> field「源 Record ID」= source record_id
-  followup -> field「源 Record ID」= source record_id
+  enquiry  -> Clue ID 线索ID
+  followup -> Follow-up ID
 """
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ import json
 import subprocess
 import sys
 import time
-from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -34,9 +33,8 @@ SRC_DASH = {
 FOLDER_NAME = "线下询盘 Offline Enquiry"
 ENQ_NAME = "线下询盘记录 Offline Enquiry"
 FU_NAME = "线下跟进记录 Offline Follow-up"
-SRC_REC_FIELD = "源 Record ID"
-SRC_CLUE_FIELD = "源 Clue ID"
-SRC_FU_ID_FIELD = "源 Follow-up ID"
+CLUE_FIELD = "Clue ID 线索ID"
+FU_ID_FIELD = "Follow-up ID"
 
 TZ = timezone(timedelta(hours=8))
 STATE_PATH = Path(__file__).resolve().parent / ".offline_enquiry_opp_sync_state.json"
@@ -163,11 +161,9 @@ def create_enquiry_table() -> str:
     levels = list_select_options(SRC_BASE, SRC_ENQ, "fld1WVFJPo")
     ctypes = list_select_options(SRC_BASE, SRC_ENQ, "fldrPEs8eh")
 
-    # 首字段即主字段：必须用 Clue ID，不能用客户名
+    # 首字段即主字段：必须用 Clue ID，不能用客户名；不再创建「源 *」技术字段
     fields = [
-        {"name": "Clue ID 线索ID", "type": "text"},
-        {"name": SRC_REC_FIELD, "type": "text"},
-        {"name": SRC_CLUE_FIELD, "type": "text"},
+        {"name": CLUE_FIELD, "type": "text"},
         {"name": "Customer Name 客戶單位", "type": "text"},
         {"name": "Contact 对接人", "type": "text"},
         {"name": "Contact Info 联系方式", "type": "text"},
@@ -233,9 +229,7 @@ def create_followup_table(enq_table_id: str) -> str:
 
     methods = list_select_options(SRC_BASE, SRC_FU, "fldJqhtk8o")
     fields = [
-        {"name": "Follow-up ID", "type": "text"},
-        {"name": SRC_REC_FIELD, "type": "text"},
-        {"name": SRC_FU_ID_FIELD, "type": "text"},
+        {"name": FU_ID_FIELD, "type": "text"},
         {
             "name": "Follow-up Time 跟进时间",
             "type": "datetime",
@@ -429,21 +423,20 @@ def extract_text(value: Any) -> str:
 
 
 def sync_enquiries(dst_enq: str, *, full: bool = False) -> dict[str, str]:
-    """Return mapping source_record_id -> dest_record_id."""
+    """Return mapping source_record_id -> dest_record_id (keyed via Clue ID)."""
     src_types = field_types(SRC_BASE, SRC_ENQ)
     src_ids, src_fields, src_rows = list_all_records(SRC_BASE, SRC_ENQ)
     print(f"source enquiries: {len(src_ids)}")
 
-    # existing dest map by 源 Record ID
     dst_ids, dst_fields, dst_rows = list_all_records(DST_BASE, dst_enq)
-    src_key_idx = dst_fields.index(SRC_REC_FIELD) if SRC_REC_FIELD in dst_fields else -1
-    existing: dict[str, str] = {}
-    if src_key_idx >= 0:
+    clue_idx = dst_fields.index(CLUE_FIELD) if CLUE_FIELD in dst_fields else -1
+    existing_by_clue: dict[str, str] = {}
+    if clue_idx >= 0:
         for rid, row in zip(dst_ids, dst_rows):
-            key = extract_text(row[src_key_idx] if src_key_idx < len(row) else None)
+            key = extract_text(row[clue_idx] if clue_idx < len(row) else None)
             if key:
-                existing[key] = rid
-    print(f"dest enquiry existing mapped: {len(existing)}")
+                existing_by_clue[key] = rid
+    print(f"dest enquiry existing by Clue ID: {len(existing_by_clue)}")
 
     writable_src_fields = [
         "Customer Name 客戶單位",
@@ -461,27 +454,29 @@ def sync_enquiries(dst_enq: str, *, full: bool = False) -> dict[str, str]:
 
     creates: list[dict] = []
     updates: list[dict] = []
-    mapping: dict[str, str] = dict(existing)
+    mapping: dict[str, str] = {}
 
     for sid, row in zip(src_ids, src_rows):
         fmap = {src_fields[i]: row[i] for i in range(min(len(src_fields), len(row)))}
-        payload: dict[str, Any] = {SRC_REC_FIELD: sid}
-        clue = extract_text(fmap.get("Clue ID 线索ID"))
-        if clue:
-            payload[SRC_CLUE_FIELD] = clue
-            payload["Clue ID 线索ID"] = clue
+        clue = extract_text(fmap.get(CLUE_FIELD))
+        if not clue:
+            continue
+        payload: dict[str, Any] = {CLUE_FIELD: clue}
         for fn in writable_src_fields:
             cv = cell_to_writable(fn, fmap.get(fn), kind=src_types.get(fn, "text"))
             if cv is not None:
                 payload[fn] = cv
-        if sid in existing:
-            updates.append({"record_id": existing[sid], "fields": payload})
+        dest_id = existing_by_clue.get(clue)
+        if dest_id:
+            updates.append({"record_id": dest_id, "fields": payload})
+            mapping[sid] = dest_id
         else:
-            creates.append(payload)
+            creates.append({"_src_id": sid, **payload})
 
     # batch create
     for i in range(0, len(creates), 40):
         chunk = creates[i : i + 40]
+        write_chunk = [{k: v for k, v in row.items() if k != "_src_id"} for row in chunk]
         resp = run(
             [
                 "base",
@@ -491,12 +486,13 @@ def sync_enquiries(dst_enq: str, *, full: bool = False) -> dict[str, str]:
                 "--table-id",
                 dst_enq,
                 "--json",
-                json.dumps({"create_records": chunk}, ensure_ascii=False),
+                json.dumps({"create_records": write_chunk}, ensure_ascii=False),
             ]
         )
         id_list = (resp.get("data") or {}).get("record_id_list") or []
         for src_payload, new_id in zip(chunk, id_list):
-            mapping[src_payload[SRC_REC_FIELD]] = new_id
+            mapping[src_payload["_src_id"]] = new_id
+            existing_by_clue[src_payload[CLUE_FIELD]] = new_id
         print(f"  enquiry create batch {i // 40 + 1}: {len(id_list)}")
         time.sleep(0.3)
 
@@ -551,14 +547,14 @@ def sync_followups(dst_fu: str, enq_map: dict[str, str]) -> None:
     print(f"source followups: {len(src_ids)}")
 
     dst_ids, dst_fields, dst_rows = list_all_records(DST_BASE, dst_fu)
-    src_key_idx = dst_fields.index(SRC_REC_FIELD) if SRC_REC_FIELD in dst_fields else -1
-    existing: dict[str, str] = {}
-    if src_key_idx >= 0:
+    fu_idx = dst_fields.index(FU_ID_FIELD) if FU_ID_FIELD in dst_fields else -1
+    existing_by_fu: dict[str, str] = {}
+    if fu_idx >= 0:
         for rid, row in zip(dst_ids, dst_rows):
-            key = extract_text(row[src_key_idx] if src_key_idx < len(row) else None)
+            key = extract_text(row[fu_idx] if fu_idx < len(row) else None)
             if key:
-                existing[key] = rid
-    print(f"dest followup existing mapped: {len(existing)}")
+                existing_by_fu[key] = rid
+    print(f"dest followup existing by Follow-up ID: {len(existing_by_fu)}")
 
     writable = [
         "Follow-up Time 跟进时间",
@@ -578,11 +574,10 @@ def sync_followups(dst_fu: str, enq_map: dict[str, str]) -> None:
     updates: list[dict] = []
     for sid, row in zip(src_ids, src_rows):
         fmap = {src_fields[i]: row[i] for i in range(min(len(src_fields), len(row)))}
-        payload: dict[str, Any] = {SRC_REC_FIELD: sid}
-        fu_id = extract_text(fmap.get("Follow-up ID"))
+        fu_id = extract_text(fmap.get(FU_ID_FIELD))
+        payload: dict[str, Any] = {}
         if fu_id:
-            payload[SRC_FU_ID_FIELD] = fu_id
-            payload["Follow-up ID"] = fu_id
+            payload[FU_ID_FIELD] = fu_id
         for fn in writable:
             cv = cell_to_writable(fn, fmap.get(fn), kind=src_types.get(fn, "text"))
             if cv is not None:
@@ -598,8 +593,9 @@ def sync_followups(dst_fu: str, enq_map: dict[str, str]) -> None:
                 remapped.append({"id": dst_link})
         if remapped:
             payload["Related Offline Enquiry 关联线下询盘"] = remapped
-        if sid in existing:
-            updates.append({"record_id": existing[sid], "fields": payload})
+        dest_id = existing_by_fu.get(fu_id) if fu_id else None
+        if dest_id:
+            updates.append({"record_id": dest_id, "fields": payload})
         else:
             creates.append(payload)
 

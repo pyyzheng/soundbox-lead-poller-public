@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
 """Near-real-time sync: Offline Enquiry/Follow-up from leads Base → Opportunity Base.
 
-Source: ZpbUb7SP7azsNasniFjc0bWSnHg
-  - tblzrNcFHAISzi5a 线下询盘记录
-  - tblgqC1lbgFazdUB 线下跟进记录
-Target: Ktddb4mhtaixgYs9CIkcNnXFngh
-  - tblV75ehPDgd7CHV 线下询盘记录 Offline Enquiry
-  - tblj2h1ffFxlh78i 线下跟进记录 Offline Follow-up
-
-Idempotent key field: 「源 Record ID」
-
-Usage:
-  source .env && python3 scripts/sync_offline_enquiry_to_opp_base.py
+Idempotent keys (业务主键，不依赖「源 *」技术字段):
+  enquiry  -> Clue ID 线索ID
+  followup -> Follow-up ID
 """
 from __future__ import annotations
 
 import logging
 import os
-import sys
 import time
 from typing import Any
 
@@ -32,9 +23,8 @@ DST_BASE = os.environ.get("OPP_BASE_TOKEN") or "Ktddb4mhtaixgYs9CIkcNnXFngh"
 DST_ENQ = os.environ.get("OFFLINE_DST_ENQ_TABLE") or "tblV75ehPDgd7CHV"
 DST_FU = os.environ.get("OFFLINE_DST_FU_TABLE") or "tblj2h1ffFxlh78i"
 
-SRC_REC = "源 Record ID"
-SRC_CLUE = "源 Clue ID"
-SRC_FU_ID = "源 Follow-up ID"
+CLUE_FIELD = "Clue ID 线索ID"
+FU_ID_FIELD = "Follow-up ID"
 
 SELECT_FIELDS = {
     "🌟Case Level / 线索分级",
@@ -55,7 +45,6 @@ ENQ_COPY_FIELDS = [
     "Country（国家）",
     "Customer Type 客户类型",
     "所属部门 Department",
-    # Salesperson 人员字段在部分角色下批量写会 Permission denied，改由用户侧维护
 ]
 
 FU_COPY_FIELDS = [
@@ -75,10 +64,7 @@ FU_COPY_FIELDS = [
 def _token() -> str:
     r = requests.post(
         "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
-        json={
-            "app_id": os.environ["FEISHU_APP_ID"],
-            "app_secret": os.environ["FEISHU_APP_SECRET"],
-        },
+        json={"app_id": os.environ["FEISHU_APP_ID"], "app_secret": os.environ["FEISHU_APP_SECRET"]},
         timeout=30,
     )
     r.raise_for_status()
@@ -103,7 +89,7 @@ def _api(method: str, url: str, token: str, **kwargs) -> dict:
         if data.get("code") == 0:
             return data
         if resp.status_code in (429, 500, 502, 503) or data.get("code") in (1254291, 99991400):
-            delay = 2**attempt
+            delay = 2 ** attempt
             log.warning("retry %s after %ss: %s", attempt + 1, delay, data.get("msg"))
             time.sleep(delay)
             last = data
@@ -125,8 +111,7 @@ def _list_records(token: str, base: str, table: str) -> list[dict]:
             token,
             params=params,
         )
-        batch = data.get("data", {}).get("items") or []
-        items.extend(batch)
+        items.extend(data.get("data", {}).get("items") or [])
         if not data.get("data", {}).get("has_more"):
             break
         page_token = data["data"].get("page_token")
@@ -152,10 +137,8 @@ def _text(v: Any) -> str:
 
 
 def _copy_value(v: Any, *, field_name: str = "") -> Any:
-    """Normalize bitable v1 cell value for write-back."""
     if v is None:
         return None
-    # bitable v1: single-select write expects a plain string
     if field_name in SELECT_FIELDS:
         if isinstance(v, str):
             return v.strip() or None
@@ -170,7 +153,6 @@ def _copy_value(v: Any, *, field_name: str = "") -> Any:
             return None
         t = _text(v)
         return t or None
-    # bitable v1: duplex/link write expects list[str] record_ids
     if field_name == "Related Offline Enquiry 关联线下询盘" or (
         isinstance(v, list) and v and isinstance(v[0], dict) and ("record_ids" in v[0] or "table_id" in v[0])
     ):
@@ -193,10 +175,8 @@ def _copy_value(v: Any, *, field_name: str = "") -> Any:
     if isinstance(v, list):
         if not v:
             return None
-        if all(isinstance(x, dict) for x in v):
-            if any("id" in x for x in v):
-                # user field still uses [{id}]
-                return [{"id": x["id"]} for x in v if x.get("id")]
+        if all(isinstance(x, dict) for x in v) and any("id" in x for x in v):
+            return [{"id": x["id"]} for x in v if x.get("id")]
         return [_text(x) for x in v]
     if isinstance(v, dict):
         if "id" in v:
@@ -209,26 +189,19 @@ def _copy_value(v: Any, *, field_name: str = "") -> Any:
     return s or None
 
 
-def _batch_create(token: str, base: str, table: str, records: list[dict]) -> list[str]:
-    ids: list[str] = []
+def _batch_create(token: str, base: str, table: str, records: list[dict]) -> None:
     for i in range(0, len(records), 100):
         chunk = records[i : i + 100]
-        data = _api(
+        _api(
             "POST",
             f"https://open.feishu.cn/open-apis/bitable/v1/apps/{base}/tables/{table}/records/batch_create",
             token,
             json={"records": [{"fields": r} for r in chunk]},
         )
-        for item in data.get("data", {}).get("records") or []:
-            rid = item.get("record_id")
-            if rid:
-                ids.append(rid)
         time.sleep(0.2)
-    return ids
 
 
 def _batch_update(token: str, base: str, table: str, records: list[dict]) -> None:
-    # smaller batches reduce partial-field permission failures
     for i in range(0, len(records), 20):
         chunk = records[i : i + 20]
         try:
@@ -254,48 +227,57 @@ def _batch_update(token: str, base: str, table: str, records: list[dict]) -> Non
 
 
 def sync_enquiries(token: str) -> dict[str, str]:
+    """Return source_enquiry_record_id -> dest_enquiry_record_id."""
     src = _list_records(token, SRC_BASE, SRC_ENQ)
     dst = _list_records(token, DST_BASE, DST_ENQ)
-    existing = {_text((r.get("fields") or {}).get(SRC_REC)): r["record_id"] for r in dst if _text((r.get("fields") or {}).get(SRC_REC))}
-    log.info("enquiry src=%s dst_mapped=%s", len(src), len(existing))
+    existing_by_clue = {
+        _text((r.get("fields") or {}).get(CLUE_FIELD)): r["record_id"]
+        for r in dst
+        if _text((r.get("fields") or {}).get(CLUE_FIELD))
+    }
+    log.info("enquiry src=%s dst_by_clue=%s", len(src), len(existing_by_clue))
 
     creates: list[dict] = []
     updates: list[dict] = []
-    mapping = dict(existing)
+    mapping: dict[str, str] = {}
 
     for rec in src:
         sid = rec["record_id"]
         fields = rec.get("fields") or {}
-        payload: dict[str, Any] = {SRC_REC: sid}
-        clue = _text(fields.get("Clue ID 线索ID"))
-        if clue:
-            payload[SRC_CLUE] = clue
-            payload["Clue ID 线索ID"] = clue
+        clue = _text(fields.get(CLUE_FIELD))
+        if not clue:
+            log.warning("skip enquiry without Clue ID: %s", sid)
+            continue
+        payload: dict[str, Any] = {CLUE_FIELD: clue}
         for name in ENQ_COPY_FIELDS:
             if name not in fields:
                 continue
             cv = _copy_value(fields.get(name), field_name=name)
             if cv is not None:
                 payload[name] = cv
-        if sid in existing:
-            updates.append({"record_id": existing[sid], "fields": payload})
+        dest_id = existing_by_clue.get(clue)
+        if dest_id:
+            # 更新时不写主键 Clue ID，避免主字段写权限问题；主键仅创建时写入
+            updates.append({"record_id": dest_id, "fields": {k: v for k, v in payload.items() if k != CLUE_FIELD}})
+            mapping[sid] = dest_id
         else:
-            creates.append(payload)
+            creates.append({"_src_id": sid, **payload})
 
     if creates:
-        # create returns records in order
         for i in range(0, len(creates), 100):
             chunk = creates[i : i + 100]
+            write_chunk = [{k: v for k, v in row.items() if k != "_src_id"} for row in chunk]
             data = _api(
                 "POST",
                 f"https://open.feishu.cn/open-apis/bitable/v1/apps/{DST_BASE}/tables/{DST_ENQ}/records/batch_create",
                 token,
-                json={"records": [{"fields": r} for r in chunk]},
+                json={"records": [{"fields": r} for r in write_chunk]},
             )
             for src_payload, item in zip(chunk, data.get("data", {}).get("records") or []):
                 rid = item.get("record_id")
                 if rid:
-                    mapping[src_payload[SRC_REC]] = rid
+                    mapping[src_payload["_src_id"]] = rid
+                    existing_by_clue[src_payload[CLUE_FIELD]] = rid
             log.info("enquiry create +%s", len(chunk))
             time.sleep(0.2)
 
@@ -303,25 +285,34 @@ def sync_enquiries(token: str) -> dict[str, str]:
         _batch_update(token, DST_BASE, DST_ENQ, updates)
         log.info("enquiry update %s", len(updates))
 
+    for rec in src:
+        sid = rec["record_id"]
+        if sid in mapping:
+            continue
+        clue = _text((rec.get("fields") or {}).get(CLUE_FIELD))
+        if clue and clue in existing_by_clue:
+            mapping[sid] = existing_by_clue[clue]
     return mapping
 
 
 def sync_followups(token: str, enq_map: dict[str, str]) -> None:
     src = _list_records(token, SRC_BASE, SRC_FU)
     dst = _list_records(token, DST_BASE, DST_FU)
-    existing = {_text((r.get("fields") or {}).get(SRC_REC)): r["record_id"] for r in dst if _text((r.get("fields") or {}).get(SRC_REC))}
-    log.info("followup src=%s dst_mapped=%s", len(src), len(existing))
+    existing_by_fu = {
+        _text((r.get("fields") or {}).get(FU_ID_FIELD)): r["record_id"]
+        for r in dst
+        if _text((r.get("fields") or {}).get(FU_ID_FIELD))
+    }
+    log.info("followup src=%s dst_by_fu_id=%s", len(src), len(existing_by_fu))
 
     creates: list[dict] = []
     updates: list[dict] = []
     for rec in src:
-        sid = rec["record_id"]
         fields = rec.get("fields") or {}
-        payload: dict[str, Any] = {SRC_REC: sid}
-        fu_id = _text(fields.get("Follow-up ID"))
+        fu_id = _text(fields.get(FU_ID_FIELD))
+        payload: dict[str, Any] = {}
         if fu_id:
-            payload[SRC_FU_ID] = fu_id
-            payload["Follow-up ID"] = fu_id
+            payload[FU_ID_FIELD] = fu_id
         for name in FU_COPY_FIELDS:
             if name not in fields:
                 continue
@@ -332,15 +323,13 @@ def sync_followups(token: str, enq_map: dict[str, str]) -> None:
             fields.get("Related Offline Enquiry 关联线下询盘"),
             field_name="Related Offline Enquiry 关联线下询盘",
         ) or []
-        remapped = []
-        for item in link:
-            src_link = item if isinstance(item, str) else None
-            if src_link and src_link in enq_map:
-                remapped.append(enq_map[src_link])
+        remapped = [enq_map[item] for item in link if isinstance(item, str) and item in enq_map]
         if remapped:
             payload["Related Offline Enquiry 关联线下询盘"] = remapped
-        if sid in existing:
-            updates.append({"record_id": existing[sid], "fields": payload})
+
+        dest_id = existing_by_fu.get(fu_id) if fu_id else None
+        if dest_id:
+            updates.append({"record_id": dest_id, "fields": payload})
         else:
             creates.append(payload)
 
