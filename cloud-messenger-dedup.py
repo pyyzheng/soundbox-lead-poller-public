@@ -46,9 +46,9 @@ FIELD_CHANNELS = "Channels（渠道）"
 FIELD_EMAIL = "Email（客户邮箱）"
 FIELD_CUSTOMER = "Customer Name（客户名称）"
 
-CHANNEL_LEAD_AD = "Facebook"
-CHANNEL_MESSENGER = "Facebook-Messenger"
-CHANNEL_INSTAGRAM = "Instagram"
+CHANNEL_LEAD_AD = "Facebook（脸书）"
+CHANNEL_MESSENGER = "Facebook-Messenger"  # 历史值
+CHANNEL_INSTAGRAM = "Instagram"  # 历史值
 MESSENGER_LIKE_CHANNELS = {CHANNEL_MESSENGER, CHANNEL_INSTAGRAM}
 
 

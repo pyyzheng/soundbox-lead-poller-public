@@ -21,6 +21,8 @@ from assignment_fields import (
     SUB_CHANNEL_TO_CHANNEL,
     WRITE_ASSIGN_AUTO,
     WRITE_SUCCESS_NO,
+    to_write_channel,
+    to_write_sub_channel,
 )
 
 log = logging.getLogger("lead-poller")
@@ -184,7 +186,7 @@ def check_feishu_fb_contact_duplicate(token: str, customer_email: str = "",
         return None
     cutoff_ms = int((datetime.now() - timedelta(hours=hours)).timestamp() * 1000)
     conditions = [
-        {"field_name": FEISHU_CHANNELS_FIELD, "operator": "is", "value": ["Facebook"]},
+        {"field_name": FEISHU_CHANNELS_FIELD, "operator": "is", "value": ["Facebook（脸书）"]},
     ]
     if email and email not in {"n/a", "na", "none", "-"}:
         # contains + 小写：飞书文本 is 区分大小写，避免 Megaton@x / megaton@x 漏判
@@ -348,11 +350,11 @@ def create_feishu_record(token: str, inquiry_content: str, clue_level: str = "",
     if grading_text:
         fields[FEISHU_LEAD_GRADING] = grading_text
     if channels:
-        fields[FEISHU_CHANNELS_FIELD] = channels
+        fields[FEISHU_CHANNELS_FIELD] = to_write_channel(channels) or channels
     if sub_channel:
-        fields[FIELD_SUB_CHANNEL] = sub_channel
+        fields[FIELD_SUB_CHANNEL] = to_write_sub_channel(sub_channel)
     elif channels and channels in SUB_CHANNEL_TO_CHANNEL:
-        fields[FIELD_SUB_CHANNEL] = channels
+        fields[FIELD_SUB_CHANNEL] = to_write_sub_channel(channels)
     if country:
         fields[FIELD_COUNTRY] = country
     if product_category:

@@ -3,7 +3,7 @@
 cloud-suboffice-assignee-fix.py — 子办国家负责人自动回填
 
 飞书主表里的「子办规则命中负责人」是普通单选字段，不是公式字段。
-子办国家线索应走子办规则（非渠道轮转）。若该字段为空，系统匹配业务员会显示「未命中规则」→ 分配异常。
+子办国家线索应走子办规则（非渠道轮转）。若该字段为空，系统匹配业务员在规则回填前会显示空值→正在匹配规则；超时未回填才变成「未命中规则」→分配异常。
 
 常见原因：飞书工作流在 Country 写入时触发，但「是否是子办国家」公式尚未就绪，Switch 走了「否」分支。
 本脚本从「子办分配规则表」读取启用规则，回填负责人并设置「是否成功分配=是」。
@@ -28,6 +28,8 @@ from assignment_fields import (  # noqa: E402
     FIELD_SUBOFFICE_OWNER,
     FIELD_SUCCESS,
     WRITE_ASSIGN_AUTO,
+    WRITE_STATUS_ASSIGNING,
+    WRITE_STATUS_EXCEPTION,
     WRITE_SUCCESS_YES,
     get_field,
 )
@@ -190,31 +192,40 @@ def fetch_recent_main_records(token: str) -> list[dict]:
 
 
 def fetch_suboffice_exception_records(token: str) -> list[dict]:
-    """拉取「分配异常」的子办国家线索（不受 RECENT_HOURS 限制）。"""
-    return _search_records(
-        token,
-        FEISHU_TABLE_ID,
-        {
-            "filter": {
-                "conjunction": "and",
-                "conditions": [
-                    {"field_name": FIELD_STATUS, "operator": "is", "value": ["❌ 分配异常"]},
-                    {"field_name": FIELD_SUBOFFICE, "operator": "is", "value": ["是"]},
-                    {"field_name": FIELD_ASSIGN_METHOD, "operator": "is", "value": [WRITE_ASSIGN_AUTO]},
+    """拉取「分配异常 / 正在匹配规则」的子办国家线索（不受 RECENT_HOURS 限制）。"""
+    merged: list[dict] = []
+    seen: set[str] = set()
+    for status in (WRITE_STATUS_EXCEPTION, WRITE_STATUS_ASSIGNING):
+        rows = _search_records(
+            token,
+            FEISHU_TABLE_ID,
+            {
+                "filter": {
+                    "conjunction": "and",
+                    "conditions": [
+                        {"field_name": FIELD_STATUS, "operator": "is", "value": [status]},
+                        {"field_name": FIELD_SUBOFFICE, "operator": "is", "value": ["是"]},
+                        {"field_name": FIELD_ASSIGN_METHOD, "operator": "is", "value": [WRITE_ASSIGN_AUTO]},
+                    ],
+                },
+                "field_names": [
+                    FIELD_ENTRY_TIME,
+                    FIELD_COUNTRY,
+                    FIELD_SUBOFFICE,
+                    FIELD_SUBOFFICE_OWNER,
+                    FIELD_EMAIL,
+                    FIELD_LEAD_ID,
+                    FIELD_ASSIGN_METHOD,
                 ],
+                "page_size": 50,
             },
-            "field_names": [
-                FIELD_ENTRY_TIME,
-                FIELD_COUNTRY,
-                FIELD_SUBOFFICE,
-                FIELD_SUBOFFICE_OWNER,
-                FIELD_EMAIL,
-                FIELD_LEAD_ID,
-                FIELD_ASSIGN_METHOD,
-            ],
-            "page_size": 50,
-        },
-    )
+        )
+        for item in rows:
+            rid = item.get("record_id", "")
+            if rid and rid not in seen:
+                merged.append(item)
+                seen.add(rid)
+    return merged
 
 
 def _merge_records(primary: list[dict], extra: list[dict]) -> list[dict]:

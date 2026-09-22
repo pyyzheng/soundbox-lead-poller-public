@@ -76,7 +76,12 @@ from feishu_writer import (
     create_feishu_record, update_feishu_autoreply,
     FEISHU_APP_TOKEN, FEISHU_TABLE_ID, FEISHU_FIELD_NAME,
 )
-from assignment_fields import FIELD_CHANNELS, FIELD_SUB_CHANNEL, SUB_CHANNEL_TO_CHANNEL  # noqa: E402
+from assignment_fields import (  # noqa: E402
+    FIELD_CHANNELS,
+    FIELD_SUB_CHANNEL,
+    SUB_CHANNEL_TO_CHANNEL,
+    to_write_sub_channel,
+)
 from tagline_fields import feishu_product_category  # noqa: E402
 from llm_parser import (
     call_llm_parse, normalize_llm_output,
@@ -122,7 +127,7 @@ def _structured_write_fields(
     fields: dict[str, str] = {}
     sub = (sub_channel or "").strip()
     if sub and sub != "无法识别":
-        fields[FIELD_SUB_CHANNEL] = sub
+        fields[FIELD_SUB_CHANNEL] = to_write_sub_channel(sub)
         fields[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(sub, sub)
     if country and country not in {"Unknown", "无法识别"}:
         fields["Country（国家）"] = country

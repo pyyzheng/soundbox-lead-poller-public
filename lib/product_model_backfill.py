@@ -86,7 +86,7 @@ def infer_product_updates(
     # 最高优先：正文系列裸词（不区分渠道/大类）
     keyword_model = extract_series_model_keyword(enquiry) if need_model else ""
 
-    is_facebook = channels == "Facebook" or sub_channel == "Facebook"
+    is_facebook = channels in {"Facebook", "Facebook（脸书）"} or sub_channel == "Facebook"
     if is_facebook:
         inferred_cat_cn, inferred_model = refine_facebook_product(
             country,

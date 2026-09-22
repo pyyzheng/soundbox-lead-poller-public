@@ -1,9 +1,13 @@
 """assignment-unblock 代理产品待确认处理。"""
 
 import importlib.util
+import os
 import sys
 import unittest
 from pathlib import Path
+
+os.environ.setdefault("FEISHU_APP_TOKEN", "test_app_token")
+os.environ.setdefault("FEISHU_TABLE_ID", "tbl_test")
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "lib"))
@@ -174,6 +178,20 @@ class TestLiveQueueAssigneeGuard(unittest.TestCase):
             self.assertEqual(unblock._live_queue_assignee("tok", "rec2"), "")
         finally:
             unblock._fetch_record_fields = original
+
+
+class TestPendingPriority(unittest.TestCase):
+    def test_sort_puts_assigning_before_assigned(self):
+        records = [
+            {"record_id": "assigned", "fields": {FIELD_STATUS: "✅ 已分配"}},
+            {"record_id": "assigning", "fields": {FIELD_STATUS: "🔄 正在匹配规则"}},
+            {"record_id": "exception", "fields": {FIELD_STATUS: "❌ 分配异常"}},
+        ]
+        ordered = unblock._sort_records_exceptions_first(records)
+        self.assertEqual(
+            [item["record_id"] for item in ordered],
+            ["assigning", "exception", "assigned"],
+        )
 
 
 class TestStalePointerPassOrder(unittest.TestCase):

@@ -58,7 +58,11 @@ from assignment_fields import (  # noqa: E402
     FIELD_SUCCESS,
     FIELD_SYSTEM,
     FIELD_LEAD_ID,
+    CHANNEL_FACEBOOK_ALIASES,
     WRITE_ASSIGN_AUTO,
+    WRITE_STATUS_ASSIGNING,
+    WRITE_STATUS_BLOCKED,
+    WRITE_STATUS_EXCEPTION,
     WRITE_SUCCESS_NO,
     WRITE_SUCCESS_YES,
     QUEUE_POINTER_TABLE,
@@ -66,6 +70,8 @@ from assignment_fields import (  # noqa: E402
     heal_invalid_channel,
     heal_invalid_sub_channel,
     is_invalid_channel,
+    to_write_channel,
+    to_write_sub_channel,
 )
 from channel_queue_assign import (  # noqa: E402
     eligible_for_channel_queue,
@@ -106,11 +112,11 @@ from option_field_match import (  # noqa: E402
     is_agent_product_yes,
     is_assign_auto,
     is_assign_manual,
-    is_assignment_exception,
     is_dup_ready,
     is_rotation_eligible,
     is_suboffice_country,
     is_success_assigned,
+    needs_assignment_unblock,
 )
 
 logging.basicConfig(
@@ -122,6 +128,8 @@ log = logging.getLogger("assign-unblock")
 
 # 默认扫近 24h，缩短异常可见窗口；可用 ASSIGN_UNBLOCK_RECENT_HOURS 覆盖。
 RECENT_HOURS = int(os.environ.get("ASSIGN_UNBLOCK_RECENT_HOURS", "24"))
+# 「正在匹配规则」可能卡在工作流回填前；多扫几天，避免刚改公式后的历史等待单漏掉。
+PENDING_HOURS = int(os.environ.get("ASSIGN_UNBLOCK_PENDING_HOURS", "168"))
 MAX_RECORDS = int(os.environ.get("ASSIGN_UNBLOCK_MAX_RECORDS", "500"))
 DRY_RUN = os.environ.get("ASSIGN_UNBLOCK_DRY_RUN", "false").lower() == "true"
 PENDING_ALERT_MINUTES = int(os.environ.get("ASSIGN_PENDING_ALERT_MINUTES", "10"))
@@ -334,7 +342,7 @@ def _sync_messenger_duplicates(token: str, records: list[dict], cutoff_ms: int) 
     by_email: dict[str, str] = {}
     for item in records:
         fields = item.get("fields", {})
-        if extract_text(fields.get(FIELD_CHANNELS, "")) != "Facebook":
+        if extract_text(fields.get(FIELD_CHANNELS, "")) not in CHANNEL_FACEBOOK_ALIASES:
             continue
         email = extract_text(fields.get(FIELD_EMAIL, "")).lower().strip()
         queue = extract_text(fields.get(FIELD_QUEUE_ASSIGNEE, ""))
@@ -430,40 +438,51 @@ def _heal_invalid_channels(token: str, fields: dict, record_id: str, lead_id: st
 
 
 def _fetch_exception_records(token: str, cutoff_ms: int) -> list[dict]:
-    return _search_records(
-        token,
-        FEISHU_TABLE_ID,
-        {
-            "filter": {
-                "conjunction": "and",
-                "conditions": [
-                    {"field_name": FIELD_STATUS, "operator": "is", "value": ["❌ 分配异常"]},
-                    {"field_name": FIELD_ASSIGN_METHOD, "operator": "is", "value": [WRITE_ASSIGN_AUTO]},
-                    {
-                        "field_name": FIELD_ENTRY_TIME,
-                        "operator": "isGreater",
-                        "value": ["ExactDate", str(cutoff_ms - 1)],
-                    },
-                ],
-            },
-            "field_names": _record_field_names(),
-            "page_size": 100,
-        },
-        max_items=MAX_RECORDS,
+    """捞起仍待分配的线索（异常 / 正在匹配规则 / 阻塞），避免被 500 条上限挤掉。"""
+    merged: list[dict] = []
+    pending_cutoff_ms = int(
+        (datetime.now(timezone.utc) - timedelta(hours=PENDING_HOURS)).timestamp() * 1000
     )
+    for status in (WRITE_STATUS_EXCEPTION, WRITE_STATUS_ASSIGNING, WRITE_STATUS_BLOCKED):
+        status_cutoff = pending_cutoff_ms if status == WRITE_STATUS_ASSIGNING else cutoff_ms
+        merged = _merge_records(
+            merged,
+            _search_records(
+                token,
+                FEISHU_TABLE_ID,
+                {
+                    "filter": {
+                        "conjunction": "and",
+                        "conditions": [
+                            {"field_name": FIELD_STATUS, "operator": "is", "value": [status]},
+                            {"field_name": FIELD_ASSIGN_METHOD, "operator": "is", "value": [WRITE_ASSIGN_AUTO]},
+                            {
+                                "field_name": FIELD_ENTRY_TIME,
+                                "operator": "isGreater",
+                                "value": ["ExactDate", str(status_cutoff - 1)],
+                            },
+                        ],
+                    },
+                    "field_names": _record_field_names(),
+                    "page_size": 100,
+                },
+                max_items=MAX_RECORDS,
+            ),
+        )
+    return merged
 
 
 def _sort_records_exceptions_first(records: list[dict]) -> list[dict]:
-    """优先处理分配异常，缩短 FB/Gmail 新线索的可见异常窗口。"""
-    exceptions: list[dict] = []
+    """优先处理分配异常/正在匹配规则，缩短 FB/Gmail 新线索的可见等待窗口。"""
+    urgent: list[dict] = []
     others: list[dict] = []
     for item in records:
         fields = item.get("fields", {})
-        if is_assignment_exception(get_field(fields, FIELD_STATUS, "")):
-            exceptions.append(item)
+        if needs_assignment_unblock(get_field(fields, FIELD_STATUS, "")):
+            urgent.append(item)
         else:
             others.append(item)
-    return exceptions + others
+    return urgent + others
 
 
 def _merge_records(primary: list[dict], extra: list[dict]) -> list[dict]:
@@ -489,7 +508,7 @@ def _sync_stale_pointers_first(
     for item in records:
         fields = item.get("fields", {})
         entry_ms = fields.get(FIELD_ENTRY_TIME, 0) or 0
-        is_exception = is_assignment_exception(fields.get(FIELD_STATUS, ""))
+        is_exception = needs_assignment_unblock(fields.get(FIELD_STATUS, ""))
         if entry_ms and entry_ms < cutoff_ms and not is_exception:
             continue
         if _advance_pointer_if_stale(token, fields, pointers, queue_map):
@@ -786,7 +805,7 @@ def run() -> int:
     for item in records:
         fields = item.get("fields", {})
         entry_ms = fields.get(FIELD_ENTRY_TIME, 0) or 0
-        is_exception = is_assignment_exception(fields.get(FIELD_STATUS, ""))
+        is_exception = needs_assignment_unblock(fields.get(FIELD_STATUS, ""))
         if entry_ms and entry_ms < cutoff_ms and not is_exception:
             continue
 
@@ -868,11 +887,12 @@ def run() -> int:
             fb_leadgen=extract_text(get_field(fields, FIELD_FB_LEADGEN, "")),
         )
         if healed_sub:
-            log.info("自愈细分渠道 %s: %r → %s", lead_id or record_id, sub_channel, healed_sub)
+            write_sub = to_write_sub_channel(healed_sub)
+            log.info("自愈细分渠道 %s: %r → %s", lead_id or record_id, sub_channel, write_sub)
             if DRY_RUN:
-                fields[FIELD_SUB_CHANNEL] = healed_sub
-            elif _update_record(token, FEISHU_TABLE_ID, record_id, {FIELD_SUB_CHANNEL: healed_sub}):
-                fields[FIELD_SUB_CHANNEL] = healed_sub
+                fields[FIELD_SUB_CHANNEL] = write_sub
+            elif _update_record(token, FEISHU_TABLE_ID, record_id, {FIELD_SUB_CHANNEL: write_sub}):
+                fields[FIELD_SUB_CHANNEL] = write_sub
 
         if DAILY_LEAST_ENABLED and eligible_for_daily_least(fields):
             live_assignee = ""
@@ -961,7 +981,8 @@ def run() -> int:
                         )
                         patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
                         if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
-                            patch[FIELD_CHANNELS] = resolved_key.split("|", 1)[0]
+                            prefix = resolved_key.split("|", 1)[0]
+                            patch[FIELD_CHANNELS] = to_write_channel(prefix) or prefix
                         if DRY_RUN:
                             queue_assign_count += 1
                             fields[FIELD_QUEUE_ASSIGNEE] = pick.assignee

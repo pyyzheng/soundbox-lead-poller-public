@@ -74,6 +74,6 @@ curl -s https://webhook.soundboxbooth.com/
 
 ## 近期变更（2026-07-11）
 
-- **IG/FB 渠道**：Messenger / Instagram 私信与 Lead Ad 表单统一写 `Channels=Facebook`；Instagram 会话细分渠道仍为 `Instagram`
+- **IG/FB 渠道**：Messenger / Instagram 私信与 Lead Ad 表单统一写 `Channels=Facebook（脸书）`；Instagram 会话细分渠道仍为 `Instagram`
 - **发送失败不落盘**：Meta API 发送失败的 Bot 回复不再写入飞书 Enquiry；仅保留客户原文 + 已成功送达的 Bot 消息
 - **Auto-Reply Error**：Bot 发送失败时写入飞书 `Auto-Reply Error` 字段，便于排查权限问题（如 `pages_messaging`）

@@ -81,8 +81,8 @@ class TestInferSubChannel(unittest.TestCase):
             email_subject="New Booking Entry",
             rules=RULES,
         )
-        self.assertEqual(fields["Channel segmentation (细分渠道)"], "谷歌2")
-        self.assertEqual(fields["Channels（渠道）"], "谷歌")
+        self.assertEqual(fields["Channel segmentation (细分渠道)"], "Google 2（谷歌2）")
+        self.assertEqual(fields["Channels（渠道）"], "Google（谷歌）")
 
     def test_rejects_message_line_with_dashes(self):
         tag = "Message: Hi - I am interested in single booths for my office (2-3)."
@@ -95,7 +95,7 @@ class TestInferSubChannel(unittest.TestCase):
             email_subject="New Booking Entry",
             rules=RULES,
         )
-        self.assertEqual(fields["Channel segmentation (细分渠道)"], "谷歌2")
+        self.assertEqual(fields["Channel segmentation (细分渠道)"], "Google 2（谷歌2）")
 
     def test_valid_tag_line_still_parses(self):
         self.assertTrue(is_valid_tag_line("美国-谷歌1-静音舱-VRT"))

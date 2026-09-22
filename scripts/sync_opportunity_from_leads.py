@@ -54,13 +54,21 @@ STAGE_MAP = {
 CHANNEL_TO_SOURCE = {
     "谷歌": "官网询盘",
     "Google": "官网询盘",
+    "Google（谷歌）": "官网询盘",
     "Facebook": "社交平台",
+    "Facebook（脸书）": "社交平台",
     "Instagram": "社交平台",
     "LinkedIn": "社交平台",
+    "LinkedIn（领英）": "社交平台",
     "Facebook-Messenger": "社交平台",
     "阿里国际站": "其他",
+    "Alibaba International（阿里国际站）": "其他",
     "国内渠道": "其他",
+    "Domestic Channel（国内渠道）": "其他",
+    "Outbound渠道": "其他",
+    "Outbound Channel（出站渠道）": "其他",
     "无法识别": "其他",
+    "Unrecognized（无法识别）": "其他",
 }
 
 PRODUCT_CAT_ALLOWED = {

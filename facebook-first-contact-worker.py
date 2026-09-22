@@ -59,7 +59,7 @@ FIELD_AUTOREPLY = "Auto-Reply Status"
 def fetch_pending_facebook(token: str) -> list:
     """查询历史待首联的 Facebook 冷线索：Facebook + Pending + 分配方式=人工。"""
     conditions = [
-        {"field_name": FIELD_CHANNELS, "operator": "is", "value": ["Facebook"]},
+        {"field_name": FIELD_CHANNELS, "operator": "is", "value": ["Facebook（脸书）"]},
         {"field_name": FIELD_AUTOREPLY, "operator": "is", "value": ["Pending"]},
         {"field_name": FIELD_ASSIGN_METHOD, "operator": "is", "value": [WRITE_ASSIGN_MANUAL]},
     ]

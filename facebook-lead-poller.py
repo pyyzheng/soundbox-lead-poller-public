@@ -532,9 +532,9 @@ def build_feishu_write_fields(parsed: dict, clue_level: str = "") -> dict:
     """Write structured fields directly; do not rely on Feishu AI shortcuts."""
     write_fields = {
         FIELD_ENQUIRY: parsed["inquiry_content"],
-        FIELD_CHANNELS: "Facebook",
+        FIELD_CHANNELS: "Facebook（脸书）",
         FIELD_ASSIGN_METHOD: WRITE_ASSIGN_AUTO,
-        FIELD_SUB_CHANNEL: "Facebook",
+        FIELD_SUB_CHANNEL: "Facebook（脸书）",
     }
     if clue_level:
         write_fields[FIELD_LEVEL] = clue_level

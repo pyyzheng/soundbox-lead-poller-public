@@ -13,8 +13,10 @@ from assignment_fields import (
     ASSIGN_SOURCE_BLOCKED,
     ASSIGN_SOURCE_ELIGIBLE,
     ASSIGN_STATUS_ASSIGNED,
+    ASSIGN_STATUS_ASSIGNING,
     ASSIGN_STATUS_BLOCKED,
     ASSIGN_STATUS_EXCEPTION,
+    ASSIGN_STATUS_NEEDS_UNBLOCK,
     FORMULA_NO,
     FORMULA_YES,
     SUBOFFICE_COUNTRY_NO,
@@ -121,3 +123,11 @@ def is_assignment_assigned(field_val) -> bool:
 
 def is_assignment_blocked(field_val) -> bool:
     return matches_option(field_val, ASSIGN_STATUS_BLOCKED)
+
+
+def is_assignment_pending(field_val) -> bool:
+    return matches_option(field_val, ASSIGN_STATUS_ASSIGNING | ASSIGN_STATUS_BLOCKED)
+
+
+def needs_assignment_unblock(field_val) -> bool:
+    return matches_option(field_val, ASSIGN_STATUS_NEEDS_UNBLOCK)

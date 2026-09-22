@@ -6,6 +6,9 @@ import os
 import sys
 import unittest
 
+os.environ.setdefault("FEISHU_APP_TOKEN", "test_app_token")
+os.environ.setdefault("FEISHU_TABLE_ID", "tbl_test")
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
 from feishu_utils import option_tokens
@@ -18,11 +21,13 @@ from option_field_match import (
     is_assignment_assigned,
     is_assignment_blocked,
     is_assignment_exception,
+    is_assignment_pending,
     is_dup_ready,
     is_not_agent_country,
     is_rotation_eligible,
     is_suboffice_country,
     is_success_assigned,
+    needs_assignment_unblock,
 )
 
 
@@ -72,6 +77,8 @@ class TestAssignmentOptionMatch(unittest.TestCase):
         self.assertTrue(is_assignment_assigned(["optpspV6LA"]))
         self.assertTrue(is_assignment_blocked(["optIZkcgkB"]))
         self.assertFalse(is_assignment_exception(["optpspV6LA"]))
+        self.assertTrue(is_assignment_pending("🔄 正在匹配规则"))
+        self.assertTrue(needs_assignment_unblock("🔄 正在匹配规则"))
 
 
 if __name__ == "__main__":

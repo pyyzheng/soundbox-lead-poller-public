@@ -295,8 +295,15 @@ class TestParseHelpers(unittest.TestCase):
 
     def test_normalize_queue_key_google_alias(self):
         self.assertEqual(normalize_queue_key("Google|欧洲区队列"), "谷歌|欧洲区队列")
+        self.assertEqual(normalize_queue_key("Google（谷歌）|欧洲区队列"), "谷歌|欧洲区队列")
         self.assertEqual(normalize_queue_key("谷歌|欧洲区队列"), "谷歌|欧洲区队列")
         self.assertEqual(normalize_queue_key("阿里国际站|欧洲区队列"), "阿里国际站|欧洲区队列")
+        self.assertEqual(
+            normalize_queue_key("Alibaba International（阿里国际站）|欧洲区队列"),
+            "阿里国际站|欧洲区队列",
+        )
+        self.assertEqual(normalize_queue_key("Facebook（脸书）|欧洲区队列"), "Facebook|欧洲区队列")
+        self.assertEqual(normalize_queue_key("Outbound Channel（出站渠道）|欧洲区队列"), "Outbound渠道|欧洲区队列")
 
     def test_pick_queue_assignee_accepts_google_prefix(self):
         pointers = {

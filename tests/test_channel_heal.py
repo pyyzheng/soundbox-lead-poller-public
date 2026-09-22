@@ -17,20 +17,21 @@ from assignment_fields import (  # noqa: E402
 
 class TestHealInvalidChannel(unittest.TestCase):
     def test_no_heal_when_valid(self):
+        self.assertIsNone(heal_invalid_channel("Google（谷歌）", sub_channel="谷歌1"))
         self.assertIsNone(heal_invalid_channel("谷歌", sub_channel="谷歌1"))
 
     def test_heal_from_sub_channel(self):
         self.assertEqual(
             heal_invalid_channel("无法识别", sub_channel="Facebook"),
-            "Facebook",
+            "Facebook（脸书）",
         )
 
     def test_heal_from_enquiry_tagline(self):
         content = "Name: A\nEmail: a@b.com\n\n秘鲁-Facebook-静音舱-VRT"
-        self.assertEqual(infer_channel_from_content(content), "Facebook")
+        self.assertEqual(infer_channel_from_content(content), "Facebook（脸书）")
         self.assertEqual(
             heal_invalid_channel("无法识别", sub_channel="无法识别", enquiry=content),
-            "Facebook",
+            "Facebook（脸书）",
         )
 
     def test_heal_from_gmail_msg_id(self):
@@ -40,13 +41,13 @@ class TestHealInvalidChannel(unittest.TestCase):
                 sub_channel="无法识别",
                 gmail_msg_id="msg-123",
             ),
-            "谷歌",
+            "Google（谷歌）",
         )
 
     def test_heal_from_fb_leadgen(self):
         self.assertEqual(
             infer_channel_from_source_ids(fb_leadgen="12345"),
-            "Facebook",
+            "Facebook（脸书）",
         )
 
     def test_expand_unrecognized_queue_key(self):

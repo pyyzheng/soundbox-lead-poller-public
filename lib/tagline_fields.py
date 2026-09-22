@@ -23,6 +23,7 @@ from assignment_fields import (  # noqa: E402
     heal_invalid_sub_channel,
     is_invalid_sub_channel,
     resolve_channel_from_sub,
+    to_write_sub_channel,
 )
 
 CATEGORY_TO_FEISHU = {
@@ -182,7 +183,7 @@ def build_feishu_fields_from_content(
             updates[FIELD_COUNTRY] = alibaba["country"]
         if alibaba.get("sub_channel"):
             updates[FIELD_SUB_CHANNEL] = alibaba["sub_channel"]
-            updates[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(alibaba["sub_channel"], "阿里国际站")
+            updates[FIELD_CHANNELS] = SUB_CHANNEL_TO_CHANNEL.get(alibaba["sub_channel"], "Alibaba International（阿里国际站）")
         else:
             # 标签行存在但无效：仍尝试抽取细分渠道（如 美国-谷歌1-静音舱-无法识别）
             parsed = parse_tag_line(tag)
@@ -247,6 +248,8 @@ def build_feishu_fields_from_content(
         updates[FIELD_PHONE] = "N/A"
     if not updates.get(FIELD_EMAIL):
         updates[FIELD_EMAIL] = "N/A"
+    if updates.get(FIELD_SUB_CHANNEL):
+        updates[FIELD_SUB_CHANNEL] = to_write_sub_channel(updates[FIELD_SUB_CHANNEL])
     return updates
 
 

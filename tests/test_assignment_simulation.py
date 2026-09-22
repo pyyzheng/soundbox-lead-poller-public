@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import unittest
 from pathlib import Path
+
+os.environ.setdefault("FEISHU_APP_TOKEN", "test_app_token")
+os.environ.setdefault("FEISHU_TABLE_ID", "tbl_test")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 
@@ -52,6 +56,8 @@ class TestAssignmentSimulation(unittest.TestCase):
           "渠道顺序队列匹配业务员": "",
       }
       self.assertTrue(eligible_for_channel_queue(fields))
+      empty_system = {**fields, "系统匹配业务员": ""}
+      self.assertTrue(eligible_for_channel_queue(empty_system))
       pick = pick_queue_assignee("谷歌|欧洲区队列", pointers, queue_map)
       self.assertIsNotNone(pick)
       assert pick is not None

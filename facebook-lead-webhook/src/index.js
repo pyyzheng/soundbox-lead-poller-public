@@ -729,10 +729,10 @@ var FEISHU_FIELDS = {
 function messengerChannelLabels(channel) {
   if (channel === "ig") {
     // 主渠道与 Facebook 统一；细分渠道保留 Instagram 便于统计
-    return { channels: "Facebook", subChannel: "Instagram" };
+    return { channels: "Facebook（脸书）", subChannel: "Instagram（Instagram）" };
   }
-  // Messenger 私信与 Lead Ad 表单统一写 Channels=Facebook（不再区分 Facebook-Messenger）
-  return { channels: "Facebook", subChannel: "Facebook" };
+  // Messenger 私信与 Lead Ad 表单统一写 Channels/细分=Facebook（脸书）
+  return { channels: "Facebook（脸书）", subChannel: "Facebook（脸书）" };
 }
 __name(messengerChannelLabels, "messengerChannelLabels");
 function buildMessengerTranscript(session) {
@@ -823,7 +823,7 @@ async function findRecentFacebookLeadAd(token, email, env, windowMs = MESSENGER_
       conjunction: "and",
       conditions: [
         { field_name: FEISHU_FIELDS.EMAIL, operator: "is", value: [normalized] },
-        { field_name: FEISHU_FIELDS.CHANNELS, operator: "is", value: ["Facebook"] }
+        { field_name: FEISHU_FIELDS.CHANNELS, operator: "is", value: ["Facebook（脸书）"] }
       ]
     },
     field_names: ["\u7EBF\u7D22ID", FIELD_ENTRY_TIME, FEISHU_FIELDS.CHANNELS, FEISHU_FIELDS.EMAIL],
@@ -880,7 +880,7 @@ async function findFacebookContactDuplicate(token, email, phone, env, windowMs =
   if ((!normalized || normalized === "n/a") && phoneDigits.length < 8) return null;
   const cutoff = Date.now() - windowMs;
   const conditions = [
-    { field_name: FEISHU_FIELDS.CHANNELS, operator: "is", value: ["Facebook"] }
+    { field_name: FEISHU_FIELDS.CHANNELS, operator: "is", value: ["Facebook（脸书）"] }
   ];
   if (normalized && normalized !== "n/a") {
     conditions.push({ field_name: FEISHU_FIELDS.EMAIL, operator: "contains", value: [normalized] });
@@ -1502,13 +1502,21 @@ var OPP_STAGE_MAP = {
 var OPP_CHANNEL_SOURCE = {
   "谷歌": "官网询盘",
   Google: "官网询盘",
+  "Google（谷歌）": "官网询盘",
   Facebook: "社交平台",
+  "Facebook（脸书）": "社交平台",
   Instagram: "社交平台",
   LinkedIn: "社交平台",
+  "LinkedIn（领英）": "社交平台",
   "Facebook-Messenger": "社交平台",
   "阿里国际站": "其他",
+  "Alibaba International（阿里国际站）": "其他",
   "国内渠道": "其他",
-  "无法识别": "其他"
+  "Domestic Channel（国内渠道）": "其他",
+  "Outbound渠道": "其他",
+  "Outbound Channel（出站渠道）": "其他",
+  "无法识别": "其他",
+  "Unrecognized（无法识别）": "其他"
 };
 var OPP_PRODUCT_ALLOWED = new Set([
   "Homepod 家居舱",
@@ -2064,10 +2072,10 @@ __name(markDuplicate, "markDuplicate");
 async function createRecord(token, parsed, env) {
   const fields = {
     [FEISHU_FIELDS.ENQUIRY]: parsed.enquiry_details,
-    [FEISHU_FIELDS.CHANNELS]: "Facebook",
+    [FEISHU_FIELDS.CHANNELS]: "Facebook（脸书）",
     [FEISHU_FIELDS.AUTOREPLY_STATUS]: "Pending",
     [FEISHU_FIELDS.ASSIGN_METHOD]: "\u81EA\u52A8",
-    [FEISHU_FIELDS.SUB_CHANNEL]: parsed.sub_channel || "Facebook",
+    [FEISHU_FIELDS.SUB_CHANNEL]: parsed.sub_channel || "Facebook（脸书）",
     [FEISHU_FIELDS.ENTRY_UTC_MS]: Date.now()
   };
   if (parsed.clue_level) fields[FEISHU_FIELDS.CLUE_LEVEL] = parsed.clue_level;

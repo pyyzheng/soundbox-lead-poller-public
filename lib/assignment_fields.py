@@ -40,25 +40,114 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     FIELD_SUB_CHANNEL: ("细分渠道（Channel segmentation）", "细分渠道"),
 }
 
-# 主渠道写入名必须与队列表队列Key前缀一致（队列表仍用「谷歌」）。
-WRITE_CHANNEL_GOOGLE = "谷歌"
-# 读侧兼容：Channels 选项曾被改成 Google，或写入失败落到无效选项。
-CHANNEL_GOOGLE_ALIASES = frozenset({"谷歌", "Google", "google"})
+# 队列表队列Key 前缀（渠道顺序队列表仍用短名，勿改）。
+QUEUE_PREFIX_GOOGLE = "谷歌"
+QUEUE_PREFIX_FACEBOOK = "Facebook"
+QUEUE_PREFIX_LINKEDIN = "LinkedIn"
+QUEUE_PREFIX_ALIBABA = "阿里国际站"
+QUEUE_PREFIX_DOMESTIC = "国内渠道"
+QUEUE_PREFIX_OUTBOUND = "Outbound渠道"
+
+# 主表 Channels（渠道）写入展示名（English（中文））。
+WRITE_CHANNEL_GOOGLE = "Google（谷歌）"
+WRITE_CHANNEL_FACEBOOK = "Facebook（脸书）"
+WRITE_CHANNEL_LINKEDIN = "LinkedIn（领英）"
+WRITE_CHANNEL_ALIBABA = "Alibaba International（阿里国际站）"
+WRITE_CHANNEL_DOMESTIC = "Domestic Channel（国内渠道）"
+WRITE_CHANNEL_OUTBOUND = "Outbound Channel（出站渠道）"
+WRITE_CHANNEL_UNRECOGNIZED = "Unrecognized（无法识别）"
+
+# 读侧兼容：历史短名 / 英文 / 双语标签。
+CHANNEL_GOOGLE_ALIASES = frozenset(
+    {QUEUE_PREFIX_GOOGLE, "Google", "google", WRITE_CHANNEL_GOOGLE}
+)
+CHANNEL_FACEBOOK_ALIASES = frozenset(
+    {QUEUE_PREFIX_FACEBOOK, "facebook", WRITE_CHANNEL_FACEBOOK, "脸书", "Facebook-Messenger"}
+)
+CHANNEL_LINKEDIN_ALIASES = frozenset(
+    {QUEUE_PREFIX_LINKEDIN, "linkedin", "Linkedln", "领英", WRITE_CHANNEL_LINKEDIN}
+)
+CHANNEL_ALIBABA_ALIASES = frozenset(
+    {QUEUE_PREFIX_ALIBABA, "Alibaba", WRITE_CHANNEL_ALIBABA}
+)
+CHANNEL_DOMESTIC_ALIASES = frozenset(
+    {QUEUE_PREFIX_DOMESTIC, WRITE_CHANNEL_DOMESTIC}
+)
+CHANNEL_OUTBOUND_ALIASES = frozenset(
+    {QUEUE_PREFIX_OUTBOUND, "Outbound", WRITE_CHANNEL_OUTBOUND, "出站渠道"}
+)
+
 INVALID_CHANNEL_VALUES = frozenset(
-    {"", "无可用选项", "No options available", "无法识别", "N/A"}
+    {
+        "",
+        "无可用选项",
+        "No options available",
+        "无法识别",
+        "Unrecognized",
+        WRITE_CHANNEL_UNRECOGNIZED,
+        "N/A",
+    }
 )
 INVALID_SUB_CHANNEL_VALUES = INVALID_CHANNEL_VALUES
 
-# 细分渠道 → 主渠道（用于写回 / 自愈）
-SUB_CHANNEL_TO_CHANNEL: dict[str, str] = {
-    "Facebook": "Facebook",
-    "Instagram": "Facebook",
-    "Facebook messager": "Facebook",
-    "Facebook-Messenger": "Facebook",  # 历史值；现网统一写 Facebook
-    "LinkedIn": "LinkedIn",
-    "Linkedln": "LinkedIn",  # 常见拼写
-    "领英": "LinkedIn",
-    "linkedin": "LinkedIn",
+# 细分渠道：内部短名（lead-rules / 询盘标签）→ 主表双语写入名。
+# Facebook messager 已删除，统一落到 Facebook（脸书）。
+SUB_CHANNEL_SHORT_TO_WRITE: dict[str, str] = {
+    "谷歌1": "Google 1（谷歌1）",
+    "谷歌2": "Google 2（谷歌2）",
+    "新官网": "New Website（新官网）",
+    "总舱网": "Pod Site（总舱网）",
+    "美国舱网": "US Pod Site（美国舱网）",
+    "加拿大舱网": "Canada Pod Site（加拿大舱网）",
+    "Shopping Mall（谷歌商城）": "Google Shopping Mall（谷歌商城）",
+    "阿里1": "Alibaba 1（阿里1）",
+    "阿里2": "Alibaba 2（阿里2）",
+    "1688": "1688（1688）",
+    "中文官网": "Chinese Website（中文官网）",
+    "新媒体": "New Media（新媒体）",
+    "国内电商": "Domestic E-commerce（国内电商）",
+    "中国制造网": "Made-in-China（中国制造网）",
+    "国内展会": "Domestic Exhibition（国内展会）",
+    "小红书": "Xiaohongshu（小红书）",
+    "百度": "Baidu（百度）",
+    "电商": "E-commerce（电商）",
+    "抖音旗舰店": "Douyin Flagship（抖音旗舰店）",
+    "抖音品牌": "Douyin Brand（抖音品牌）",
+    "Facebook": "Facebook（脸书）",
+    "Facebook messager": "Facebook（脸书）",  # 已删选项；历史/推断兼容
+    "Facebook-Messenger": "Facebook（脸书）",
+    "Instagram": "Instagram（Instagram）",
+    "Ins广告表单线索": "Instagram Lead Form（Ins广告表单线索）",
+    "LinkedIn": "LinkedIn（领英）",
+    "Linkedln": "LinkedIn（领英）",
+    "领英": "LinkedIn（领英）",
+    "linkedin": "LinkedIn（领英）",
+    "REVOR": "REVOR（Outbound）",
+    "Email": "Email（邮件）",
+    "无法识别": WRITE_CHANNEL_UNRECOGNIZED,
+}
+
+# 双语写入名 → 内部短名（读侧归一；Facebook（脸书）归一为 Facebook）
+WRITE_SUB_TO_SHORT: dict[str, str] = {
+    v: k
+    for k, v in SUB_CHANNEL_SHORT_TO_WRITE.items()
+    if k not in {"Facebook messager", "Facebook-Messenger", "Linkedln", "领英", "linkedin"}
+}
+WRITE_SUB_TO_SHORT["Facebook（脸书）"] = "Facebook"
+WRITE_SUB_TO_SHORT["LinkedIn（领英）"] = "LinkedIn"
+WRITE_SUB_TO_SHORT[WRITE_CHANNEL_UNRECOGNIZED] = "无法识别"
+
+# 细分渠道（短名或双语）→ 主渠道写入名
+_SUB_TO_MAIN_BY_SHORT: dict[str, str] = {
+    "Facebook": WRITE_CHANNEL_FACEBOOK,
+    "Instagram": WRITE_CHANNEL_FACEBOOK,
+    "Facebook messager": WRITE_CHANNEL_FACEBOOK,
+    "Facebook-Messenger": WRITE_CHANNEL_FACEBOOK,
+    "Ins广告表单线索": WRITE_CHANNEL_FACEBOOK,
+    "LinkedIn": WRITE_CHANNEL_LINKEDIN,
+    "Linkedln": WRITE_CHANNEL_LINKEDIN,
+    "领英": WRITE_CHANNEL_LINKEDIN,
+    "linkedin": WRITE_CHANNEL_LINKEDIN,
     "谷歌1": WRITE_CHANNEL_GOOGLE,
     "谷歌2": WRITE_CHANNEL_GOOGLE,
     "新官网": WRITE_CHANNEL_GOOGLE,
@@ -66,28 +155,76 @@ SUB_CHANNEL_TO_CHANNEL: dict[str, str] = {
     "美国舱网": WRITE_CHANNEL_GOOGLE,
     "加拿大舱网": WRITE_CHANNEL_GOOGLE,
     "Shopping Mall（谷歌商城）": WRITE_CHANNEL_GOOGLE,
-    "阿里1": "阿里国际站",
-    "阿里2": "阿里国际站",
-    "1688": "国内渠道",
-    "中文官网": "国内渠道",
-    "新媒体": "国内渠道",
-    "国内电商": "国内渠道",
-    "中国制造网": "国内渠道",
+    "阿里1": WRITE_CHANNEL_ALIBABA,
+    "阿里2": WRITE_CHANNEL_ALIBABA,
+    "1688": WRITE_CHANNEL_DOMESTIC,
+    "中文官网": WRITE_CHANNEL_DOMESTIC,
+    "新媒体": WRITE_CHANNEL_DOMESTIC,
+    "国内电商": WRITE_CHANNEL_DOMESTIC,
+    "中国制造网": WRITE_CHANNEL_DOMESTIC,
+    "国内展会": WRITE_CHANNEL_DOMESTIC,
+    "小红书": WRITE_CHANNEL_DOMESTIC,
+    "百度": WRITE_CHANNEL_DOMESTIC,
+    "电商": WRITE_CHANNEL_DOMESTIC,
+    "抖音旗舰店": WRITE_CHANNEL_DOMESTIC,
+    "抖音品牌": WRITE_CHANNEL_DOMESTIC,
+    "REVOR": WRITE_CHANNEL_OUTBOUND,
+    "Email": WRITE_CHANNEL_OUTBOUND,
 }
 
-# 队列Key 前缀别名：Channels 显示名漂移时，查找队列表仍落到规范前缀。
+SUB_CHANNEL_TO_CHANNEL: dict[str, str] = dict(_SUB_TO_MAIN_BY_SHORT)
+for _short, _write in SUB_CHANNEL_SHORT_TO_WRITE.items():
+    _main = _SUB_TO_MAIN_BY_SHORT.get(_short)
+    if _main:
+        SUB_CHANNEL_TO_CHANNEL[_write] = _main
+# 已删除的 Facebook messager 双语不单独建选项；写名与 Facebook 相同。
+SUB_CHANNEL_TO_CHANNEL["Facebook（脸书）"] = WRITE_CHANNEL_FACEBOOK
+
+
+# 任意 Channels 显示名 / 历史短名 → 队列表队列Key 前缀。
 QUEUE_KEY_CHANNEL_ALIASES: dict[str, str] = {
-    "Google": WRITE_CHANNEL_GOOGLE,
-    "google": WRITE_CHANNEL_GOOGLE,
+    WRITE_CHANNEL_GOOGLE: QUEUE_PREFIX_GOOGLE,
+    "Google": QUEUE_PREFIX_GOOGLE,
+    "google": QUEUE_PREFIX_GOOGLE,
+    QUEUE_PREFIX_GOOGLE: QUEUE_PREFIX_GOOGLE,
+    WRITE_CHANNEL_FACEBOOK: QUEUE_PREFIX_FACEBOOK,
+    "facebook": QUEUE_PREFIX_FACEBOOK,
+    QUEUE_PREFIX_FACEBOOK: QUEUE_PREFIX_FACEBOOK,
+    "脸书": QUEUE_PREFIX_FACEBOOK,
+    "Facebook-Messenger": QUEUE_PREFIX_FACEBOOK,
+    WRITE_CHANNEL_LINKEDIN: QUEUE_PREFIX_LINKEDIN,
+    "linkedin": QUEUE_PREFIX_LINKEDIN,
+    "Linkedln": QUEUE_PREFIX_LINKEDIN,
+    "领英": QUEUE_PREFIX_LINKEDIN,
+    QUEUE_PREFIX_LINKEDIN: QUEUE_PREFIX_LINKEDIN,
+    WRITE_CHANNEL_ALIBABA: QUEUE_PREFIX_ALIBABA,
+    "Alibaba": QUEUE_PREFIX_ALIBABA,
+    QUEUE_PREFIX_ALIBABA: QUEUE_PREFIX_ALIBABA,
+    WRITE_CHANNEL_DOMESTIC: QUEUE_PREFIX_DOMESTIC,
+    QUEUE_PREFIX_DOMESTIC: QUEUE_PREFIX_DOMESTIC,
+    WRITE_CHANNEL_OUTBOUND: QUEUE_PREFIX_OUTBOUND,
+    "Outbound": QUEUE_PREFIX_OUTBOUND,
+    "出站渠道": QUEUE_PREFIX_OUTBOUND,
+    QUEUE_PREFIX_OUTBOUND: QUEUE_PREFIX_OUTBOUND,
 }
 
-# Channels=无法识别 时，按区域后缀依次尝试这些主渠道队列（队列表里存在才命中）。
+# 队列表前缀 → 主表写入名（自愈写回 Channels 时用）。
+QUEUE_PREFIX_TO_WRITE: dict[str, str] = {
+    QUEUE_PREFIX_GOOGLE: WRITE_CHANNEL_GOOGLE,
+    QUEUE_PREFIX_FACEBOOK: WRITE_CHANNEL_FACEBOOK,
+    QUEUE_PREFIX_LINKEDIN: WRITE_CHANNEL_LINKEDIN,
+    QUEUE_PREFIX_ALIBABA: WRITE_CHANNEL_ALIBABA,
+    QUEUE_PREFIX_DOMESTIC: WRITE_CHANNEL_DOMESTIC,
+    QUEUE_PREFIX_OUTBOUND: WRITE_CHANNEL_OUTBOUND,
+}
+
+# Channels 无效时，按区域后缀依次尝试这些队列表前缀（队列表里存在才命中）。
 FALLBACK_QUEUE_CHANNELS: tuple[str, ...] = (
-    WRITE_CHANNEL_GOOGLE,
-    "Facebook",
-    "LinkedIn",
-    "阿里国际站",
-    "国内渠道",
+    QUEUE_PREFIX_GOOGLE,
+    QUEUE_PREFIX_FACEBOOK,
+    QUEUE_PREFIX_LINKEDIN,
+    QUEUE_PREFIX_ALIBABA,
+    QUEUE_PREFIX_DOMESTIC,
 )
 
 FIELD_ENQUIRY = "Enquiry details（询盘内容）"
@@ -170,15 +307,61 @@ def get_field(fields: dict, field_name: str, default=None):
 
 
 def normalize_queue_key(queue_key: str) -> str:
-    """把队列Key 渠道前缀归一到队列表使用的规范名（如 Google|… → 谷歌|…）。"""
+    """把队列Key 渠道前缀归一到队列表使用的规范名（如 Google（谷歌）|… → 谷歌|…）。"""
     key = (queue_key or "").strip()
     if "|" not in key:
         return key
     channel, rest = key.split("|", 1)
-    canonical = QUEUE_KEY_CHANNEL_ALIASES.get(channel, channel)
-    if channel in CHANNEL_GOOGLE_ALIASES:
-        canonical = WRITE_CHANNEL_GOOGLE
+    canonical = channel_to_queue_prefix(channel) or channel
     return f"{canonical}|{rest}"
+
+
+def channel_to_queue_prefix(channel: str) -> str | None:
+    """Channels 显示名 / 历史短名 → 队列表队列Key 前缀。"""
+    ch = (channel or "").strip()
+    if not ch:
+        return None
+    if ch in QUEUE_KEY_CHANNEL_ALIASES:
+        return QUEUE_KEY_CHANNEL_ALIASES[ch]
+    # 大小写不敏感兜底（Facebook / facebook）
+    lower_map = {k.lower(): v for k, v in QUEUE_KEY_CHANNEL_ALIASES.items()}
+    return lower_map.get(ch.lower())
+
+
+def to_write_channel(channel: str) -> str | None:
+    """任意渠道别名 / 队列表前缀 → 主表双语写入名。"""
+    prefix = channel_to_queue_prefix(channel)
+    if not prefix:
+        return None
+    return QUEUE_PREFIX_TO_WRITE.get(prefix)
+
+
+def normalize_sub_channel_short(sub_channel: str) -> str:
+    """细分渠道双语/历史别名 → 内部短名（询盘标签 / lead-rules）。"""
+    sub = (sub_channel or "").strip()
+    if not sub:
+        return ""
+    if sub in WRITE_SUB_TO_SHORT:
+        return WRITE_SUB_TO_SHORT[sub]
+    if sub in SUB_CHANNEL_SHORT_TO_WRITE:
+        # 已是短名，或短名别名（如 Linkedln）
+        if sub in {"Linkedln", "领英", "linkedin"}:
+            return "LinkedIn"
+        if sub in {"Facebook messager", "Facebook-Messenger"}:
+            return "Facebook"
+        return sub
+    return sub
+
+
+def to_write_sub_channel(sub_channel: str) -> str:
+    """任意细分渠道别名 → 主表双语写入名；无法映射时原样返回。"""
+    sub = (sub_channel or "").strip()
+    if not sub:
+        return ""
+    if sub in SUB_CHANNEL_SHORT_TO_WRITE.values():
+        return sub
+    short = normalize_sub_channel_short(sub)
+    return SUB_CHANNEL_SHORT_TO_WRITE.get(short) or SUB_CHANNEL_SHORT_TO_WRITE.get(sub) or sub
 
 
 def resolve_channel_from_sub(sub_channel: str) -> str | None:
@@ -186,7 +369,10 @@ def resolve_channel_from_sub(sub_channel: str) -> str | None:
     sub = (sub_channel or "").strip()
     if not sub or sub in INVALID_CHANNEL_VALUES:
         return None
-    return SUB_CHANNEL_TO_CHANNEL.get(sub)
+    if sub in SUB_CHANNEL_TO_CHANNEL:
+        return SUB_CHANNEL_TO_CHANNEL[sub]
+    short = normalize_sub_channel_short(sub)
+    return SUB_CHANNEL_TO_CHANNEL.get(short)
 
 
 def is_invalid_channel(channel: str) -> bool:
@@ -263,7 +449,16 @@ def infer_sub_channel_from_content(content: str) -> str | None:
                 return sub
 
     # 正文关键词（长词优先）。LinkedIn/领英只走上面的平台来源特征，避免官网表单随口提到被改渠道。
-    skip_generic = {"LinkedIn", "Linkedln", "领英", "linkedin"}
+    # Email 是表单字段名，禁止当细分渠道关键词。
+    skip_generic = {
+        "LinkedIn",
+        "Linkedln",
+        "领英",
+        "linkedin",
+        "Email",
+        "Email（邮件）",
+        "LinkedIn（领英）",
+    }
     for sub in sorted(SUB_CHANNEL_TO_CHANNEL.keys(), key=len, reverse=True):
         if sub in skip_generic:
             continue
@@ -295,14 +490,16 @@ def infer_sub_channel_from_signals(
     if channel in CHANNEL_GOOGLE_ALIASES and (gmail_msg_id or "").strip():
         # 与 lead-rules _default 一致：无法从正文/邮件判定时默认谷歌2
         return "谷歌2"
-    if channel == "Facebook":
+    if channel in CHANNEL_FACEBOOK_ALIASES:
         return "Facebook"
-    if channel == "LinkedIn":
+    if channel in CHANNEL_LINKEDIN_ALIASES:
         return "LinkedIn"
-    if channel == "阿里国际站":
+    if channel in CHANNEL_ALIBABA_ALIASES:
         return "阿里1"
-    if channel == "国内渠道":
+    if channel in CHANNEL_DOMESTIC_ALIASES:
         return "中文官网"
+    if channel in CHANNEL_OUTBOUND_ALIASES:
+        return "REVOR"
     if channel and channel in SUB_CHANNEL_TO_CHANNEL:
         return channel
     return None
@@ -322,7 +519,7 @@ def heal_invalid_sub_channel(
     """细分渠道无效，或与主渠道 LinkedIn 冲突时返回应写回值。"""
     channel = (channels or "").strip()
     mapped = resolve_channel_from_sub(sub_channel)
-    if channel == "LinkedIn" and mapped != "LinkedIn":
+    if channel in CHANNEL_LINKEDIN_ALIASES and mapped != WRITE_CHANNEL_LINKEDIN:
         return "LinkedIn"
     if not is_invalid_sub_channel(sub_channel):
         return None
@@ -370,7 +567,7 @@ def infer_channel_from_content(content: str) -> str | None:
 def infer_channel_from_source_ids(*, fb_leadgen: str = "", gmail_msg_id: str = "") -> str | None:
     """按来源 ID 推断主渠道。"""
     if (fb_leadgen or "").strip():
-        return "Facebook"
+        return WRITE_CHANNEL_FACEBOOK
     if (gmail_msg_id or "").strip():
         return WRITE_CHANNEL_GOOGLE
     return None

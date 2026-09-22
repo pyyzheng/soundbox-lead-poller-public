@@ -35,10 +35,14 @@ from assignment_fields import (
     FIELD_SYSTEM,
     QUEUE_POINTER_TABLE,
     WRITE_ASSIGN_AUTO,
+    WRITE_STATUS_ASSIGNING,
+    WRITE_STATUS_BLOCKED,
+    WRITE_STATUS_EXCEPTION,
     WRITE_SUCCESS_YES,
     get_field,
     heal_invalid_channel,
     is_invalid_channel,
+    to_write_channel,
 )
 from channel_queue_assign import (
     eligible_for_channel_queue,
@@ -195,47 +199,55 @@ def _update(token: str, table_id: str, record_id: str, fields: dict) -> bool:
 def main() -> int:
     token = get_feishu_token()
     cutoff_ms = int((datetime.now(timezone.utc) - timedelta(hours=RECENT_HOURS)).timestamp() * 1000)
-    anomalies = _search(
-        token,
-        FEISHU_TABLE_ID,
-        {
-            "filter": {
-                "conjunction": "and",
-                "conditions": [
-                    {"field_name": FIELD_STATUS, "operator": "is", "value": ["❌ 分配异常"]},
-                    {"field_name": FIELD_ASSIGN_METHOD, "operator": "is", "value": [WRITE_ASSIGN_AUTO]},
-                    {
-                        "field_name": FIELD_ENTRY_TIME,
-                        "operator": "isGreater",
-                        "value": ["ExactDate", str(cutoff_ms - 1)],
-                    },
+    anomalies: list[dict] = []
+    seen: set[str] = set()
+    for status in (WRITE_STATUS_EXCEPTION, WRITE_STATUS_ASSIGNING, WRITE_STATUS_BLOCKED):
+        rows = _search(
+            token,
+            FEISHU_TABLE_ID,
+            {
+                "filter": {
+                    "conjunction": "and",
+                    "conditions": [
+                        {"field_name": FIELD_STATUS, "operator": "is", "value": [status]},
+                        {"field_name": FIELD_ASSIGN_METHOD, "operator": "is", "value": [WRITE_ASSIGN_AUTO]},
+                        {
+                            "field_name": FIELD_ENTRY_TIME,
+                            "operator": "isGreater",
+                            "value": ["ExactDate", str(cutoff_ms - 1)],
+                        },
+                    ],
+                },
+                "field_names": [
+                    FIELD_LEAD_ID,
+                    FIELD_QUEUE_KEY,
+                    FIELD_QUEUE_ASSIGNEE,
+                    FIELD_ASSIGN_METHOD,
+                    FIELD_STATUS,
+                    FIELD_SUCCESS,
+                    FIELD_ASSIGNEE,
+                    FIELD_ENTRY_TIME,
+                    "是否满足渠道轮转",
+                    FIELD_ASSIGN_SOURCE,
+                    FIELD_DUP_READY,
+                    FIELD_SUBOFFICE,
+                    FIELD_AGENT_COUNTRY,
+                    FIELD_AGENT_PRODUCT,
+                    FIELD_SYSTEM,
+                    FIELD_CHANNELS,
+                    FIELD_SUB_CHANNEL,
+                    FIELD_ENQUIRY,
+                    FIELD_FB_LEADGEN,
+                    FIELD_GMAIL_MSG,
                 ],
             },
-            "field_names": [
-                FIELD_LEAD_ID,
-                FIELD_QUEUE_KEY,
-                FIELD_QUEUE_ASSIGNEE,
-                FIELD_ASSIGN_METHOD,
-                FIELD_STATUS,
-                FIELD_SUCCESS,
-                FIELD_ASSIGNEE,
-                FIELD_ENTRY_TIME,
-                "是否满足渠道轮转",
-                FIELD_ASSIGN_SOURCE,
-                FIELD_DUP_READY,
-                FIELD_SUBOFFICE,
-                FIELD_AGENT_COUNTRY,
-                FIELD_AGENT_PRODUCT,
-                FIELD_SYSTEM,
-                FIELD_CHANNELS,
-                FIELD_SUB_CHANNEL,
-                FIELD_ENQUIRY,
-                FIELD_FB_LEADGEN,
-                FIELD_GMAIL_MSG,
-            ],
-        },
-    )
-    log.info("分配异常 %d 条（近 %dh）", len(anomalies), RECENT_HOURS)
+        )
+        for item in rows:
+            rid = item.get("record_id", "")
+            if rid and rid not in seen:
+                anomalies.append(item)
+                seen.add(rid)
+    log.info("待分配 %d 条（近 %dh，含正在匹配规则/异常）", len(anomalies), RECENT_HOURS)
 
     pointers = parse_queue_pointers(
         _search(token, QUEUE_POINTER_TABLE, {"field_names": ["队列Key", "当前顺序号", "最大顺序号"], "page_size": 100})
@@ -382,9 +394,11 @@ def main() -> int:
             continue
         resolved_key = pick.resolved_queue_key or queue_key
         patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
-        # 若靠区域兜底命中，顺带写回主渠道，避免公式继续产出「无法识别|…」
-        if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
-            patch[FIELD_CHANNELS] = resolved_key.split("|", 1)[0]
+            # 若靠区域兜底命中，顺带写回主渠道，避免公式继续产出「无法识别|…」
+            if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
+                prefix = resolved_key.split("|", 1)[0]
+                write_ch = to_write_channel(prefix) or prefix
+                patch[FIELD_CHANNELS] = write_ch
         log.info("修复 %s → %s (queue=%s)", lead_id, pick.assignee, resolved_key)
         if os.environ.get("FIX_ANOMALY_DRY_RUN", "false").lower() == "true":
             fixed += 1

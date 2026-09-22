@@ -130,15 +130,36 @@ def build_assignment_source() -> str:
     )
 
 
+SUBOFFICE_FLAG = "fld9kCu7o6"
+AGENT_COUNTRY = "fldep8Uww5"
+AGENT_PRODUCT = "fldhA7myT8"
+QUEUE_KEY = "fldbw1JCI5"
+ROTATION = "fldQG8H60m"
+
+
 def build_system_assignee() -> str:
+    """OpenAPI field-id 版；与 lib/assignment_formulas.py 语义对齐。
+
+    lookup / 工作流未回填前不要输出「未命中规则」，否则分配状态会立刻变异常。
+    """
     r = ref
+    waiting = (
+        f"OR(ISBLANK({r(SUBOFFICE_FLAG)}),"
+        f"{r(SUBOFFICE_FLAG)}=\"是\","
+        f"ISBLANK({r(AGENT_COUNTRY)}),"
+        f"AND({r(AGENT_COUNTRY)}=\"是\","
+        f"OR(ISBLANK({r(AGENT_PRODUCT)}),{r(AGENT_PRODUCT)}=\"待确认\")),"
+        f"{r(ROTATION)}=\"是\","
+        f"ISBLANK({r(QUEUE_KEY)}))"
+    )
     return (
         f"IFERROR(IF({r(ASSIGN_SOURCE)}=\"查重中\",\"\","
         f"IF({r(ASSIGN_SOURCE)}=\"查重冲突\",\"匹配错误请检查\","
         f"IF(AND({r(ASSIGN_SOURCE)}=\"查重命中\",NOT(ISBLANK({r(DUP_OWNER)}))),{r(DUP_OWNER)},"
         f"IF(NOT(ISBLANK({r(SUBOFFICE_ASSIGNEE)})),{r(SUBOFFICE_ASSIGNEE)},"
         f"IF(NOT(ISBLANK({r(AGENT_ASSIGNEE)})),{r(AGENT_ASSIGNEE)},"
-        f"IF(NOT(ISBLANK({r(QUEUE_ASSIGNEE)})),{r(QUEUE_ASSIGNEE)},\"未命中规则\")))))),\"公式计算异常\")"
+        f"IF(NOT(ISBLANK({r(QUEUE_ASSIGNEE)})),{r(QUEUE_ASSIGNEE)},"
+        f"IF({waiting},\"\",\"未命中规则\"))))))),\"公式计算异常\")"
     )
 
 
