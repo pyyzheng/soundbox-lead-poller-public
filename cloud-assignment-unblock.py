@@ -249,8 +249,11 @@ def _load_agent_rules(token: str) -> list[dict]:
 
 
 def _match_agent_rule(rules: list[dict], country: str, category: str, model: str) -> str | None:
+    from country_labels import normalize_country_short
+
+    country_n = normalize_country_short(country)
     for rule in rules:
-        if rule["country"] != country or rule["category"] != category:
+        if normalize_country_short(rule["country"]) != country_n or rule["category"] != category:
             continue
         if rule["model"] in (model, "全系列"):
             return rule["assignee"]

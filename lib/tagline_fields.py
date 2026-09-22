@@ -25,6 +25,7 @@ from assignment_fields import (  # noqa: E402
     resolve_channel_from_sub,
     to_write_sub_channel,
 )
+from country_labels import INVALID_COUNTRY_VALUES, to_write_country  # noqa: E402
 
 CATEGORY_TO_FEISHU = {
     "静音舱": "Silence Booth 静音舱",
@@ -250,6 +251,8 @@ def build_feishu_fields_from_content(
         updates[FIELD_EMAIL] = "N/A"
     if updates.get(FIELD_SUB_CHANNEL):
         updates[FIELD_SUB_CHANNEL] = to_write_sub_channel(updates[FIELD_SUB_CHANNEL])
+    if updates.get(FIELD_COUNTRY) and updates[FIELD_COUNTRY] not in INVALID_COUNTRY_VALUES:
+        updates[FIELD_COUNTRY] = to_write_country(updates[FIELD_COUNTRY])
     return updates
 
 

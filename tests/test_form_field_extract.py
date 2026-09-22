@@ -60,7 +60,7 @@ class TestNewSiteHtmlExtract(unittest.TestCase):
             "Message: customer asked about certification\n"
         )
         fields = build_feishu_fields_from_content(content, channels="谷歌")
-        self.assertEqual(fields.get(FIELD_COUNTRY), "保加利亚")
+        self.assertEqual(fields.get(FIELD_COUNTRY), "Bulgaria（保加利亚）")
 
     def test_html_table_extracts_mailto_email_and_name(self):
         fields = extract_fields(NEW_SITE_HTML)

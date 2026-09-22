@@ -24,6 +24,7 @@ from assignment_fields import (
     to_write_channel,
     to_write_sub_channel,
 )
+from country_labels import to_write_country
 
 log = logging.getLogger("lead-poller")
 
@@ -356,7 +357,7 @@ def create_feishu_record(token: str, inquiry_content: str, clue_level: str = "",
     elif channels and channels in SUB_CHANNEL_TO_CHANNEL:
         fields[FIELD_SUB_CHANNEL] = to_write_sub_channel(channels)
     if country:
-        fields[FIELD_COUNTRY] = country
+        fields[FIELD_COUNTRY] = to_write_country(country)
     if product_category:
         fields[FIELD_PRODUCT_CAT] = product_category
     if product_model and product_model != "无法识别":
