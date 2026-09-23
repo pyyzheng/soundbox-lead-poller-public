@@ -14,18 +14,51 @@ const DEFAULT_MAX_DEPTH = 8;
 const DEFAULT_RECENT_UPLOAD_SEC = 6 * 60 * 60;
 const DEFAULT_FOLDER_BUDGET = 80;
 
-/** 文件/文件夹标题命中这些词则不发群通知（仍会记入本地 state）。 */
+/** 文件/文件夹标题命中这些词则不发群通知（仍会记入本地 state）。
+ * 两类：① 禁止外发/内部资料 ② 说明书/手册（非超级图册素材）。
+ * 英文关键词按不区分大小写匹配。
+ */
 const DEFAULT_SKIP_TITLE_KEYWORDS = [
+  // 禁止外发 / 内部
   '禁止外发',
   '禁止外传',
   '禁止分享',
+  '禁止转发',
   '勿外发',
   '勿外传',
   '勿对外',
   '不对外',
   '仅限内部',
   '内部专用',
+  '内部资料',
+  '保密',
   '禁止',
+  // 说明书 / 手册（中文）
+  '安装说明书',
+  '使用说明书',
+  '操作说明书',
+  '产品说明书',
+  '装配说明书',
+  '安装手册',
+  '使用手册',
+  '操作手册',
+  '用户手册',
+  '用户指南',
+  '安装指南',
+  '装配手册',
+  '维护手册',
+  '维修手册',
+  '快速入门',
+  '说明书',
+  // 说明书 / 手册（英文，常见命名）
+  'Installation Manual',
+  'User Manual',
+  'Instruction Manual',
+  'Operating Manual',
+  'Assembly Manual',
+  'Quick Start',
+  'Installation Guide',
+  'User Guide',
 ];
 
 /**
@@ -42,9 +75,14 @@ export function matchSkipTitleKeyword(texts, keywords = DEFAULT_SKIP_TITLE_KEYWO
     .map((t) => String(t || '').trim())
     .filter(Boolean);
   if (!haystacks.length) return null;
+
+  const normalize = (s) => s.toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+
   for (const text of haystacks) {
+    const normalizedText = normalize(text);
     for (const kw of list) {
       if (text.includes(kw)) return kw;
+      if (normalizedText.includes(normalize(kw))) return kw;
     }
   }
   return null;

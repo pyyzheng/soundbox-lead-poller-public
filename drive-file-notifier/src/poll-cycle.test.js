@@ -414,7 +414,13 @@ test('matchSkipTitleKeyword detects 禁止外发 / 不对外 and 禁止', () => 
   assert.equal(matchSkipTitleKeyword('报价-不对外.pdf'), '不对外');
   assert.equal(matchSkipTitleKeyword('方案-勿对外'), '勿对外');
   assert.equal(matchSkipTitleKeyword('仅限内部资料.zip'), '仅限内部');
+  assert.equal(matchSkipTitleKeyword('VRT安装说明书.pdf'), '安装说明书');
+  assert.equal(matchSkipTitleKeyword('SR使用说明书.pdf'), '使用说明书');
+  assert.equal(matchSkipTitleKeyword('产品说明书-VRT.pdf'), '产品说明书');
+  assert.equal(matchSkipTitleKeyword('VRT User Manual.pdf'), 'User Manual');
+  assert.equal(matchSkipTitleKeyword('vrt-user-manual.pdf'), 'User Manual');
   assert.equal(matchSkipTitleKeyword('普通文件.pdf'), null);
+  assert.equal(matchSkipTitleKeyword('产品画册.pdf'), null);
   assert.equal(matchSkipTitleKeyword(['普通', '禁止外传.zip']), '禁止外传');
 });
 
