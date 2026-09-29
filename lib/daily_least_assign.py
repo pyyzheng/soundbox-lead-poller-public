@@ -46,13 +46,16 @@ TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")
 
 # 区内花名册（并列最少时按此顺序取第一个）
 ME_ROSTER: tuple[str, ...] = ("Gigi", "Cathy")
-ASIA_ROSTER: tuple[str, ...] = ("Zoe", "Kevin", "Rita")  # 并列时优先 Zoe
+ASIA_ROSTER: tuple[str, ...] = ("Tiya", "Zoe", "Kevin", "Rita")  # 并列时优先 Tiya
 
 # 人级累计统计对象（Jannice 代理不进最少池，可不计入竞争；仍可统计但不参与选人）
 TRACKED_ASSIGNEES: frozenset[str] = frozenset(ME_ROSTER + ASIA_ROSTER)
 
 # 新人入职日（上海日历）：当天对齐同伴已有累计，次日只垫昨日存量，之后完全实计
-NEWCOMER_JOIN_DATE: dict[str, date] = {"Zoe": date(2026, 9, 15)}
+NEWCOMER_JOIN_DATE: dict[str, date] = {
+    "Zoe": date(2026, 9, 15),
+    "Tiya": date(2026, 9, 29),
+}
 
 POOL_ME = "ME"
 POOL_ASIA = "ASIA"

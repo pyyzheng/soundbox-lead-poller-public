@@ -2,7 +2,7 @@
 """同步「按天最少优先计数」看板表。
 
 口径与 cloud-assignment-unblock 一致：
-- 人级一本账：Gigi/Cathy/Kevin/Rita/Zoe
+- 人级一本账：Gigi/Cathy/Tiya/Zoe/Kevin/Rita
 - 昨+今（Asia/Shanghai）；人工改派非空不计
 - 公区下一区指针状态来自指针表 `__DAILY_LEAST__|公区区指针`（全表同值）
 

@@ -75,9 +75,12 @@ class DailyLeastPoolTests(unittest.TestCase):
     def test_pick_least_tie_break_roster_order(self):
         counts = {"Gigi": 3, "Cathy": 3}
         self.assertEqual(pick_least_assignee(ME_ROSTER, counts), "Gigi")
-        counts = {"Kevin": 5, "Rita": 4, "Zoe": 5}
+        counts = {"Tiya": 5, "Kevin": 5, "Rita": 4, "Zoe": 5}
         self.assertEqual(pick_least_assignee(ASIA_ROSTER, counts), "Rita")
-        self.assertEqual(pick_least_assignee(ASIA_ROSTER, {"Kevin": 2, "Rita": 2, "Zoe": 2}), "Zoe")
+        self.assertEqual(
+            pick_least_assignee(ASIA_ROSTER, {"Tiya": 2, "Kevin": 2, "Rita": 2, "Zoe": 2}),
+            "Tiya",
+        )
 
     def test_me_picks_lower_count(self):
         counts = {"Gigi": 10, "Cathy": 7, "Kevin": 0, "Rita": 0, "Zoe": 0}
@@ -88,7 +91,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         self.assertFalse(pick.advance_public_region)
 
     def test_public_alternates_region(self):
-        counts = {"Gigi": 1, "Cathy": 2, "Kevin": 0, "Rita": 3, "Zoe": 2}
+        counts = {"Gigi": 1, "Cathy": 2, "Tiya": 9, "Kevin": 0, "Rita": 3, "Zoe": 2}
         pick1 = pick_daily_least_assignee("谷歌|南美非洲公区队列", counts, PUBLIC_REGION_ME)
         assert pick1 is not None
         self.assertEqual(pick1.assignee, "Gigi")
@@ -131,6 +134,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         split = {
             "Gigi": {"yesterday": 1, "today": 1},
             "Cathy": {"yesterday": 1, "today": 0},
+            "Tiya": {"yesterday": 5, "today": 0},
             "Kevin": {"yesterday": 3, "today": 2},
             "Rita": {"yesterday": 3, "today": 1},
             "Zoe": {"yesterday": 0, "today": 0},
@@ -152,6 +156,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         split = {
             "Gigi": {"yesterday": 1, "today": 1},
             "Cathy": {"yesterday": 1, "today": 0},
+            "Tiya": {"yesterday": 2, "today": 1},
             "Kevin": {"yesterday": 2, "today": 0},
             "Rita": {"yesterday": 2, "today": 0},
             "Zoe": {"yesterday": 0, "today": 0},
@@ -181,6 +186,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         split = {
             "Gigi": {"yesterday": 1, "today": 0},
             "Cathy": {"yesterday": 1, "today": 0},
+            "Tiya": {"yesterday": 2, "today": 1},
             "Kevin": {"yesterday": 2, "today": 1},
             "Rita": {"yesterday": 2, "today": 0},
             "Zoe": {"yesterday": 0, "today": 0},
@@ -206,6 +212,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         split = {
             "Gigi": {"yesterday": 1, "today": 0},
             "Cathy": {"yesterday": 1, "today": 0},
+            "Tiya": {"yesterday": 2, "today": 0},
             "Kevin": {"yesterday": 2, "today": 0},
             "Rita": {"yesterday": 2, "today": 0},
             "Zoe": {"yesterday": 0, "today": 2},
@@ -225,6 +232,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         split = {
             "Gigi": {"yesterday": 0, "today": 0},
             "Cathy": {"yesterday": 0, "today": 0},
+            "Tiya": {"yesterday": 9, "today": 0},
             "Kevin": {"yesterday": 2, "today": 0},
             "Rita": {"yesterday": 2, "today": 0},
             "Zoe": {"yesterday": 0, "today": 0},
@@ -235,6 +243,29 @@ class DailyLeastPoolTests(unittest.TestCase):
         pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals_from_split(split), PUBLIC_REGION_ME)
         assert pick is not None
         self.assertEqual(pick.assignee, "Zoe")
+
+    def test_tiya_join_day_aligns_to_asia_peer_max(self):
+        from datetime import date
+
+        from daily_least_assign import apply_newcomer_start_line, totals_from_split
+
+        split = {
+            "Gigi": {"yesterday": 1, "today": 0},
+            "Cathy": {"yesterday": 1, "today": 0},
+            "Tiya": {"yesterday": 0, "today": 0},
+            "Zoe": {"yesterday": 2, "today": 1},
+            "Kevin": {"yesterday": 3, "today": 1},
+            "Rita": {"yesterday": 2, "today": 0},
+        }
+        raised = apply_newcomer_start_line(split, today=date(2026, 9, 29))
+        self.assertEqual(raised, ["Tiya"])
+        self.assertEqual(split["Tiya"]["yesterday"] + split["Tiya"]["today"], 4)
+        self.assertEqual(split["Tiya"]["today"], 0)
+        pick = pick_daily_least_assignee(
+            "谷歌|亚洲区队列", totals_from_split(split), PUBLIC_REGION_ME
+        )
+        assert pick is not None
+        self.assertEqual(pick.assignee, "Rita")
 
     def test_eligible_daily_least(self):
         self.assertTrue(eligible_for_daily_least(_fields()))
