@@ -82,7 +82,8 @@ FORMULAS = (
         "expression": (
             'IFERROR(IF([Duplicate（重复）]="查重中","",'
             'IF([Duplicate（重复）]="查重冲突","匹配错误请检查",'
-            'IF(AND([Duplicate（重复）]="查重命中",NOT(ISBLANK([Dup_Match_Owner]))),[Dup_Match_Owner],'
+            'IF(AND([Duplicate（重复）]="查重命中",NOT(ISBLANK([Dup_Match_Owner])),'
+            '[Dup_Match_Owner_是否可接单]="是"),[Dup_Match_Owner],'
             'IF(NOT(ISBLANK([子办规则命中负责人])),[子办规则命中负责人],'
             'IF(NOT(ISBLANK([代理规则命中业务员])),[代理规则命中业务员],'
             'IF(NOT(ISBLANK([渠道顺序队列匹配业务员])),[渠道顺序队列匹配业务员],'
