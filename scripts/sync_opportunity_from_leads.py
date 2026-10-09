@@ -113,7 +113,7 @@ SOURCE_FIELDS = [
     CASE_LEVEL_FIELD,
     "🌟value of the lead（线索预估价值）",
     "Deal Amount / 成交金额",
-    "The final assigned salesperson（最终分配的业务员）",
+    "Owner（最终负责人）",
     "Next Step",
     "Quick Follow-up / 快捷跟进",
 ]
@@ -348,7 +348,7 @@ def build_fields(src: dict[str, Any], roster: dict[str, str]) -> dict[str, Any] 
     unit = _cell_text(src.get("Customer Name 客戶單位"))
     channel = _option_name(src.get("Channels（渠道）"))
     product = _option_name(src.get("Product Categories（产品大类）"))
-    assignee = _cell_text(src.get("The final assigned salesperson（最终分配的业务员）"))
+    assignee = _cell_text(src.get("Owner（最终负责人）"))
     next_step = _cell_text(src.get("Next Step")) or _cell_text(
         src.get("Quick Follow-up / 快捷跟进")
     )

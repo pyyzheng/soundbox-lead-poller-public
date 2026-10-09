@@ -72,7 +72,7 @@ def _delay_step() -> dict:
     return {
         "id": "actNotifyDelay",
         "type": "Delay",
-        "title": "延迟1分钟（过滤Case handler清空空窗）",
+        "title": "延迟1分钟（过滤Assignee清空空窗）",
         "next": "actNotifyFresh",
         "children": {"links": []},
         "data": {"duration": DELAY_MINUTES},

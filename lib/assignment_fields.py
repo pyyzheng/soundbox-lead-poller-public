@@ -12,7 +12,9 @@ FIELD_SUBOFFICE = "是否是子办国家"
 FIELD_ROTATION = "是否满足渠道轮转"
 FIELD_DUP_READY = "Dup Formula Ready（公式查重就绪）"
 FIELD_STATUS = "Allocation Status（分配状态）"
-FIELD_ASSIGNEE = "The final assigned salesperson（最终分配的业务员）"
+FIELD_ASSIGNEE = "Owner（最终负责人）"
+FIELD_HANDLER = "Assignee（指派负责人）"
+FIELD_ATTACHMENTS = "Attachments（询盘附件）"
 FIELD_MANUAL_ASSIGNEE = "Manually reassigned sales representatives（人工改派的业务员）"
 FIELD_SYSTEM = "Matched Sales Rep（系统匹配业务员）"
 FIELD_EMAIL = "Email（客户邮箱）"
@@ -32,7 +34,12 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     FIELD_LEAD_ID: ("线索ID",),
     FIELD_ASSIGN_METHOD: ("分配方式",),
     FIELD_STATUS: ("分配状态",),
-    FIELD_ASSIGNEE: ("最终分配的业务员",),
+    FIELD_ASSIGNEE: (
+        "The final assigned salesperson（最终分配的业务员）",
+        "最终分配的业务员",
+    ),
+    FIELD_HANDLER: ("Case handler",),
+    FIELD_ATTACHMENTS: ("Enquiry attachments（询盘附件）",),
     FIELD_MANUAL_ASSIGNEE: ("人工改派的业务员",),
     FIELD_SYSTEM: ("系统匹配业务员",),
     FIELD_SUCCESS: ("是否成功分配",),

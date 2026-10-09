@@ -1628,7 +1628,10 @@ function buildOppFields(fields, roster) {
   const unit = oppText(fields["Customer Name 客戶單位"]);
   const channel = oppOption(fields["Channels（渠道）"]);
   const product = oppOption(fields["Product Categories（产品大类）"]);
-  const assignee = oppText(fields["The final assigned salesperson（最终分配的业务员）"]);
+  const assignee = oppText(
+    fields["Owner（最终负责人）"] ||
+      fields["The final assigned salesperson（最终分配的业务员）"]
+  );
   const nextStep = oppText(fields["Next Step"]) || oppText(fields["Quick Follow-up / 快捷跟进"]);
   const value = oppNum(fields["🌟value of the lead（线索预估价值）"]);
   const dealAmt = oppNum(fields["Deal Amount / 成交金额"]);

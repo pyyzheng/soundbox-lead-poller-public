@@ -429,7 +429,7 @@ def _search_country(kw: str) -> list[dict]:
         "--field-id",
         "Country（国家）",
         "--field-id",
-        "The final assigned salesperson（最终分配的业务员）",
+        "Owner（最终负责人）",
         "--field-id",
         "子办规则命中负责人",
         "--field-id",

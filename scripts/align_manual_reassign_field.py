@@ -30,9 +30,9 @@ FORMULAS = (
     {
         "id": "fldIgfZT45",
         "name": "分配依据",
-        "description": "解释最终分配来源。优先级与最终分配一致：Case handler > 人工改派 > 系统路径。",
+        "description": "解释最终分配来源。优先级与最终分配一致：Assignee > 人工改派 > 系统路径。",
         "expression": (
-            "IF(NOT(ISBLANK([Case handler])),\"Case handler转派\","
+            "IF(NOT(ISBLANK([Assignee（指派负责人）])),\"Assignee转派\","
             "IF(NOT(ISBLANK([Manually reassigned sales representatives（人工改派的业务员）])),\"人工改派\","
             "IF(AND(NOT(ISBLANK([Dup_Match_Owner])),[Dup_Match_Owner_是否可接单]=\"是\","
             "OR([分配部门]=\"本部（公共）\",[分配部门]=\"南美非洲公区\","
@@ -47,10 +47,10 @@ FORMULAS = (
     },
     {
         "id": "fldOMcCv5Y",
-        "name": "The final assigned salesperson（最终分配的业务员）",
-        "description": "唯一认定跟进人。优先级：Case handler > 人工改派 > 系统匹配。",
+        "name": "Owner（最终负责人）",
+        "description": "唯一认定跟进人。优先级：Assignee > 人工改派 > 系统匹配。",
         "expression": (
-            "IFBLANK([Case handler],"
+            "IFBLANK([Assignee（指派负责人）],"
             "IFBLANK([Manually reassigned sales representatives（人工改派的业务员）],"
             "[Matched Sales Rep（系统匹配业务员）]))"
         ),
@@ -59,13 +59,13 @@ FORMULAS = (
         "id": "fldzOCPLsg",
         "name": "实际线索跟进人",
         "description": "兼容旧引用；等于最终分配的业务员（唯一跟进口径）。",
-        "expression": "[The final assigned salesperson（最终分配的业务员）]",
+        "expression": "[Owner（最终负责人）]",
     },
     {
         "id": "fldorF3W8M",
         "name": "Urge recipient / 催办对象",
         "description": "等于最终分配的业务员（唯一跟进口径）。",
-        "expression": "[The final assigned salesperson（最终分配的业务员）]",
+        "expression": "[Owner（最终负责人）]",
     },
 )
 
@@ -292,7 +292,7 @@ def _verify() -> None:
             "--field-id",
             FIELD_NAME,
             "--field-id",
-            "The final assigned salesperson（最终分配的业务员）",
+            "Owner（最终负责人）",
             "--limit",
             "5",
             "--filter-json",

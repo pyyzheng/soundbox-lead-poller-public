@@ -28,7 +28,7 @@ INTAKE_READONLY = {
     "Wechat（微信）",
     "Product Categories（产品大类）",
     "Product model（具体型号）",
-    "Enquiry attachments（询盘附件）",
+    "Attachments（询盘附件）",
     "Entry Time（录入时间）",
     "Data Entry Clerk（录入人员）",
     "Allocation Method（分配方式）",
@@ -39,7 +39,7 @@ INTAKE_READONLY = {
 
 # 跟进/改派类：若字段存在则保持或打开可编辑
 FOLLOWUP_EDIT = {
-    "Case handler",
+    "Assignee（指派负责人）",
     "Next Step",
     "Next follow-up date",
     "🌟Follow-up record",
@@ -132,8 +132,8 @@ def patch_main_table(main: dict[str, Any]) -> dict[str, Any]:
             # 不把 no_perm 抬成 edit；只把只读/可新增改成可编辑
             if perm != "no_perm":
                 perms[name] = "edit"
-    if "Case handler" in perms and perms["Case handler"] != "no_perm":
-        perms["Case handler"] = "edit"
+    if "Assignee（指派负责人）" in perms and perms["Assignee（指派负责人）"] != "no_perm":
+        perms["Assignee（指派负责人）"] = "edit"
     fr["field_perms"] = perms
     out["field_rule"] = fr
     return out
@@ -192,7 +192,7 @@ def main() -> int:
         ops = (main.get("record_rule") or {}).get("record_operations")
         perms = (main.get("field_rule") or {}).get("field_perms") or {}
         enquiry = perms.get("Enquiry details（询盘内容）")
-        handler = perms.get("Case handler")
+        handler = perms.get("Assignee（指派负责人）")
         print(f"OK {name}: ops={ops} enquiry={enquiry} case_handler={handler}")
     if failed:
         print("FAILED", failed)

@@ -16,12 +16,12 @@
                 "value": []
               },
               {
-                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "field_name": "Owner（最终负责人）",
                 "operator": "isNotEmpty",
                 "value": []
               },
               {
-                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "field_name": "Owner（最终负责人）",
                 "operator": "isNot",
                 "value": [
                   {
@@ -31,7 +31,7 @@
                 ]
               },
               {
-                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "field_name": "Owner（最终负责人）",
                 "operator": "isNot",
                 "value": [
                   {
@@ -41,7 +41,7 @@
                 ]
               },
               {
-                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "field_name": "Owner（最终负责人）",
                 "operator": "isNot",
                 "value": [
                   {

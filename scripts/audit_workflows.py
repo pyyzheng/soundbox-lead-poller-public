@@ -55,8 +55,8 @@ CORE_FIELD_IDS: dict[str, str] = {
     "fldphEUn67": "匹配的业务员账号",
     "fldyv3fLLI": "实际跟进人账号",
     "flddqTlnEm": "Customer Name（客户名称）",
-    "fldJi4Y57A": "Case handler",
-    "fldOMcCv5Y": "最终分配的业务员",
+    "fldJi4Y57A": "Assignee（指派负责人）",
+    "fldOMcCv5Y": "Owner（最终负责人）",
 }
 
 

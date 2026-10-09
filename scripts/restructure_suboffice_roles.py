@@ -348,7 +348,7 @@ def _own_record_filters(*, include_case_handler: bool = False) -> dict[str, Any]
                 "conjunction": "and",
                 "filters": [
                     {
-                        "field_name": "Case handler",
+                        "field_name": "Assignee（指派负责人）",
                         "operator": "contains",
                         "field_type": "SingleSelect",
                         "reference_type": "SingleSelect",

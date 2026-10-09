@@ -217,7 +217,7 @@ def main():
     print(f"     2. upload_to_feishu(token, file_data, filename, mime_type)")
     print(f"     3. 返回 [{{'file_token': 'xxx'}}]")
     print(f"     4. 写入 create_feishu_record(attachment_tokens=[...])")
-    print(f"     5. 飞书字段: Enquiry attachments（询盘附件）")
+    print(f"     5. 飞书字段: Attachments（询盘附件）")
     print()
     print("=" * 60)
     print("模拟完成")

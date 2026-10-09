@@ -11,7 +11,7 @@
             "conjunction": "and",
             "conditions": [
               {
-                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "field_name": "Owner（最终负责人）",
                 "operator": "isNotEmpty",
                 "value": []
               },
@@ -21,7 +21,7 @@
                 "value": []
               },
               {
-                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "field_name": "Owner（最终负责人）",
                 "operator": "isNot",
                 "value": [
                   {
@@ -31,7 +31,7 @@
                 ]
               },
               {
-                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "field_name": "Owner（最终负责人）",
                 "operator": "isNot",
                 "value": [
                   {
@@ -41,7 +41,7 @@
                 ]
               },
               {
-                "field_name": "The final assigned salesperson（最终分配的业务员）",
+                "field_name": "Owner（最终负责人）",
                 "operator": "isNot",
                 "value": [
                   {
@@ -55,7 +55,7 @@
         ],
         "field_watch_info": [
           {
-            "field_name": "The final assigned salesperson（最终分配的业务员）"
+            "field_name": "Owner（最终负责人）"
           }
         ],
         "table_name": "线索总池 Case Database",
@@ -74,7 +74,7 @@
     {
       "id": "actNotifyDelay",
       "type": "Delay",
-      "title": "延迟1分钟（过滤Case handler清空空窗）",
+      "title": "延迟1分钟（过滤Assignee清空空窗）",
       "next": "actNotifyFresh",
       "children": {
         "links": []
@@ -95,7 +95,7 @@
         "table_name": "线索总池 Case Database",
         "field_names": [
           "Clue ID",
-          "The final assigned salesperson（最终分配的业务员）",
+          "Owner（最终负责人）",
           "Customer Name（客户名称）",
           "Country（国家）"
         ],

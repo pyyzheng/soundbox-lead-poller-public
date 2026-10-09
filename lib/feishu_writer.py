@@ -370,7 +370,7 @@ def create_feishu_record(token: str, inquiry_content: str, clue_level: str = "",
     fields[FIELD_ASSIGN_METHOD] = WRITE_ASSIGN_AUTO
     fields[FIELD_SUCCESS] = WRITE_SUCCESS_NO
     if attachment_tokens:
-        fields["Enquiry attachments（询盘附件）"] = attachment_tokens
+        fields["Attachments（询盘附件）"] = attachment_tokens
     # Keyword 字段已于 2026-06-23 从飞书表删除，不再写入
     if keyword:
         log.debug("URL keyword omitted (field removed): %s", keyword)

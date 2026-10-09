@@ -66,7 +66,7 @@ DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"
 TZ = ZoneInfo("Asia/Shanghai")
 RULE_NOTE = (
     "计入=自动分配成功（中东/亚洲/公区/代理/查重）；"
-    "不计=人工改派/Case handler 转接；"
+    "不计=人工改派/Assignee 转接；"
     "公区代理不占区指针；欧洲仍顺序轮；"
     "新人入职当天对齐同伴已有累计（同一起跑线）；次日只垫昨日存量，今日新单最少优先；入职两日后完全实计"
 )

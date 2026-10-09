@@ -88,7 +88,7 @@ def strip_case_handler_filters(node: Any) -> int:
         kept = []
         for rule in rules:
             filters = rule.get("filters") or []
-            if any(f.get("field_name") == "Case handler" for f in filters):
+            if any(f.get("field_name") == "Assignee（指派负责人）" for f in filters):
                 removed += 1
                 continue
             kept.append(rule)
