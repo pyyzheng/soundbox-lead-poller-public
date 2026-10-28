@@ -8,6 +8,7 @@ import {
   notifyFilesAsZip as defaultNotifyFilesAsZip,
 } from './notify.js';
 import { claimRemoteNotified } from './remote-notified.js';
+import { reviewMode, submitReview } from './review.js';
 
 const META_BATCH_SIZE = 50;
 const DEFAULT_MAX_DEPTH = 8;
@@ -127,6 +128,7 @@ export async function pollCycle({
     maybeAutoSubscribe: deps.maybeAutoSubscribe || defaultMaybeAutoSubscribe,
     persistState: deps.persistState,
     claimRemoteNotified: deps.claimRemoteNotified || claimRemoteNotified,
+    requestReview: deps.requestReview || submitReview,
   };
 
   let notified = 0;
@@ -134,9 +136,24 @@ export async function pollCycle({
   notified += await checkFolderAdditions(ctx);
 
   if (notified > 0) {
-    log(`cycle end | sent ${notified} notification(s) this cycle`);
+    const verb = reviewMode(config) === 'off' ? 'sent' : 'queued for review';
+    log(`cycle end | ${verb} ${notified} notification(s) this cycle`);
   }
   return { notified, isFirstRun };
+}
+
+function emitNotice(ctx, spec) {
+  if (reviewMode(ctx.config) === 'off') {
+    if (spec.kind === 'zip') return ctx.notifyFilesAsZip(ctx.client, ctx.config, spec.payload);
+    return ctx.notifyFileAttachment(ctx.client, ctx.config, spec.payload);
+  }
+  return ctx.requestReview({
+    client: ctx.client,
+    config: ctx.config,
+    state: ctx.state,
+    spec,
+    persist: ctx.persistState,
+  });
 }
 
 /**
@@ -194,12 +211,22 @@ async function checkContentChanges(ctx) {
 
       log(`changed ${meta.title} token=${token.slice(0, 8)} modify=${modify} prev=${prev.lastModify}`);
       if (!(await markNotified(ctx, token, nowSec))) continue;
-      await ctx.notifyFileAttachment(client, config, {
-        fileToken: token,
-        fileType: type,
-        reason: '文件内容已更新',
-        titleHint: meta.title,
-        driveUrl: meta.url,
+      await emitNotice(ctx, {
+        kind: 'file',
+        tokens: [token],
+        summary: {
+          eventLabel: '文件内容已更新',
+          folderPath: '',
+          fileNames: [meta.title].filter(Boolean),
+          files: [{ name: meta.title, token, type }],
+        },
+        payload: {
+          fileToken: token,
+          fileType: type,
+          reason: '文件内容已更新',
+          titleHint: meta.title,
+          driveUrl: meta.url,
+        },
       });
       notified += 1;
     }
@@ -482,14 +509,25 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
     if (!(await markNotified(ctx, child.token, nowSec))) return 0;
     await ctx.maybeAutoSubscribe(client, config, child.token, child.type);
     await trackNewChild(ctx, { child });
-    await ctx.notifyFileAttachment(client, config, {
-      fileToken: child.token,
-      fileType: child.type,
-      reason: '文件夹有新上传/新建',
-      titleHint: child.name,
-      folderPath: folder.path,
-      folderToken: folder.token,
-      driveUrl: child.url,
+    await emitNotice(ctx, {
+      kind: 'file',
+      tokens: [child.token],
+      summary: {
+        eventLabel: '文件夹有新上传/新建',
+        folderPath: folder.path,
+        fileNames: [child.name].filter(Boolean),
+        files: [{ name: child.name, token: child.token, type: child.type }],
+        folder: { name: folder.path, token: folder.token },
+      },
+      payload: {
+        fileToken: child.token,
+        fileType: child.type,
+        reason: '文件夹有新上传/新建',
+        titleHint: child.name,
+        folderPath: folder.path,
+        folderToken: folder.token,
+        driveUrl: child.url,
+      },
     });
     return 1;
   }
@@ -504,12 +542,23 @@ async function sendNewFiles(ctx, folder, newFiles, nowSec) {
     }
   }
   if (!zipBatch.length) return 0;
-  await ctx.notifyFilesAsZip(client, config, {
-    reason: '文件夹有新上传/新建',
-    folderName: folder.path,
-    folderToken: folder.token,
-    zipNameHint: folder.name,
-    files: zipBatch.map((c) => ({ token: c.token, type: c.type, name: c.name })),
+  await emitNotice(ctx, {
+    kind: 'zip',
+    tokens: zipBatch.map((c) => c.token),
+    summary: {
+      eventLabel: '文件夹有新上传/新建',
+      folderPath: folder.path,
+      fileNames: zipBatch.map((c) => c.name).filter(Boolean),
+      files: zipBatch.map((c) => ({ name: c.name, token: c.token, type: c.type })),
+      folder: { name: folder.path, token: folder.token },
+    },
+    payload: {
+      reason: '文件夹有新上传/新建',
+      folderName: folder.path,
+      folderToken: folder.token,
+      zipNameHint: folder.name,
+      files: zipBatch.map((c) => ({ token: c.token, type: c.type, name: c.name })),
+    },
   });
   return 1;
 }

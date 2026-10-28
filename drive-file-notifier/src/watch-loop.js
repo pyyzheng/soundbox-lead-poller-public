@@ -1,7 +1,8 @@
 import { loadConfig } from './config.js';
 import { createClient } from './feishu.js';
 import { pollCycle } from './poll-cycle.js';
-import { mergeRemoteNotifiedInto, remoteNotifiedEnabled } from './remote-notified.js';
+import { resumeReviews, reviewMode, reviewersOf, startReviewSocket } from './review.js';
+import { mergeRemoteNotifiedInto, mergeRemoteReviewsInto, remoteNotifiedEnabled } from './remote-notified.js';
 import { loadState, resolveStatePath, saveState } from './state.js';
 
 const DEFAULT_INTERVAL_MS = 30_000;
@@ -11,7 +12,8 @@ function stateDigest(state) {
   const notifiedCount = Object.keys(state.notified || {}).length;
   const filesCount = Object.keys(state.files || {}).length;
   const foldersCount = Object.keys(state.folderChildren || {}).length;
-  return `initialized=${!!state.initialized} notified=${notifiedCount} files=${filesCount} folders=${foldersCount}`;
+  const reviewCount = Object.keys(state.reviews || {}).length;
+  return `initialized=${!!state.initialized} notified=${notifiedCount} files=${filesCount} folders=${foldersCount} reviews=${reviewCount}`;
 }
 
 async function main() {
@@ -25,6 +27,7 @@ async function main() {
 
   if (remoteNotifiedEnabled()) {
     await mergeRemoteNotifiedInto(state);
+    await mergeRemoteReviewsInto(state);
     saveState(statePath, state);
     console.log(`[boot] state after remote merge: ${stateDigest(state)}`);
   } else {
@@ -33,10 +36,12 @@ async function main() {
 
   let config = loadConfig();
   let client = createClient(config.appId, config.appSecret);
+  const persistState = () => saveState(statePath, state);
+  const runtime = { client, config, state, persist: persistState };
+  let reviewSocketStarted = false;
   const intervalMs = Number(process.env.POLL_INTERVAL_MS) || config.pollIntervalMs || DEFAULT_INTERVAL_MS;
   const durationMs = Number(process.env.MAX_RUN_MS) || DEFAULT_DURATION_MS;
   const deadline = Date.now() + durationMs;
-  const persistState = () => saveState(statePath, state);
 
   console.log(
     `[loop] polling every ${Math.round(intervalMs / 1000)}s for ${Math.round(durationMs / 60000)}min`,
@@ -58,6 +63,15 @@ async function main() {
     try {
       config = loadConfig();
       client = createClient(config.appId, config.appSecret);
+      runtime.client = client;
+      runtime.config = config;
+      if (!reviewSocketStarted && reviewMode(config) !== 'off') {
+        startReviewSocket(runtime);
+        reviewSocketStarted = true;
+        const names = reviewersOf(config).map((person) => person.name || person.openId).join('、');
+        console.log(`[review] approval gate on, reviewers=${names || '(missing open_id)'}`);
+      }
+      await resumeReviews(runtime);
       const { notified } = await pollCycle({
         client,
         config,

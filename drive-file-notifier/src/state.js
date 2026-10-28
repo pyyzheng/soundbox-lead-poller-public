@@ -9,6 +9,7 @@ const EMPTY_STATE = {
   folderMeta: {},
   subfolders: {},
   folderListedAt: {},
+  reviews: {},
 };
 
 export function resolveStatePath(config) {

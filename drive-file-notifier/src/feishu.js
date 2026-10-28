@@ -292,6 +292,36 @@ export async function replyFileMessage(client, messageId, fileKey, opts) {
   return replyMessage(client, messageId, 'file', { file_key: fileKey }, opts);
 }
 
+export async function sendInteractiveMessage(client, receiveId, card, { receiveIdType = 'open_id' } = {}) {
+  const res = await client.im.v1.message.create({
+    params: { receive_id_type: receiveIdType },
+    data: {
+      receive_id: receiveId,
+      msg_type: 'interactive',
+      content: JSON.stringify(card),
+    },
+  });
+  const messageId = res?.data?.message_id || res?.message_id;
+  if (!messageId && res?.code && res.code !== 0) {
+    throw new Error(`发送审核卡片失败: code=${res.code} msg=${res.msg}`);
+  }
+  if (!messageId) {
+    throw new Error(`发送审核卡片失败: ${JSON.stringify(res).slice(0, 300)}`);
+  }
+  return res.data || res;
+}
+
+export async function patchInteractiveMessage(client, messageId, card) {
+  const res = await client.im.v1.message.patch({
+    path: { message_id: messageId },
+    data: { content: JSON.stringify(card) },
+  });
+  if (res?.code && res.code !== 0) {
+    throw new Error(`更新审核卡片失败: code=${res.code} msg=${res.msg}`);
+  }
+  return res?.data || res || {};
+}
+
 export async function sendTextMessage(client, chatId, text) {
   const res = await client.im.v1.message.create({
     params: { receive_id_type: 'chat_id' },

@@ -82,5 +82,18 @@
       "name": "西米",
       "openId": "ou_8f57357a0c3ce70ce30be90021bff676"
     }
-  ]
+  ],
+  "review": {
+    "enabled": true,
+    "reviewers": [
+      {
+        "name": "郑培友",
+        "openId": "ou_6355ed1e5ec6d298f6644df9e0187534"
+      },
+      {
+        "name": "米拉",
+        "openId": "ou_c575f681cd46a96c9400632d98c5c632"
+      }
+    ]
+  }
 }

@@ -456,6 +456,39 @@ test('skips notify when file title contains 禁止外发', async () => {
   assert.ok(state.files[BLOCKED], 'blocked file still tracked in state');
 });
 
+test('review mode asks for approval instead of posting to the group', async () => {
+  const client = {
+    listed: [],
+    folders: { [ROOT]: [{ token: FILE_NEW, type: 'file', name: 'new.pdf' }] },
+    metas: { [FILE_NEW]: { modify: now, title: 'new.pdf' } },
+  };
+  const state = {
+    initialized: true,
+    files: {},
+    folderChildren: { [ROOT]: [] },
+    notified: {},
+    folderMeta: {},
+    subfolders: {},
+    reviews: {},
+  };
+  const reviews = [];
+  const { sent, deps } = makeDeps(client);
+  deps.requestReview = async (args) => {
+    reviews.push(args.spec);
+  };
+  const cfg = {
+    ...config,
+    review: { enabled: true, reviewer: { name: '郑培友', openId: 'ou_me' } },
+  };
+  const { notified } = await pollCycle({ client, config: cfg, state, tag: 't', deps });
+  assert.equal(notified, 1);
+  assert.equal(sent.length, 0);
+  assert.equal(reviews.length, 1);
+  assert.equal(reviews[0].kind, 'file');
+  assert.equal(reviews[0].payload.fileToken, FILE_NEW);
+  assert.equal(Number(state.notified[FILE_NEW]) > 0, true);
+});
+
 test('skips notify for files inside a folder titled 禁止', async () => {
   const SECRET = 'secretFolder';
   const FILE = 'secretFile';

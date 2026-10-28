@@ -432,7 +432,7 @@ function composeMessage(config, eventLabel, detailLines) {
   return lines.join('\n');
 }
 
-function resolveEventLabel(reason = '') {
+export function resolveEventLabel(reason = '') {
   if (/新上传|新建|new/i.test(reason)) return '文件夹有新上传/新建';
   if (/更新|changed|内容/i.test(reason)) return '文件内容已更新';
   // 手动测试等兜底：按「内容更新」表述

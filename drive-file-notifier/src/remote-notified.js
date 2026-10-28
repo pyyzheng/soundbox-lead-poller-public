@@ -7,6 +7,8 @@
  * so the notifier still works with local-only dedup.
  */
 
+import { pruneReviews } from './review-card.js';
+
 const STATE_PATH = 'drive-file-notifier/.remote-notified.json';
 const API = 'https://api.github.com';
 
@@ -32,16 +34,20 @@ export function remoteNotifiedEnabled() {
   return Boolean(repoSpec());
 }
 
-/** @returns {{ notified: Record<string, number>, sha: string|null }} */
-export async function loadRemoteNotified() {
+function emptyDoc() {
+  return { updatedAt: '', notified: {}, reviews: {} };
+}
+
+/** @returns {{ doc: { updatedAt: string, notified: Record<string, number>, reviews: object }, sha: string|null }} */
+export async function loadRemoteDoc() {
   const spec = repoSpec();
-  if (!spec) return { notified: {}, sha: null };
+  if (!spec) return { doc: emptyDoc(), sha: null };
 
   const url = `${API}/repos/${spec.owner}/${spec.name}/contents/${STATE_PATH}`;
   const res = await fetch(url, { headers: headers(spec.token) });
   if (res.status === 404) {
     console.log('[remote] .remote-notified.json not found (404), starting fresh');
-    return { notified: {}, sha: null };
+    return { doc: emptyDoc(), sha: null };
   }
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -50,12 +56,62 @@ export async function loadRemoteNotified() {
 
   const body = await res.json();
   const raw = JSON.parse(Buffer.from(body.content, body.encoding || 'base64').toString('utf8'));
-  const count = Object.keys(raw.notified || {}).length;
-  console.log(`[remote] loaded ${count} notified token(s), sha=${body.sha?.slice(0, 8)}`);
+  const notified = raw.notified || {};
+  const reviews = raw.reviews || {};
+  console.log(`[remote] loaded ${Object.keys(notified).length} notified token(s), ${Object.keys(reviews).length} review(s), sha=${body.sha?.slice(0, 8)}`);
   return {
-    notified: raw.notified || {},
+    doc: {
+      updatedAt: raw.updatedAt || '',
+      notified,
+      reviews,
+    },
     sha: body.sha || null,
   };
+}
+
+/** @returns {{ notified: Record<string, number>, sha: string|null }} */
+export async function loadRemoteNotified() {
+  const { doc, sha } = await loadRemoteDoc();
+  return { notified: doc.notified || {}, sha };
+}
+
+/**
+ * Read-modify-write the remote JSON. `mutate` returns `{ changed, doc }`.
+ * `changed: false` leaves the file untouched (for example a duplicate claim).
+ */
+async function updateRemoteDoc(mutate, message) {
+  const spec = repoSpec();
+  if (!spec) return { changed: false, disabled: true };
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const { doc, sha } = await loadRemoteDoc();
+    const next = mutate(doc);
+    if (!next?.changed) return { changed: false, doc };
+
+    const payload = {
+      message,
+      content: Buffer.from(JSON.stringify(next.doc, null, 2)).toString('base64'),
+    };
+    if (sha) payload.sha = sha;
+    const url = `${API}/repos/${spec.owner}/${spec.name}/contents/${STATE_PATH}`;
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: headers(spec.token),
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) return { changed: true, doc: next.doc };
+    if (res.status === 409) {
+      console.warn(`[remote] SHA conflict on attempt ${attempt + 1}, retrying`);
+      continue;
+    }
+    const text = await res.text().catch(() => '');
+    const error = new Error(`update remote doc HTTP ${res.status}: ${text.slice(0, 200)}`);
+    error.status = res.status;
+    throw error;
+  }
+  const error = new Error('update remote doc exhausted 5 retries');
+  error.status = 409;
+  throw error;
 }
 
 /** Claim a token atomically; retries on SHA conflict (409). Returns false if already claimed. */
@@ -66,48 +122,72 @@ export async function claimRemoteNotified(token, nowSec = Math.floor(Date.now() 
     return true;
   }
 
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const { notified, sha } = await loadRemoteNotified();
-    if (Number(notified[token]) > 0) {
-      console.log(`[remote] token=${token.slice(0, 8)} already claimed at=${notified[token]}, rejecting`);
+  try {
+    const result = await updateRemoteDoc((doc) => {
+      if (Number(doc.notified?.[token]) > 0) return { changed: false, doc };
+      return {
+        changed: true,
+        doc: {
+          updatedAt: new Date().toISOString(),
+          notified: { ...(doc.notified || {}), [token]: nowSec },
+          reviews: doc.reviews || {},
+        },
+      };
+    }, `drive-notifier: mark notified ${token.slice(0, 8)}`);
+    if (!result.changed) {
+      console.log(`[remote] token=${token.slice(0, 8)} already claimed, rejecting`);
       return false;
     }
-
-    notified[token] = nowSec;
-    const payload = {
-      message: `drive-notifier: mark notified ${token.slice(0, 8)}`,
-      content: Buffer.from(JSON.stringify({
-        updatedAt: new Date().toISOString(),
-        notified,
-      }, null, 2)).toString('base64'),
-    };
-    if (sha) payload.sha = sha;
-
-    const url = `${API}/repos/${spec.owner}/${spec.name}/contents/${STATE_PATH}`;
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: headers(spec.token),
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      console.log(`[remote] claimed token=${token.slice(0, 8)} attempt=${attempt + 1}`);
+    console.log(`[remote] claimed token=${token.slice(0, 8)}`);
+    return true;
+  } catch (err) {
+    if (err.status === 403 || err.status === 422) {
+      console.warn(`[remote] claim failed HTTP ${err.status} (permission issue, proceeding with local dedup): ${err.message.slice(0, 150)}`);
       return true;
     }
-    if (res.status === 409) {
-      console.warn(`[remote] SHA conflict on attempt ${attempt + 1}, retrying`);
-      continue;
-    }
-    if (res.status === 403 || res.status === 422) {
-      const text = await res.text().catch(() => '');
-      console.warn(`[remote] claim failed HTTP ${res.status} (permission issue, proceeding with local dedup): ${text.slice(0, 150)}`);
+    if (err.status === 409) {
+      console.warn('[remote] claim exhausted 5 retries, proceeding with local dedup');
       return true;
     }
-    const text = await res.text().catch(() => '');
-    throw new Error(`claim remote notified HTTP ${res.status}: ${text.slice(0, 200)}`);
+    throw err;
   }
-  console.warn('[remote] claim exhausted 5 retries, proceeding with local dedup');
-  return true;
+}
+
+export async function saveRemoteReviews(reviews) {
+  if (!remoteNotifiedEnabled()) return;
+  try {
+    await updateRemoteDoc((doc) => ({
+      changed: true,
+      doc: {
+        updatedAt: new Date().toISOString(),
+        notified: doc.notified || {},
+        reviews: pruneReviews(reviews),
+      },
+    }), 'drive-notifier: update reviews');
+  } catch (err) {
+    console.warn(`[remote] save reviews failed: ${err.message}`);
+  }
+}
+
+export async function mergeRemoteReviewsInto(state) {
+  if (!remoteNotifiedEnabled()) return;
+  try {
+    const { doc } = await loadRemoteDoc();
+    if (!state.reviews) state.reviews = {};
+    let merged = 0;
+    for (const [id, remote] of Object.entries(doc.reviews || {})) {
+      const local = state.reviews[id];
+      const remoteAt = Date.parse(remote?.updatedAt || remote?.createdAt || '');
+      const localAt = Date.parse(local?.updatedAt || local?.createdAt || '');
+      if (!local || !(localAt > remoteAt)) {
+        state.reviews[id] = remote;
+        merged += 1;
+      }
+    }
+    console.log(`[state] merged ${merged} review(s) from remote (remote total: ${Object.keys(doc.reviews || {}).length})`);
+  } catch (err) {
+    console.warn(`[state] merge remote reviews failed: ${err.message}`);
+  }
 }
 
 export async function mergeRemoteNotifiedInto(state) {

@@ -1,9 +1,11 @@
 import * as lark from '@larksuiteoapi/node-sdk';
 import { loadConfig } from './config.js';
 import { createClient, getFileMeta } from './feishu.js';
-import { maybeAutoSubscribe, notifyFileAttachment } from './notify.js';
+import { maybeAutoSubscribe } from './notify.js';
 import { matchSkipTitleKeyword } from './poll-cycle.js';
 import { createPoller } from './poller.js';
+import { handleCardAction, notifyOrReview, reviewMode } from './review.js';
+import { loadState, resolveStatePath, saveState } from './state.js';
 
 async function shouldSkipByTitle(client, config, fileToken, fileType, titleHint = '') {
   let title = titleHint;
@@ -23,9 +25,19 @@ async function shouldSkipByTitle(client, config, fileToken, fileType, titleHint 
   return false;
 }
 
+let runtime;
+
 async function main() {
   const config = loadConfig();
   const client = createClient(config.appId, config.appSecret);
+  const statePath = resolveStatePath(config);
+  const state = loadState(statePath);
+  runtime = {
+    client,
+    config,
+    state,
+    persist: () => saveState(statePath, state),
+  };
 
   const watchedFolders = new Set((config.watchFolders || []).map((f) => f.token));
   const acceptedFiles = new Set((config.watchFiles || []).map((f) => f.token));
@@ -42,7 +54,7 @@ async function main() {
     config,
     onChange: async ({ token, type, meta }) => {
       if (await shouldSkipByTitle(client, config, token, type, meta?.title)) return;
-      await notifyFileAttachment(client, config, {
+      await queueDriveNotice({
         fileToken: token,
         fileType: type,
         reason: '文件内容已更新',
@@ -68,11 +80,7 @@ async function main() {
           await poller.markSeen(fileToken);
           return;
         }
-        const result = await notifyFileAttachment(client, config, {
-          fileToken,
-          fileType,
-          reason,
-        });
+        const result = await queueDriveNotice({ fileToken, fileType, reason });
         await poller.markSeen(fileToken);
         console.log(`[done] ${eventName}`, result);
       });
@@ -81,7 +89,12 @@ async function main() {
     }
   };
 
+  const reviewHandlers = reviewMode(config) === 'off' ? {} : {
+    'card.action.trigger': (data) => handleCardAction(runtime, data),
+  };
+
   const eventDispatcher = new lark.EventDispatcher({}).register({
+    ...reviewHandlers,
     'drive.file.created_in_folder_v1': async (data) => {
       try {
         const event = unwrap(data);
@@ -102,7 +115,7 @@ async function main() {
         }
         acceptedFiles.add(fileToken);
         await maybeAutoSubscribe(client, config, fileToken, fileType);
-        const result = await notifyFileAttachment(client, config, {
+        const result = await queueDriveNotice({
           fileToken,
           fileType,
           reason: '文件夹有新上传/新建',
@@ -138,6 +151,31 @@ async function main() {
     (config.watchFiles || []).map((f) => ({ token: f.token, type: f.type || 'file' })),
   );
   await poller.start();
+}
+
+async function queueDriveNotice({ fileToken, fileType, reason, titleHint }) {
+  const spec = {
+    kind: 'file',
+    tokens: [fileToken],
+    summary: {
+      eventLabel: reason,
+      folderPath: '',
+      fileNames: titleHint ? [titleHint] : [],
+      files: [{ name: titleHint || fileToken, token: fileToken, type: fileType || 'file' }],
+    },
+    payload: { fileToken, fileType, reason, titleHint },
+  };
+  if (reviewMode(runtime.config) === 'off') return notifyOrReview(runtime, spec);
+
+  if (Number(runtime.state?.notified?.[fileToken]) > 0) {
+    console.log(`[skip] already queued ${fileToken}`);
+    return { skipped: true, reason: 'already-notified' };
+  }
+  const result = await notifyOrReview(runtime, spec);
+  if (!runtime.state.notified) runtime.state.notified = {};
+  runtime.state.notified[fileToken] = Math.floor(Date.now() / 1000);
+  runtime.persist?.();
+  return result;
 }
 
 function unwrap(data) {
