@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-31T05:50:02.903Z",
+  "updatedAt": "2026-10-31T05:50:21.499Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -434,6 +434,260 @@
               "token": "ZXKxbGKu2ovdLgxJgkecWzUenqc",
               "type": "file",
               "name": "图层 2.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mvvzf383_729a7n": {
+      "id": "rv_mvvzf383_729a7n",
+      "status": "pending",
+      "createdAt": "2026-10-31T05:50:04.563Z",
+      "updatedAt": "2026-10-31T05:50:21.239Z",
+      "messageId": "om_x100b616c57712ca4c30ff74c99bcddd",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b616c57712ca4c30ff74c99bcddd"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b616c5706a8a0c01c289e3c9b8c0"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "CcuTbvqIqoJmVgxYK1Oc8Paxnug",
+        "Hb42bNISKoupGixryUVcolYvnhc",
+        "OWQ8bOKtlo9jAcxWzZuc1VIinsk",
+        "GCr7bMbroohIauxtSabcYhhIn3D",
+        "OazdbNtiUol0dqxlWKLcO13Cnhd",
+        "AtVRbrjQJo0rxZxSikFcxlpTnrV",
+        "FRIvbFA3IodGXmxk38BcVoBfnug",
+        "TXPobdSqOowh33xHeo9czOomnFb",
+        "QXOPbG4seoTmu3xpUJ4caaSOnNh",
+        "ERkbbMpTtojjvsxofhwcmy31n1f",
+        "Jierb57zio0N9uxB5V6c07gqnOe"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "CcuTbvqIqoJmVgxYK1Oc8Paxnug",
+          "Hb42bNISKoupGixryUVcolYvnhc",
+          "OWQ8bOKtlo9jAcxWzZuc1VIinsk",
+          "GCr7bMbroohIauxtSabcYhhIn3D",
+          "OazdbNtiUol0dqxlWKLcO13Cnhd",
+          "AtVRbrjQJo0rxZxSikFcxlpTnrV",
+          "FRIvbFA3IodGXmxk38BcVoBfnug",
+          "TXPobdSqOowh33xHeo9czOomnFb",
+          "QXOPbG4seoTmu3xpUJ4caaSOnNh",
+          "ERkbbMpTtojjvsxofhwcmy31n1f",
+          "Jierb57zio0N9uxB5V6c07gqnOe"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-山东省滨州科技职业学院-体育馆-精工声学软包CM60(麦韬)",
+          "fileNames": [
+            "图层 9.jpg",
+            "图层 8.jpg",
+            "图层 7.jpg",
+            "图层 6.jpg",
+            "图层 5.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 11.jpg",
+            "图层 10.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 9.jpg",
+              "token": "CcuTbvqIqoJmVgxYK1Oc8Paxnug",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/CcuTbvqIqoJmVgxYK1Oc8Paxnug"
+            },
+            {
+              "name": "图层 8.jpg",
+              "token": "Hb42bNISKoupGixryUVcolYvnhc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Hb42bNISKoupGixryUVcolYvnhc"
+            },
+            {
+              "name": "图层 7.jpg",
+              "token": "OWQ8bOKtlo9jAcxWzZuc1VIinsk",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/OWQ8bOKtlo9jAcxWzZuc1VIinsk"
+            },
+            {
+              "name": "图层 6.jpg",
+              "token": "GCr7bMbroohIauxtSabcYhhIn3D",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GCr7bMbroohIauxtSabcYhhIn3D"
+            },
+            {
+              "name": "图层 5.jpg",
+              "token": "OazdbNtiUol0dqxlWKLcO13Cnhd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/OazdbNtiUol0dqxlWKLcO13Cnhd"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "AtVRbrjQJo0rxZxSikFcxlpTnrV",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/AtVRbrjQJo0rxZxSikFcxlpTnrV"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "FRIvbFA3IodGXmxk38BcVoBfnug",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/FRIvbFA3IodGXmxk38BcVoBfnug"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "TXPobdSqOowh33xHeo9czOomnFb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TXPobdSqOowh33xHeo9czOomnFb"
+            },
+            {
+              "name": "图层 11.jpg",
+              "token": "QXOPbG4seoTmu3xpUJ4caaSOnNh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QXOPbG4seoTmu3xpUJ4caaSOnNh"
+            },
+            {
+              "name": "图层 10.jpg",
+              "token": "ERkbbMpTtojjvsxofhwcmy31n1f",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ERkbbMpTtojjvsxofhwcmy31n1f"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "Jierb57zio0N9uxB5V6c07gqnOe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Jierb57zio0N9uxB5V6c07gqnOe"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-山东省滨州科技职业学院-体育馆-精工声学软包CM60(麦韬)",
+            "token": "X2AQf6QuglRmtadZC9ocqDVRnLg",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/X2AQf6QuglRmtadZC9ocqDVRnLg"
+          },
+          "links": [
+            {
+              "label": "图层 9.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/CcuTbvqIqoJmVgxYK1Oc8Paxnug"
+            },
+            {
+              "label": "图层 8.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Hb42bNISKoupGixryUVcolYvnhc"
+            },
+            {
+              "label": "图层 7.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/OWQ8bOKtlo9jAcxWzZuc1VIinsk"
+            },
+            {
+              "label": "图层 6.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GCr7bMbroohIauxtSabcYhhIn3D"
+            },
+            {
+              "label": "图层 5.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/OazdbNtiUol0dqxlWKLcO13Cnhd"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/AtVRbrjQJo0rxZxSikFcxlpTnrV"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/FRIvbFA3IodGXmxk38BcVoBfnug"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TXPobdSqOowh33xHeo9czOomnFb"
+            },
+            {
+              "label": "图层 11.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QXOPbG4seoTmu3xpUJ4caaSOnNh"
+            },
+            {
+              "label": "图层 10.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ERkbbMpTtojjvsxofhwcmy31n1f"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Jierb57zio0N9uxB5V6c07gqnOe"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/X2AQf6QuglRmtadZC9ocqDVRnLg"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-山东省滨州科技职业学院-体育馆-精工声学软包CM60(麦韬)",
+          "folderToken": "X2AQf6QuglRmtadZC9ocqDVRnLg",
+          "zipNameHint": "S-山东省滨州科技职业学院-体育馆-精工声学软包CM60(麦韬)",
+          "files": [
+            {
+              "token": "CcuTbvqIqoJmVgxYK1Oc8Paxnug",
+              "type": "file",
+              "name": "图层 9.jpg"
+            },
+            {
+              "token": "Hb42bNISKoupGixryUVcolYvnhc",
+              "type": "file",
+              "name": "图层 8.jpg"
+            },
+            {
+              "token": "OWQ8bOKtlo9jAcxWzZuc1VIinsk",
+              "type": "file",
+              "name": "图层 7.jpg"
+            },
+            {
+              "token": "GCr7bMbroohIauxtSabcYhhIn3D",
+              "type": "file",
+              "name": "图层 6.jpg"
+            },
+            {
+              "token": "OazdbNtiUol0dqxlWKLcO13Cnhd",
+              "type": "file",
+              "name": "图层 5.jpg"
+            },
+            {
+              "token": "AtVRbrjQJo0rxZxSikFcxlpTnrV",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "FRIvbFA3IodGXmxk38BcVoBfnug",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "TXPobdSqOowh33xHeo9czOomnFb",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "QXOPbG4seoTmu3xpUJ4caaSOnNh",
+              "type": "file",
+              "name": "图层 11.jpg"
+            },
+            {
+              "token": "ERkbbMpTtojjvsxofhwcmy31n1f",
+              "type": "file",
+              "name": "图层 10.jpg"
+            },
+            {
+              "token": "Jierb57zio0N9uxB5V6c07gqnOe",
+              "type": "file",
+              "name": "图层 1.jpg"
             }
           ]
         }
