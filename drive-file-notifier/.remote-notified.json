@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-06T06:55:13.234Z",
+  "updatedAt": "2026-11-06T06:55:24.847Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1107,6 +1107,134 @@
             },
             {
               "token": "NcbibLOhEodn8ZxvdF2cKWhanJb",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mw4me0ku_9uxnqz": {
+      "id": "rv_mw4me0ku_9uxnqz",
+      "status": "pending",
+      "createdAt": "2026-11-06T06:55:15.054Z",
+      "updatedAt": "2026-11-06T06:55:24.631Z",
+      "messageId": "om_x100b61e3d362c0b4df66e2a6170029d",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b61e3d362c0b4df66e2a6170029d"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b61e3d37204a0de4d97a15f285ad"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "U4E1bfJTRo6cpLxNPGNcDs4Rnpc",
+        "LpWNbFklloJXKjxQiGkctSqEnRe",
+        "TgftbQzFGoworqxvYIncgdvSnWh",
+        "LSCLbHSCbofQ4UxJblFcejGZnLg"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "U4E1bfJTRo6cpLxNPGNcDs4Rnpc",
+          "LpWNbFklloJXKjxQiGkctSqEnRe",
+          "TgftbQzFGoworqxvYIncgdvSnWh",
+          "LSCLbHSCbofQ4UxJblFcejGZnLg"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/G-惠州市慈云-图书馆-SR静音舱(戴家楣)",
+          "fileNames": [
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 4.jpg",
+              "token": "U4E1bfJTRo6cpLxNPGNcDs4Rnpc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/U4E1bfJTRo6cpLxNPGNcDs4Rnpc"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "LpWNbFklloJXKjxQiGkctSqEnRe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/LpWNbFklloJXKjxQiGkctSqEnRe"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "TgftbQzFGoworqxvYIncgdvSnWh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TgftbQzFGoworqxvYIncgdvSnWh"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "LSCLbHSCbofQ4UxJblFcejGZnLg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/LSCLbHSCbofQ4UxJblFcejGZnLg"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/G-惠州市慈云-图书馆-SR静音舱(戴家楣)",
+            "token": "LNoTfR1YFlRWWYdgrF6c9wNOnv6",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/LNoTfR1YFlRWWYdgrF6c9wNOnv6"
+          },
+          "links": [
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/U4E1bfJTRo6cpLxNPGNcDs4Rnpc"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/LpWNbFklloJXKjxQiGkctSqEnRe"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TgftbQzFGoworqxvYIncgdvSnWh"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/LSCLbHSCbofQ4UxJblFcejGZnLg"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/LNoTfR1YFlRWWYdgrF6c9wNOnv6"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/G-惠州市慈云-图书馆-SR静音舱(戴家楣)",
+          "folderToken": "LNoTfR1YFlRWWYdgrF6c9wNOnv6",
+          "zipNameHint": "G-惠州市慈云-图书馆-SR静音舱(戴家楣)",
+          "files": [
+            {
+              "token": "U4E1bfJTRo6cpLxNPGNcDs4Rnpc",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "LpWNbFklloJXKjxQiGkctSqEnRe",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "TgftbQzFGoworqxvYIncgdvSnWh",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "LSCLbHSCbofQ4UxJblFcejGZnLg",
               "type": "file",
               "name": "图层 1.jpg"
             }
