@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-06T07:01:15.123Z",
+  "updatedAt": "2026-11-06T07:01:29.159Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1240,6 +1240,152 @@
             },
             {
               "token": "LSCLbHSCbofQ4UxJblFcejGZnLg",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mw4mls2m_mw2g6n": {
+      "id": "rv_mw4mls2m_mw2g6n",
+      "status": "pending",
+      "createdAt": "2026-11-06T07:01:17.278Z",
+      "updatedAt": "2026-11-06T07:01:28.986Z",
+      "messageId": "om_x100b61e3fabcc8acc4bd5a64654a0e5",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b61e3fabcc8acc4bd5a64654a0e5"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b61e3fa4954a4c0c8403630f509b"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "SdCPbvVxsoJN82xR6SKcEPM2n9e",
+        "UPt7b579uoL8FtxHNm9cxPj3nFd",
+        "ZdRXbT4wQovIsexddyvcGW33n3f",
+        "NpY5bt3x1o7CVZxVb9YcBONJnvb",
+        "DKQXbrZerou1tKxcVRLc4WwFn3e"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "SdCPbvVxsoJN82xR6SKcEPM2n9e",
+          "UPt7b579uoL8FtxHNm9cxPj3nFd",
+          "ZdRXbT4wQovIsexddyvcGW33n3f",
+          "NpY5bt3x1o7CVZxVb9YcBONJnvb",
+          "DKQXbrZerou1tKxcVRLc4WwFn3e"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/Z-联芸科技（杭州）股份有限公司-VRT静音舱(沈永为)",
+          "fileNames": [
+            "图层 5.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 5.jpg",
+              "token": "SdCPbvVxsoJN82xR6SKcEPM2n9e",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SdCPbvVxsoJN82xR6SKcEPM2n9e"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "UPt7b579uoL8FtxHNm9cxPj3nFd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/UPt7b579uoL8FtxHNm9cxPj3nFd"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "ZdRXbT4wQovIsexddyvcGW33n3f",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ZdRXbT4wQovIsexddyvcGW33n3f"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "NpY5bt3x1o7CVZxVb9YcBONJnvb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/NpY5bt3x1o7CVZxVb9YcBONJnvb"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "DKQXbrZerou1tKxcVRLc4WwFn3e",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/DKQXbrZerou1tKxcVRLc4WwFn3e"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/Z-联芸科技（杭州）股份有限公司-VRT静音舱(沈永为)",
+            "token": "NHghfTmBGlVUoGdwNEIcZoFFnVh",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/NHghfTmBGlVUoGdwNEIcZoFFnVh"
+          },
+          "links": [
+            {
+              "label": "图层 5.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SdCPbvVxsoJN82xR6SKcEPM2n9e"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/UPt7b579uoL8FtxHNm9cxPj3nFd"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ZdRXbT4wQovIsexddyvcGW33n3f"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/NpY5bt3x1o7CVZxVb9YcBONJnvb"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/DKQXbrZerou1tKxcVRLc4WwFn3e"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/NHghfTmBGlVUoGdwNEIcZoFFnVh"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/Z-联芸科技（杭州）股份有限公司-VRT静音舱(沈永为)",
+          "folderToken": "NHghfTmBGlVUoGdwNEIcZoFFnVh",
+          "zipNameHint": "Z-联芸科技（杭州）股份有限公司-VRT静音舱(沈永为)",
+          "files": [
+            {
+              "token": "SdCPbvVxsoJN82xR6SKcEPM2n9e",
+              "type": "file",
+              "name": "图层 5.jpg"
+            },
+            {
+              "token": "UPt7b579uoL8FtxHNm9cxPj3nFd",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "ZdRXbT4wQovIsexddyvcGW33n3f",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "NpY5bt3x1o7CVZxVb9YcBONJnvb",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "DKQXbrZerou1tKxcVRLc4WwFn3e",
               "type": "file",
               "name": "图层 1.jpg"
             }
