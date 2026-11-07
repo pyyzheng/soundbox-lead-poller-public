@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-07T00:55:57.545Z",
+  "updatedAt": "2026-11-07T00:56:00.612Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1395,9 +1395,9 @@
     },
     "rv_test_mw5ozrxz": {
       "id": "rv_test_mw5ozrxz",
-      "status": "pending",
+      "status": "rejected",
       "createdAt": "2026-11-07T00:55:55.703Z",
-      "updatedAt": "2026-11-07T00:55:56.497Z",
+      "updatedAt": "2026-11-07T00:56:00.612Z",
       "messageId": "om_x100b61d33f0594accf4735b6717d0af",
       "messages": [
         {
@@ -1406,7 +1406,7 @@
           "messageId": "om_x100b61d33f0594accf4735b6717d0af"
         }
       ],
-      "decidedByName": "",
+      "decidedByName": "郑培友",
       "error": "",
       "groupSent": false,
       "tokens": [],
