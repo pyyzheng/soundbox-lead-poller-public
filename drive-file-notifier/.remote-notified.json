@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-07T01:04:57.398Z",
+  "updatedAt": "2026-11-07T01:04:58.470Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1251,7 +1251,7 @@
       "id": "rv_mw4mls2m_mw2g6n",
       "status": "sending",
       "createdAt": "2026-11-06T07:01:17.278Z",
-      "updatedAt": "2026-11-07T01:04:57.398Z",
+      "updatedAt": "2026-11-07T01:04:58.308Z",
       "messageId": "om_x100b61d3351f7ca0cf6b87bce848fc7",
       "messages": [
         {
@@ -1394,7 +1394,7 @@
       },
       "publishRequestedAt": "2026-11-07T01:04:25.472Z",
       "publishClaimOwner": "42321999219",
-      "publishClaimedAt": "2026-11-07T01:04:57.398Z"
+      "publishClaimedAt": "2026-11-07T01:04:58.308Z"
     },
     "rv_test_mw5ozrxz": {
       "id": "rv_test_mw5ozrxz",
