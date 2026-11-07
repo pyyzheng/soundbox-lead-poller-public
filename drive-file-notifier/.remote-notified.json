@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-07T00:56:00.612Z",
+  "updatedAt": "2026-11-07T00:58:39.804Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1123,18 +1123,18 @@
       "id": "rv_mw4me0ku_9uxnqz",
       "status": "pending",
       "createdAt": "2026-11-06T06:55:15.054Z",
-      "updatedAt": "2026-11-06T06:55:24.631Z",
-      "messageId": "om_x100b61e3d362c0b4df66e2a6170029d",
+      "updatedAt": "2026-11-07T00:58:36.494Z",
+      "messageId": "om_x100b61d3356424a4cd1f0f293624d02",
       "messages": [
         {
           "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
           "name": "郑培友",
-          "messageId": "om_x100b61e3d362c0b4df66e2a6170029d"
+          "messageId": "om_x100b61d3356424a4cd1f0f293624d02"
         },
         {
           "openId": "ou_c575f681cd46a96c9400632d98c5c632",
           "name": "米拉",
-          "messageId": "om_x100b61e3d37204a0de4d97a15f285ad"
+          "messageId": "om_x100b61d335791ca0cf6db413b2a4c2e"
         }
       ],
       "decidedByName": "",
@@ -1251,18 +1251,18 @@
       "id": "rv_mw4mls2m_mw2g6n",
       "status": "pending",
       "createdAt": "2026-11-06T07:01:17.278Z",
-      "updatedAt": "2026-11-06T07:01:28.986Z",
-      "messageId": "om_x100b61e3fabcc8acc4bd5a64654a0e5",
+      "updatedAt": "2026-11-07T00:58:38.894Z",
+      "messageId": "om_x100b61d3351f7ca0cf6b87bce848fc7",
       "messages": [
         {
           "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
           "name": "郑培友",
-          "messageId": "om_x100b61e3fabcc8acc4bd5a64654a0e5"
+          "messageId": "om_x100b61d3351f7ca0cf6b87bce848fc7"
         },
         {
           "openId": "ou_c575f681cd46a96c9400632d98c5c632",
           "name": "米拉",
-          "messageId": "om_x100b61e3fa4954a4c0c8403630f509b"
+          "messageId": "om_x100b61d3351128b4cff97c40df07794"
         }
       ],
       "decidedByName": "",
