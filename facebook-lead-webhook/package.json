@@ -1,6 +1,7 @@
 {
   "name": "facebook-lead-webhook",
   "private": true,
+  "type": "module",
   "version": "1.0.0",
   "scripts": {
     "deploy": "wrangler deploy",

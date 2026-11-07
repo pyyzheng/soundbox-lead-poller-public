@@ -86,7 +86,7 @@ async function updateRemoteDoc(mutate, message) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const { doc, sha } = await loadRemoteDoc();
     const next = mutate(doc);
-    if (!next?.changed) return { changed: false, doc };
+    if (!next?.changed) return { changed: false, doc, claim: next?.claim || 'unchanged' };
 
     const payload = {
       message,
@@ -99,7 +99,7 @@ async function updateRemoteDoc(mutate, message) {
       headers: headers(spec.token),
       body: JSON.stringify(payload),
     });
-    if (res.ok) return { changed: true, doc: next.doc };
+    if (res.ok) return { changed: true, doc: next.doc, claim: next.claim || 'ok' };
     if (res.status === 409) {
       console.warn(`[remote] SHA conflict on attempt ${attempt + 1}, retrying`);
       continue;
@@ -153,6 +153,19 @@ export async function claimRemoteNotified(token, nowSec = Math.floor(Date.now() 
   }
 }
 
+/** Keep the newer copy of each review so a poller cannot roll back an HTTP decision. */
+export function preferNewerReviews(remote, local) {
+  const out = { ...(remote || {}) };
+  for (const [id, review] of Object.entries(local || {})) {
+    if (!review) continue;
+    const prev = out[id];
+    const remoteAt = Date.parse(prev?.updatedAt || prev?.createdAt || '') || 0;
+    const localAt = Date.parse(review?.updatedAt || review?.createdAt || '') || 0;
+    if (!prev || localAt >= remoteAt) out[id] = review;
+  }
+  return out;
+}
+
 export async function saveRemoteReviews(reviews) {
   if (!remoteNotifiedEnabled()) return;
   try {
@@ -161,11 +174,58 @@ export async function saveRemoteReviews(reviews) {
       doc: {
         updatedAt: new Date().toISOString(),
         notified: doc.notified || {},
-        reviews: pruneReviews(reviews),
+        reviews: pruneReviews(preferNewerReviews(doc.reviews, reviews)),
       },
     }), 'drive-notifier: update reviews');
   } catch (err) {
     console.warn(`[remote] save reviews failed: ${err.message}`);
+  }
+}
+
+const PUBLISH_CLAIM_MS = 20 * 60 * 1000;
+
+/** One publisher at a time. Same owner may reclaim; a live other owner is left alone. */
+export async function claimReviewPublish(reviewId, owner, ttlMs = PUBLISH_CLAIM_MS) {
+  if (!remoteNotifiedEnabled()) return { ok: true, at: new Date().toISOString() };
+  try {
+    const result = await updateRemoteDoc((doc) => {
+      const reviews = { ...(doc.reviews || {}) };
+      const review = reviews[reviewId];
+      if (!review) return { changed: false, claim: 'missing', doc };
+      if (review.groupSent || review.status === 'sent' || review.status === 'rejected') {
+        return { changed: false, claim: 'done', doc };
+      }
+      const at = Date.parse(review.publishClaimedAt || '');
+      const held = review.publishClaimOwner
+        && review.publishClaimOwner !== owner
+        && Number.isFinite(at)
+        && Date.now() - at < ttlMs;
+      if (held) return { changed: false, claim: 'busy', doc };
+      const now = new Date().toISOString();
+      reviews[reviewId] = {
+        ...review,
+        publishClaimOwner: owner,
+        publishClaimedAt: now,
+        updatedAt: now,
+      };
+      return {
+        changed: true,
+        claim: 'ok',
+        doc: {
+          updatedAt: now,
+          notified: doc.notified || {},
+          reviews,
+        },
+      };
+    }, `drive-notifier: claim publish ${reviewId}`);
+    return {
+      ok: result.claim === 'ok' || result.claim === 'missing',
+      claim: result.claim,
+      at: new Date().toISOString(),
+    };
+  } catch (err) {
+    console.warn(`[remote] claim publish failed, continuing: ${err.message}`);
+    return { ok: true, claim: 'unchecked', at: new Date().toISOString() };
   }
 }
 

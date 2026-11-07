@@ -1,0 +1,52 @@
+name: Drive Review Publish
+
+# 审核点「通过」后由线上回调拉起。只发这一条，不扫云盘。
+on:
+  repository_dispatch:
+    types: [drive-review-publish]
+  workflow_dispatch:
+    inputs:
+      review_id:
+        description: 审核 ID
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drive-review-publish-${{ github.event.client_payload.review_id || inputs.review_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish approved review
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: drive-file-notifier
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: drive-file-notifier/package-lock.json
+
+      - name: Install compress tools
+        run: sudo apt-get update && sudo apt-get install -y imagemagick ghostscript zip
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Publish to chat
+        env:
+          APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          CHAT_ID: ${{ secrets.DRIVE_NOTIFIER_CHAT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GHA_PAT }}
+          GH_TOKEN: ${{ secrets.GHA_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REVIEW_ID: ${{ github.event.client_payload.review_id || inputs.review_id }}
+        run: npm run publish-review

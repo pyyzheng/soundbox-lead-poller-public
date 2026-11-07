@@ -11,13 +11,13 @@ import {
   callbackResponse,
   decisionFromReactions,
   parseCardAction,
-  isReviewer,
   pruneReviews,
   reviewMode,
   reviewerOpenId,
   reviewersOf,
+  transitionReview,
 } from './review-card.js';
-import { mergeRemoteReviewsInto, saveRemoteReviews } from './remote-notified.js';
+import { claimReviewPublish, mergeRemoteReviewsInto, saveRemoteReviews } from './remote-notified.js';
 
 const publishing = new Set();
 let reactionPollBroken = false;
@@ -55,6 +55,11 @@ export async function submitReview(runtime, spec, deps = {}) {
 
 export async function resumeReviews(runtime, deps = {}) {
   if (reviewMode(runtime.config) === 'off') return;
+  try {
+    await mergeRemoteReviewsInto(runtime.state);
+  } catch (err) {
+    console.warn(`[review] refresh remote reviews failed: ${err.message}`);
+  }
   const reviews = Object.values(runtime.state?.reviews || {});
   for (const review of reviews) {
     try {
@@ -92,56 +97,42 @@ export async function resumeReviews(runtime, deps = {}) {
 }
 
 export async function decideReview(runtime, parsed, deps = {}) {
-  if (!isReviewer(runtime.config, parsed.operatorId)) {
-    return { toast: { type: 'error', content: '只有审核人可以操作' } };
+  if (publishing.has(parsed.reviewId)) {
+    const review = runtime.state?.reviews?.[parsed.reviewId];
+    return {
+      toast: { type: 'info', content: '正在推送到群，请稍候' },
+      ...(review ? { card: buildReviewCard(review, runtime.config) } : {}),
+    };
   }
   const review = await loadReview(runtime, parsed.reviewId);
-  if (!review) return { toast: { type: 'error', content: '找不到这条审核，可能已过期' } };
-
-  if (review.status === 'sent') {
-    return { toast: { type: 'info', content: '已经推送到群' }, card: buildReviewCard(review, runtime.config) };
-  }
-  if (review.status === 'rejected') {
-    return { toast: { type: 'info', content: '已经驳回' }, card: buildReviewCard(review, runtime.config) };
-  }
-  if (review.status === 'sending' || publishing.has(review.id)) {
-    return { toast: { type: 'info', content: '正在推送到群，请稍候' }, card: buildReviewCard(review, runtime.config) };
-  }
-
-  if (parsed.decision === 'reject') {
-    review.status = 'rejected';
-    review.error = '';
-    review.decidedByName = reviewerName(runtime.config, parsed.operatorId);
-    touch(review);
+  const outcome = transitionReview(review, parsed, runtime.config);
+  if (outcome.changed) {
     await persistReview(runtime);
-    await patchReviewCards(runtime.client, review, runtime.config, deps.patchCard || patchReviewCard);
-    console.log(`[review] rejected ${review.id} by ${review.decidedByName || parsed.operatorId}`);
-    return {
-      toast: { type: 'info', content: '已驳回，不会发到群' },
-      card: buildReviewCard(review, runtime.config),
-    };
+    if (parsed.decision === 'reject') {
+      await patchReviewCards(runtime.client, review, runtime.config, deps.patchCard || patchReviewCard);
+      console.log(`[review] rejected ${review.id} by ${review.decidedByName || parsed.operatorId}`);
+    }
   }
-
-  if (parsed.decision === 'approve') {
-    review.status = 'sending';
-    review.error = '';
-    review.decidedByName = reviewerName(runtime.config, parsed.operatorId);
-    touch(review);
-    await persistReview(runtime);
-    return {
-      schedulePublish: true,
-      toast: { type: 'info', content: '已通过，正在推送到群' },
-      card: buildReviewCard(review, runtime.config),
-    };
-  }
-
-  return { toast: { type: 'error', content: '无法识别的操作' } };
+  return {
+    toast: outcome.toast,
+    ...(outcome.card ? { card: outcome.card } : {}),
+    ...(outcome.schedulePublish ? { schedulePublish: true } : {}),
+  };
 }
 
 export async function publishReview(runtime, reviewId, deps = {}) {
+  await mergeRemoteReviewsInto(runtime.state);
   const review = runtime.state?.reviews?.[reviewId];
-  if (!review || review.status === 'sent' || review.status === 'rejected' || review.groupSent) return;
-  if (publishing.has(reviewId)) return;
+  if (!review || review.status === 'sent' || review.status === 'rejected' || review.groupSent) return 'skipped';
+  if (publishing.has(reviewId)) return 'skipped';
+  const owner = process.env.PUBLISH_OWNER || process.env.GITHUB_RUN_ID || `local-${process.pid}`;
+  const claim = await claimReviewPublish(reviewId, owner);
+  if (!claim.ok) {
+    console.log(`[review] publish ${reviewId} already claimed, skip`);
+    return 'skipped';
+  }
+  review.publishClaimOwner = owner;
+  review.publishClaimedAt = claim.at || new Date().toISOString();
   publishing.add(reviewId);
   const patch = deps.patchCard || patchReviewCard;
   const dispatch = deps.dispatchNotice || dispatchNotice;
@@ -158,6 +149,7 @@ export async function publishReview(runtime, reviewId, deps = {}) {
     await persistReview(runtime);
     await patchReviewCards(runtime.client, review, runtime.config, patch);
     console.log(`[review] published ${reviewId} to chat`);
+    return 'sent';
   } catch (err) {
     if (review.groupSent) {
       review.status = 'sent';
@@ -165,7 +157,7 @@ export async function publishReview(runtime, reviewId, deps = {}) {
       touch(review);
       await persistReview(runtime);
       console.warn(`[review] ${reviewId} already posted; status kept as sent after ${err.message}`);
-      return;
+      return 'sent';
     }
     review.status = 'send_failed';
     review.error = err.message || String(err);
@@ -173,6 +165,7 @@ export async function publishReview(runtime, reviewId, deps = {}) {
     await persistReview(runtime);
     await patchReviewCards(runtime.client, review, runtime.config, patch);
     console.error(`[review] publish ${reviewId} failed: ${review.error}`);
+    return 'failed';
   } finally {
     publishing.delete(reviewId);
   }
@@ -424,10 +417,6 @@ async function patchReviewCards(client, review, config, patch) {
       console.warn(`[review] patch card failed: ${err.message}`);
     });
   }
-}
-
-function reviewerName(config, openId) {
-  return reviewersOf(config).find((person) => person.openId === openId)?.name || '';
 }
 
 function sendReviewCard(client, openId, card) {

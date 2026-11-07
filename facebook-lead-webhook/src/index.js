@@ -1,3 +1,5 @@
+import { handleDriveReview } from "./drive-review.js";
+
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
@@ -3679,6 +3681,9 @@ __name(requireAuth, "requireAuth");
 var index_default = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === "/drive-review") {
+      return handleDriveReview(request, env, ctx);
+    }
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {

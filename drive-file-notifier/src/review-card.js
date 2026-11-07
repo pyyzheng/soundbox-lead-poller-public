@@ -4,8 +4,9 @@ const TERMINAL_REVIEW = new Set(['sent', 'rejected']);
 const REVIEW_KEEP_MS = 14 * 24 * 60 * 60 * 1000;
 
 export function reviewersOf(config) {
-  if (process.env.REVIEWER_OPEN_ID) {
-    return [{ name: '', openId: process.env.REVIEWER_OPEN_ID }];
+  const override = typeof process !== 'undefined' ? process.env?.REVIEWER_OPEN_ID : '';
+  if (override) {
+    return [{ name: '', openId: override }];
   }
   const people = [];
   const seen = new Set();
@@ -210,6 +211,57 @@ function buttonColumn(label, type, value) {
       },
     ],
   };
+}
+
+/** Pure status change for one review. Mutates `review` when a new decision is accepted. */
+export function transitionReview(review, parsed, config) {
+  if (!isReviewer(config, parsed?.operatorId)) {
+    return { toast: { type: 'error', content: '只有审核人可以操作' } };
+  }
+  if (!review) return { toast: { type: 'error', content: '找不到这条审核，可能已过期' } };
+
+  if (review.status === 'sent') {
+    return { toast: { type: 'info', content: '已经推送到群' }, card: buildReviewCard(review, config) };
+  }
+  if (review.status === 'rejected') {
+    return { toast: { type: 'info', content: '已经驳回' }, card: buildReviewCard(review, config) };
+  }
+  if (review.status === 'sending') {
+    return { toast: { type: 'info', content: '正在推送到群，请稍候' }, card: buildReviewCard(review, config) };
+  }
+  if (parsed.decision !== 'approve' && parsed.decision !== 'reject') {
+    return { toast: { type: 'error', content: '无法识别的操作' } };
+  }
+
+  const now = new Date().toISOString();
+  review.error = '';
+  review.decidedByName = reviewersOf(config).find((person) => person.openId === parsed.operatorId)?.name || '';
+  review.updatedAt = now;
+  if (parsed.decision === 'reject') {
+    review.status = 'rejected';
+    return {
+      changed: true,
+      toast: { type: 'info', content: '已驳回，不会发到群' },
+      card: buildReviewCard(review, config),
+    };
+  }
+  review.status = 'sending';
+  review.publishRequestedAt = now;
+  return {
+    changed: true,
+    schedulePublish: true,
+    toast: { type: 'info', content: '已通过，正在推送到群' },
+    card: buildReviewCard(review, config),
+  };
+}
+
+export function stageReviewAction(doc, data, config) {
+  const parsed = parseCardAction(data);
+  const reviews = { ...(doc?.reviews || {}) };
+  const current = reviews[parsed.reviewId] ? { ...reviews[parsed.reviewId] } : null;
+  const outcome = transitionReview(current, parsed, config);
+  if (outcome.changed && current?.id) reviews[current.id] = current;
+  return { parsed, outcome, reviews, review: current };
 }
 
 export function callbackResponse({ toast, card } = {}) {

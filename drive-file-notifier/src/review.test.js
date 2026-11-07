@@ -6,7 +6,9 @@ import {
   parseCardAction,
   pruneReviews,
   reviewMode,
+  stageReviewAction,
 } from './review-card.js';
+import { preferNewerReviews } from './remote-notified.js';
 import { decideReview, publishReview, submitReview } from './review.js';
 
 const reviewer = { name: '郑培友', openId: 'ou_me' };
@@ -210,6 +212,31 @@ test('submitReview sends a card to the reviewer and does not post to the group',
   assert.equal(review.messageId, 'om_new');
   assert.match(JSON.stringify(card), /通过并推送/);
   assert.equal(Object.keys(state.reviews).length, 1);
+});
+
+test('stageReviewAction rejects without asking for a group send', () => {
+  const review = pendingReview();
+  const staged = stageReviewAction({ reviews: { rv1: review } }, {
+    event: {
+      operator: { open_id: 'ou_me' },
+      action: { value: { action: 'reject', reviewId: 'rv1' } },
+    },
+  }, config);
+  assert.equal(staged.outcome.changed, true);
+  assert.equal(staged.outcome.schedulePublish, undefined);
+  assert.equal(staged.reviews.rv1.status, 'rejected');
+  assert.equal(review.status, 'pending');
+});
+
+test('preferNewerReviews keeps a newer remote rejection', () => {
+  const merged = preferNewerReviews({
+    rv1: { status: 'rejected', updatedAt: '2026-11-06T08:00:00.000Z' },
+  }, {
+    rv1: { status: 'pending', updatedAt: '2026-11-06T07:00:00.000Z' },
+    rv2: { status: 'pending', updatedAt: '2026-11-06T08:10:00.000Z' },
+  });
+  assert.equal(merged.rv1.status, 'rejected');
+  assert.equal(merged.rv2.status, 'pending');
 });
 
 test('pruneReviews drops old terminal reviews and keeps pending ones', () => {

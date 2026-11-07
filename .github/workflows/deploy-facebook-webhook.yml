@@ -32,3 +32,6 @@ jobs:
           body=$(curl -fsS https://webhook.soundboxbooth.com/)
           echo "$body"
           echo "$body" | grep -q 'facebook-lead-webhook'
+          review=$(curl -fsS https://webhook.soundboxbooth.com/drive-review)
+          echo "$review"
+          echo "$review" | grep -q 'drive-review'
