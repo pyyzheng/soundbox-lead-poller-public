@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-06T07:01:29.159Z",
+  "updatedAt": "2026-11-07T00:55:57.545Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1391,6 +1391,37 @@
             }
           ]
         }
+      }
+    },
+    "rv_test_mw5ozrxz": {
+      "id": "rv_test_mw5ozrxz",
+      "status": "pending",
+      "createdAt": "2026-11-07T00:55:55.703Z",
+      "updatedAt": "2026-11-07T00:55:56.497Z",
+      "messageId": "om_x100b61d33f0594accf4735b6717d0af",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b61d33f0594accf4735b6717d0af"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [],
+      "spec": {
+        "kind": "file",
+        "tokens": [],
+        "summary": {
+          "eventLabel": "【测试】审核按钮回调",
+          "folderPath": "测试，不会发到群",
+          "fileNames": [
+            "点不通过即可，这不是真实云盘更新"
+          ],
+          "files": []
+        },
+        "payload": {}
       }
     }
   }
