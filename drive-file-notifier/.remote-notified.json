@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-09T09:53:43.906Z",
+  "updatedAt": "2026-11-09T09:53:53.358Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1679,6 +1679,134 @@
       "publishRequestedAt": "2026-11-09T07:43:22.878Z",
       "publishClaimOwner": "42581111757",
       "publishClaimedAt": "2026-11-09T07:44:30.210Z"
+    },
+    "rv_mw9334ut_1aoybb": {
+      "id": "rv_mw9334ut_1aoybb",
+      "status": "pending",
+      "createdAt": "2026-11-09T09:53:45.557Z",
+      "updatedAt": "2026-11-09T09:53:53.015Z",
+      "messageId": "om_x100b602dcc34cca4dde86677daab444",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b602dcc34cca4dde86677daab444"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b602dcdca3500c3c0a263903202e"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "W2Ngbx6IzoTYBkxqXv6cz6KNnoc",
+        "KNLqboOLAojdhYxCBLBciVTjnzg",
+        "GTM6bB4gxoK7yuxcsWmcCMP1nOd",
+        "UJMFbOInGolmo3xeUbHcaqAHnPd"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "W2Ngbx6IzoTYBkxqXv6cz6KNnoc",
+          "KNLqboOLAojdhYxCBLBciVTjnzg",
+          "GTM6bB4gxoK7yuxcsWmcCMP1nOd",
+          "UJMFbOInGolmo3xeUbHcaqAHnPd"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-中国移动(香港)国际有限公司-ART S静音舱（张昊）",
+          "fileNames": [
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 4.jpg",
+              "token": "W2Ngbx6IzoTYBkxqXv6cz6KNnoc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/W2Ngbx6IzoTYBkxqXv6cz6KNnoc"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "KNLqboOLAojdhYxCBLBciVTjnzg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KNLqboOLAojdhYxCBLBciVTjnzg"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "GTM6bB4gxoK7yuxcsWmcCMP1nOd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GTM6bB4gxoK7yuxcsWmcCMP1nOd"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "UJMFbOInGolmo3xeUbHcaqAHnPd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/UJMFbOInGolmo3xeUbHcaqAHnPd"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-中国移动(香港)国际有限公司-ART S静音舱（张昊）",
+            "token": "J6Tgfbm2UllxKYdaJqkcS0iinhe",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/J6Tgfbm2UllxKYdaJqkcS0iinhe"
+          },
+          "links": [
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/W2Ngbx6IzoTYBkxqXv6cz6KNnoc"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KNLqboOLAojdhYxCBLBciVTjnzg"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GTM6bB4gxoK7yuxcsWmcCMP1nOd"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/UJMFbOInGolmo3xeUbHcaqAHnPd"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/J6Tgfbm2UllxKYdaJqkcS0iinhe"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-中国移动(香港)国际有限公司-ART S静音舱（张昊）",
+          "folderToken": "J6Tgfbm2UllxKYdaJqkcS0iinhe",
+          "zipNameHint": "B-中国移动(香港)国际有限公司-ART S静音舱（张昊）",
+          "files": [
+            {
+              "token": "W2Ngbx6IzoTYBkxqXv6cz6KNnoc",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "KNLqboOLAojdhYxCBLBciVTjnzg",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "GTM6bB4gxoK7yuxcsWmcCMP1nOd",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "UJMFbOInGolmo3xeUbHcaqAHnPd",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
     }
   }
 }
