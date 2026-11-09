@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-09T09:57:58.307Z",
+  "updatedAt": "2026-11-09T09:58:12.235Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1808,6 +1808,188 @@
             },
             {
               "token": "UJMFbOInGolmo3xeUbHcaqAHnPd",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mw938l82_6xhqfb": {
+      "id": "rv_mw938l82_6xhqfb",
+      "status": "pending",
+      "createdAt": "2026-11-09T09:58:00.050Z",
+      "updatedAt": "2026-11-09T09:58:11.714Z",
+      "messageId": "om_x100b602dddee28a8c06990030547b82",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b602dddee28a8c06990030547b82"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b602dddff78acc06617a6d3407d8"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "RCeFbYZTnonGaqx5pBFccy9NnMh",
+        "ZcpjbmCVAoCwwExza7kcHkjrnlc",
+        "KDzbbD1pvoHFVdxCbqxca6ANnsb",
+        "KgeXbiry7ovH8Ix7p11cQLRunyd",
+        "SG6MbpspooC30VxmOXHcmB8zn3d",
+        "DRpOb92IooLzvNxWo7tcaU8Qnid",
+        "Dz6KbChYNoauJpxMfoLcVclYnSg"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "RCeFbYZTnonGaqx5pBFccy9NnMh",
+          "ZcpjbmCVAoCwwExza7kcHkjrnlc",
+          "KDzbbD1pvoHFVdxCbqxca6ANnsb",
+          "KgeXbiry7ovH8Ix7p11cQLRunyd",
+          "SG6MbpspooC30VxmOXHcmB8zn3d",
+          "DRpOb92IooLzvNxWo7tcaU8Qnid",
+          "Dz6KbChYNoauJpxMfoLcVclYnSg"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/J-酒店医疗地产 Hospitality & Healthcare/H-武汉市第一医院互联网医院-SR静音舱(肖圣一)",
+          "fileNames": [
+            "图层 7.jpg",
+            "图层 6.jpg",
+            "图层 5.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 7.jpg",
+              "token": "RCeFbYZTnonGaqx5pBFccy9NnMh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/RCeFbYZTnonGaqx5pBFccy9NnMh"
+            },
+            {
+              "name": "图层 6.jpg",
+              "token": "ZcpjbmCVAoCwwExza7kcHkjrnlc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ZcpjbmCVAoCwwExza7kcHkjrnlc"
+            },
+            {
+              "name": "图层 5.jpg",
+              "token": "KDzbbD1pvoHFVdxCbqxca6ANnsb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KDzbbD1pvoHFVdxCbqxca6ANnsb"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "KgeXbiry7ovH8Ix7p11cQLRunyd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KgeXbiry7ovH8Ix7p11cQLRunyd"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "SG6MbpspooC30VxmOXHcmB8zn3d",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SG6MbpspooC30VxmOXHcmB8zn3d"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "DRpOb92IooLzvNxWo7tcaU8Qnid",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/DRpOb92IooLzvNxWo7tcaU8Qnid"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "Dz6KbChYNoauJpxMfoLcVclYnSg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Dz6KbChYNoauJpxMfoLcVclYnSg"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/J-酒店医疗地产 Hospitality & Healthcare/H-武汉市第一医院互联网医院-SR静音舱(肖圣一)",
+            "token": "F9lYf0oe1lnx5zdaNehcuA77nMc",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/F9lYf0oe1lnx5zdaNehcuA77nMc"
+          },
+          "links": [
+            {
+              "label": "图层 7.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/RCeFbYZTnonGaqx5pBFccy9NnMh"
+            },
+            {
+              "label": "图层 6.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ZcpjbmCVAoCwwExza7kcHkjrnlc"
+            },
+            {
+              "label": "图层 5.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KDzbbD1pvoHFVdxCbqxca6ANnsb"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KgeXbiry7ovH8Ix7p11cQLRunyd"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SG6MbpspooC30VxmOXHcmB8zn3d"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/DRpOb92IooLzvNxWo7tcaU8Qnid"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Dz6KbChYNoauJpxMfoLcVclYnSg"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/F9lYf0oe1lnx5zdaNehcuA77nMc"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/J-酒店医疗地产 Hospitality & Healthcare/H-武汉市第一医院互联网医院-SR静音舱(肖圣一)",
+          "folderToken": "F9lYf0oe1lnx5zdaNehcuA77nMc",
+          "zipNameHint": "H-武汉市第一医院互联网医院-SR静音舱(肖圣一)",
+          "files": [
+            {
+              "token": "RCeFbYZTnonGaqx5pBFccy9NnMh",
+              "type": "file",
+              "name": "图层 7.jpg"
+            },
+            {
+              "token": "ZcpjbmCVAoCwwExza7kcHkjrnlc",
+              "type": "file",
+              "name": "图层 6.jpg"
+            },
+            {
+              "token": "KDzbbD1pvoHFVdxCbqxca6ANnsb",
+              "type": "file",
+              "name": "图层 5.jpg"
+            },
+            {
+              "token": "KgeXbiry7ovH8Ix7p11cQLRunyd",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "SG6MbpspooC30VxmOXHcmB8zn3d",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "DRpOb92IooLzvNxWo7tcaU8Qnid",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "Dz6KbChYNoauJpxMfoLcVclYnSg",
               "type": "file",
               "name": "图层 1.jpg"
             }
