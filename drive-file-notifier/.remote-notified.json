@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-09T10:03:50.268Z",
+  "updatedAt": "2026-11-09T10:04:19.296Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1819,7 +1819,7 @@
       "id": "rv_mw938l82_6xhqfb",
       "status": "sending",
       "createdAt": "2026-11-09T09:58:00.050Z",
-      "updatedAt": "2026-11-09T10:03:47.846Z",
+      "updatedAt": "2026-11-09T10:04:19.296Z",
       "messageId": "om_x100b602dddee28a8c06990030547b82",
       "messages": [
         {
@@ -1996,7 +1996,9 @@
           ]
         }
       },
-      "publishRequestedAt": "2026-11-09T10:03:47.846Z"
+      "publishRequestedAt": "2026-11-09T10:03:47.846Z",
+      "publishClaimOwner": "42598098869",
+      "publishClaimedAt": "2026-11-09T10:04:19.296Z"
     }
   }
 }
