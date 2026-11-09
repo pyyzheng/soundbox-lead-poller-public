@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-09T01:53:21.125Z",
+  "updatedAt": "2026-11-09T01:53:39.766Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1435,6 +1435,242 @@
           "files": []
         },
         "payload": {}
+      }
+    },
+    "rv_mw8lxd3d_xw4xnr": {
+      "id": "rv_mw8lxd3d_xw4xnr",
+      "status": "pending",
+      "createdAt": "2026-11-09T01:53:22.825Z",
+      "updatedAt": "2026-11-09T01:53:39.392Z",
+      "messageId": "om_x100b602634d0b0b8dfc83f8476d5b5f",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b602634d0b0b8dfc83f8476d5b5f"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b602634e154a0de969b17d237470"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "ILHib50yToGAFjxMtTkcuSP3nGc",
+        "XUr2bzPD5o9aVZxXjbvcGuBRnHe",
+        "GrTibzVGUoTbdkxyxNmc8EeOnwf",
+        "MVUHbmDkWoz3fnxHqKSc6sUDn1c",
+        "WEPcbVm8Kojwn3xcNSJcMjbEnfd",
+        "PRcdbXRjfopxhVxp0NZcDcYcnub",
+        "IpfrbJ8NLoHm7ixXm3KcONfEnHf",
+        "II2bbRoJNowdsfxSYqOc5pkMnLg",
+        "Rh8Vb2lNxox97UxBH23cYFT1n01",
+        "SPqubJixmoPtZ1xYUtzcAZsVnah"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "ILHib50yToGAFjxMtTkcuSP3nGc",
+          "XUr2bzPD5o9aVZxXjbvcGuBRnHe",
+          "GrTibzVGUoTbdkxyxNmc8EeOnwf",
+          "MVUHbmDkWoz3fnxHqKSc6sUDn1c",
+          "WEPcbVm8Kojwn3xcNSJcMjbEnfd",
+          "PRcdbXRjfopxhVxp0NZcDcYcnub",
+          "IpfrbJ8NLoHm7ixXm3KcONfEnHf",
+          "II2bbRoJNowdsfxSYqOc5pkMnLg",
+          "Rh8Vb2lNxox97UxBH23cYFT1n01",
+          "SPqubJixmoPtZ1xYUtzcAZsVnah"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-去哪儿旅行-静音舱-Qunar Travel-SR",
+          "fileNames": [
+            "图层 14.jpg",
+            "图层 13.jpg",
+            "图层 12.jpg",
+            "图层 11.jpg",
+            "图层 10.jpg",
+            "图层 9.jpg",
+            "图层 8.jpg",
+            "图层 7.jpg",
+            "图层 1.jpg",
+            "图层 15.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 14.jpg",
+              "token": "ILHib50yToGAFjxMtTkcuSP3nGc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ILHib50yToGAFjxMtTkcuSP3nGc"
+            },
+            {
+              "name": "图层 13.jpg",
+              "token": "XUr2bzPD5o9aVZxXjbvcGuBRnHe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/XUr2bzPD5o9aVZxXjbvcGuBRnHe"
+            },
+            {
+              "name": "图层 12.jpg",
+              "token": "GrTibzVGUoTbdkxyxNmc8EeOnwf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GrTibzVGUoTbdkxyxNmc8EeOnwf"
+            },
+            {
+              "name": "图层 11.jpg",
+              "token": "MVUHbmDkWoz3fnxHqKSc6sUDn1c",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/MVUHbmDkWoz3fnxHqKSc6sUDn1c"
+            },
+            {
+              "name": "图层 10.jpg",
+              "token": "WEPcbVm8Kojwn3xcNSJcMjbEnfd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/WEPcbVm8Kojwn3xcNSJcMjbEnfd"
+            },
+            {
+              "name": "图层 9.jpg",
+              "token": "PRcdbXRjfopxhVxp0NZcDcYcnub",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/PRcdbXRjfopxhVxp0NZcDcYcnub"
+            },
+            {
+              "name": "图层 8.jpg",
+              "token": "IpfrbJ8NLoHm7ixXm3KcONfEnHf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/IpfrbJ8NLoHm7ixXm3KcONfEnHf"
+            },
+            {
+              "name": "图层 7.jpg",
+              "token": "II2bbRoJNowdsfxSYqOc5pkMnLg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/II2bbRoJNowdsfxSYqOc5pkMnLg"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "Rh8Vb2lNxox97UxBH23cYFT1n01",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Rh8Vb2lNxox97UxBH23cYFT1n01"
+            },
+            {
+              "name": "图层 15.jpg",
+              "token": "SPqubJixmoPtZ1xYUtzcAZsVnah",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SPqubJixmoPtZ1xYUtzcAZsVnah"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-去哪儿旅行-静音舱-Qunar Travel-SR",
+            "token": "TIHufF7I9lZheqdt5pDcGiqGnXd",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/TIHufF7I9lZheqdt5pDcGiqGnXd"
+          },
+          "links": [
+            {
+              "label": "图层 14.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ILHib50yToGAFjxMtTkcuSP3nGc"
+            },
+            {
+              "label": "图层 13.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/XUr2bzPD5o9aVZxXjbvcGuBRnHe"
+            },
+            {
+              "label": "图层 12.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GrTibzVGUoTbdkxyxNmc8EeOnwf"
+            },
+            {
+              "label": "图层 11.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/MVUHbmDkWoz3fnxHqKSc6sUDn1c"
+            },
+            {
+              "label": "图层 10.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/WEPcbVm8Kojwn3xcNSJcMjbEnfd"
+            },
+            {
+              "label": "图层 9.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/PRcdbXRjfopxhVxp0NZcDcYcnub"
+            },
+            {
+              "label": "图层 8.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/IpfrbJ8NLoHm7ixXm3KcONfEnHf"
+            },
+            {
+              "label": "图层 7.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/II2bbRoJNowdsfxSYqOc5pkMnLg"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Rh8Vb2lNxox97UxBH23cYFT1n01"
+            },
+            {
+              "label": "图层 15.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SPqubJixmoPtZ1xYUtzcAZsVnah"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/TIHufF7I9lZheqdt5pDcGiqGnXd"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-去哪儿旅行-静音舱-Qunar Travel-SR",
+          "folderToken": "TIHufF7I9lZheqdt5pDcGiqGnXd",
+          "zipNameHint": "B-去哪儿旅行-静音舱-Qunar Travel-SR",
+          "files": [
+            {
+              "token": "ILHib50yToGAFjxMtTkcuSP3nGc",
+              "type": "file",
+              "name": "图层 14.jpg"
+            },
+            {
+              "token": "XUr2bzPD5o9aVZxXjbvcGuBRnHe",
+              "type": "file",
+              "name": "图层 13.jpg"
+            },
+            {
+              "token": "GrTibzVGUoTbdkxyxNmc8EeOnwf",
+              "type": "file",
+              "name": "图层 12.jpg"
+            },
+            {
+              "token": "MVUHbmDkWoz3fnxHqKSc6sUDn1c",
+              "type": "file",
+              "name": "图层 11.jpg"
+            },
+            {
+              "token": "WEPcbVm8Kojwn3xcNSJcMjbEnfd",
+              "type": "file",
+              "name": "图层 10.jpg"
+            },
+            {
+              "token": "PRcdbXRjfopxhVxp0NZcDcYcnub",
+              "type": "file",
+              "name": "图层 9.jpg"
+            },
+            {
+              "token": "IpfrbJ8NLoHm7ixXm3KcONfEnHf",
+              "type": "file",
+              "name": "图层 8.jpg"
+            },
+            {
+              "token": "II2bbRoJNowdsfxSYqOc5pkMnLg",
+              "type": "file",
+              "name": "图层 7.jpg"
+            },
+            {
+              "token": "Rh8Vb2lNxox97UxBH23cYFT1n01",
+              "type": "file",
+              "name": "图层 1.jpg"
+            },
+            {
+              "token": "SPqubJixmoPtZ1xYUtzcAZsVnah",
+              "type": "file",
+              "name": "图层 15.jpg"
+            }
+          ]
+        }
       }
     }
   }
