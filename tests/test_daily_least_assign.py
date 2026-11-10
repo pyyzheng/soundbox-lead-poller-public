@@ -91,7 +91,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         self.assertFalse(pick.advance_public_region)
 
     def test_public_alternates_region(self):
-        counts = {"Gigi": 1, "Cathy": 2, "Tiya": 9, "Kevin": 0, "Rita": 3, "Zoe": 2}
+        counts = {"Gigi": 1, "Cathy": 2, "Tiya": 9, "Kevin": 1, "Rita": 3, "Zoe": 0}
         pick1 = pick_daily_least_assignee("谷歌|南美非洲公区队列", counts, PUBLIC_REGION_ME)
         assert pick1 is not None
         self.assertEqual(pick1.assignee, "Gigi")
@@ -105,6 +105,12 @@ class DailyLeastPoolTests(unittest.TestCase):
         assert pick2 is not None
         self.assertEqual(pick2.assignee, "Kevin")
         self.assertEqual(pick2.next_public_region, PUBLIC_REGION_ME)
+
+    def test_asia_skips_zoe_even_with_lowest_count(self):
+        counts = {"Tiya": 2, "Kevin": 1, "Rita": 3, "Zoe": 0}
+        pick = pick_daily_least_assignee("谷歌|亚洲区队列", counts, PUBLIC_REGION_ME)
+        assert pick is not None
+        self.assertEqual(pick.assignee, "Kevin")
 
     def test_agency_gap_then_least_prefers_behind(self):
         """Cathy 因代理累计升高后，中东普通单应补给 Gigi。"""
@@ -164,19 +170,13 @@ class DailyLeastPoolTests(unittest.TestCase):
         apply_newcomer_start_line(split, today=date(2026, 9, 16))
         self.assertEqual(split["Zoe"], {"yesterday": 2, "today": 0})
         totals = totals_from_split(split)
-        pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
-        assert pick is not None
-        self.assertEqual(pick.assignee, "Zoe")
+        self.assertEqual(pick_least_assignee(ASIA_ROSTER, totals), "Zoe")
 
         bump_count(totals, "Zoe")
-        pick2 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
-        assert pick2 is not None
-        self.assertEqual(pick2.assignee, "Kevin")
+        self.assertEqual(pick_least_assignee(ASIA_ROSTER, totals), "Kevin")
 
         bump_count(totals, "Kevin")
-        pick3 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
-        assert pick3 is not None
-        self.assertEqual(pick3.assignee, "Rita")
+        self.assertEqual(pick_least_assignee(ASIA_ROSTER, totals), "Rita")
 
     def test_newcomer_start_line_does_not_follow_peer_today_after_join_day(self):
         from datetime import date
@@ -195,13 +195,9 @@ class DailyLeastPoolTests(unittest.TestCase):
         self.assertEqual(split["Zoe"]["yesterday"], 2)
         self.assertEqual(split["Zoe"]["today"], 0)
         totals = totals_from_split(split)
-        pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
-        assert pick is not None
-        self.assertEqual(pick.assignee, "Zoe")
+        self.assertEqual(pick_least_assignee(ASIA_ROSTER, totals), "Zoe")
         bump_count(totals, "Zoe")
-        pick2 = pick_daily_least_assignee("谷歌|亚洲区队列", totals, PUBLIC_REGION_ME)
-        assert pick2 is not None
-        self.assertEqual(pick2.assignee, "Rita")
+        self.assertEqual(pick_least_assignee(ASIA_ROSTER, totals), "Rita")
 
     def test_newcomer_start_line_does_not_double_pad_after_real_leads(self):
         from datetime import date
@@ -240,9 +236,7 @@ class DailyLeastPoolTests(unittest.TestCase):
         raised = apply_newcomer_start_line(split, today=date(2026, 9, 17))
         self.assertEqual(raised, [])
         self.assertEqual(split["Zoe"], {"yesterday": 0, "today": 0})
-        pick = pick_daily_least_assignee("谷歌|亚洲区队列", totals_from_split(split), PUBLIC_REGION_ME)
-        assert pick is not None
-        self.assertEqual(pick.assignee, "Zoe")
+        self.assertEqual(pick_least_assignee(ASIA_ROSTER, totals_from_split(split)), "Zoe")
 
     def test_tiya_join_day_aligns_to_asia_peer_max(self):
         from datetime import date

@@ -47,6 +47,8 @@ TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")
 # 区内花名册（并列最少时按此顺序取第一个）
 ME_ROSTER: tuple[str, ...] = ("Gigi", "Cathy")
 ASIA_ROSTER: tuple[str, ...] = ("Tiya", "Zoe", "Kevin", "Rita")  # 并列时优先 Tiya
+# 邹盈（Zoe）退出询盘分配，仍保留在计数名单中。
+ASIA_ASSIGNMENT_ROSTER = tuple(name for name in ASIA_ROSTER if name != "Zoe")
 
 # 人级累计统计对象（Jannice 代理不进最少池，可不计入竞争；仍可统计但不参与选人）
 TRACKED_ASSIGNEES: frozenset[str] = frozenset(ME_ROSTER + ASIA_ROSTER)
@@ -264,7 +266,7 @@ def next_public_region(current: int) -> int:
 
 def roster_for_public_region(region: int) -> tuple[str, ...]:
     if region == PUBLIC_REGION_ASIA:
-        return ASIA_ROSTER
+        return ASIA_ASSIGNMENT_ROSTER
     return ME_ROSTER
 
 
@@ -289,7 +291,7 @@ def pick_daily_least_assignee(
         )
 
     if pool == POOL_ASIA:
-        assignee = pick_least_assignee(ASIA_ROSTER, counts)
+        assignee = pick_least_assignee(ASIA_ASSIGNMENT_ROSTER, counts)
         return DailyLeastPickResult(
             assignee=assignee,
             pool=pool,
