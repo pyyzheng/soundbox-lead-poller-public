@@ -394,11 +394,11 @@ def main() -> int:
             continue
         resolved_key = pick.resolved_queue_key or queue_key
         patch = {FIELD_QUEUE_ASSIGNEE: pick.assignee, FIELD_SUCCESS: WRITE_SUCCESS_YES}
-            # 若靠区域兜底命中，顺带写回主渠道，避免公式继续产出「无法识别|…」
-            if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
-                prefix = resolved_key.split("|", 1)[0]
-                write_ch = to_write_channel(prefix) or prefix
-                patch[FIELD_CHANNELS] = write_ch
+        # 若靠区域兜底命中，顺带写回主渠道，避免公式继续产出「无法识别|…」
+        if is_invalid_channel(extract_text(get_field(fields, FIELD_CHANNELS, ""))) and "|" in resolved_key:
+            prefix = resolved_key.split("|", 1)[0]
+            write_ch = to_write_channel(prefix) or prefix
+            patch[FIELD_CHANNELS] = write_ch
         log.info("修复 %s → %s (queue=%s)", lead_id, pick.assignee, resolved_key)
         if os.environ.get("FIX_ANOMALY_DRY_RUN", "false").lower() == "true":
             fixed += 1
