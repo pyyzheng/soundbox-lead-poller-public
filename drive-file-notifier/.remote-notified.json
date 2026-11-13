@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-13T09:35:13.640Z",
+  "updatedAt": "2026-11-13T09:35:19.671Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -2000,6 +2000,76 @@
       "publishRequestedAt": "2026-11-09T10:03:47.846Z",
       "publishClaimOwner": "42598098869",
       "publishClaimedAt": "2026-11-09T10:04:20.137Z"
+    },
+    "rv_mwes6qzg_1igr2e": {
+      "id": "rv_mwes6qzg_1igr2e",
+      "status": "pending",
+      "createdAt": "2026-11-13T09:35:15.484Z",
+      "updatedAt": "2026-11-13T09:35:19.429Z",
+      "messageId": "om_x100b6059d39110a8b4a42ebce17352e",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b6059d39110a8b4a42ebce17352e"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b6059d3a10c84b37071e98a86d2a"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "MEWhd8xwtodeRJxu2x9cgaYFnih"
+      ],
+      "spec": {
+        "kind": "file",
+        "tokens": [
+          "MEWhd8xwtodeRJxu2x9cgaYFnih"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "M-Marketing 品牌营销资料/Global Offices 全球子办",
+          "fileNames": [
+            "全球子办信息汇总 Global Offices Directory"
+          ],
+          "files": [
+            {
+              "name": "全球子办信息汇总 Global Offices Directory",
+              "token": "MEWhd8xwtodeRJxu2x9cgaYFnih",
+              "type": "docx",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/docx/MEWhd8xwtodeRJxu2x9cgaYFnih"
+            }
+          ],
+          "folder": {
+            "name": "M-Marketing 品牌营销资料/Global Offices 全球子办",
+            "token": "RM2gfFUfHlryx5dCN25cVrOwnXe",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/RM2gfFUfHlryx5dCN25cVrOwnXe"
+          },
+          "links": [
+            {
+              "label": "全球子办信息汇总 Global Offices Directory",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/docx/MEWhd8xwtodeRJxu2x9cgaYFnih"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/RM2gfFUfHlryx5dCN25cVrOwnXe"
+            }
+          ]
+        },
+        "payload": {
+          "fileToken": "MEWhd8xwtodeRJxu2x9cgaYFnih",
+          "fileType": "docx",
+          "reason": "文件夹有新上传/新建",
+          "titleHint": "全球子办信息汇总 Global Offices Directory",
+          "folderPath": "M-Marketing 品牌营销资料/Global Offices 全球子办",
+          "folderToken": "RM2gfFUfHlryx5dCN25cVrOwnXe",
+          "driveUrl": "https://rcn1z5q6iyyc.feishu.cn/docx/MEWhd8xwtodeRJxu2x9cgaYFnih"
+        }
+      }
     }
   }
 }
