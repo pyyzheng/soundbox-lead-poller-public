@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-16T06:35:07.258Z",
+  "updatedAt": "2026-11-16T06:35:14.836Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1616,6 +1616,98 @@
           "folderPath": "M-Marketing 品牌营销资料/Global Offices 全球子办",
           "folderToken": "RM2gfFUfHlryx5dCN25cVrOwnXe",
           "driveUrl": "https://rcn1z5q6iyyc.feishu.cn/docx/MEWhd8xwtodeRJxu2x9cgaYFnih"
+        }
+      }
+    },
+    "rv_mwiw2ouj_x0xiqb": {
+      "id": "rv_mwiw2ouj_x0xiqb",
+      "status": "pending",
+      "createdAt": "2026-11-16T06:35:09.259Z",
+      "updatedAt": "2026-11-16T06:35:14.566Z",
+      "messageId": "om_x100b609e0cc32c90cff72ce0588d876",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b609e0cc32c90cff72ce0588d876"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b609e0cd29c80b4b961f2fac0249"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "WR3Nbc3MNo2xm5xUe0EcD3WUnuc",
+        "X4qMbQeV9o4QAOxnwTCcpMjsnCb"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "WR3Nbc3MNo2xm5xUe0EcD3WUnuc",
+          "X4qMbQeV9o4QAOxnwTCcpMjsnCb"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "C-产品画册&产品色卡_20260706-0355PM",
+          "fileNames": [
+            "VRX云舱-EN.pdf",
+            "VRX云舱-中文版.pdf"
+          ],
+          "files": [
+            {
+              "name": "VRX云舱-EN.pdf",
+              "token": "WR3Nbc3MNo2xm5xUe0EcD3WUnuc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/WR3Nbc3MNo2xm5xUe0EcD3WUnuc"
+            },
+            {
+              "name": "VRX云舱-中文版.pdf",
+              "token": "X4qMbQeV9o4QAOxnwTCcpMjsnCb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/X4qMbQeV9o4QAOxnwTCcpMjsnCb"
+            }
+          ],
+          "folder": {
+            "name": "C-产品画册&产品色卡_20260706-0355PM",
+            "token": "YYFCfwjMMley4md1SMgcPLvznEb",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/YYFCfwjMMley4md1SMgcPLvznEb"
+          },
+          "links": [
+            {
+              "label": "VRX云舱-EN.pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/WR3Nbc3MNo2xm5xUe0EcD3WUnuc"
+            },
+            {
+              "label": "VRX云舱-中文版.pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/X4qMbQeV9o4QAOxnwTCcpMjsnCb"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/YYFCfwjMMley4md1SMgcPLvznEb"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "C-产品画册&产品色卡_20260706-0355PM",
+          "folderToken": "YYFCfwjMMley4md1SMgcPLvznEb",
+          "zipNameHint": "C-产品画册&产品色卡_20260706-0355PM",
+          "files": [
+            {
+              "token": "WR3Nbc3MNo2xm5xUe0EcD3WUnuc",
+              "type": "file",
+              "name": "VRX云舱-EN.pdf"
+            },
+            {
+              "token": "X4qMbQeV9o4QAOxnwTCcpMjsnCb",
+              "type": "file",
+              "name": "VRX云舱-中文版.pdf"
+            }
+          ]
         }
       }
     }
