@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-16T07:04:57.073Z",
+  "updatedAt": "2026-11-16T07:05:17.518Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1317,6 +1317,224 @@
               "token": "X4qMbQeV9o4QAOxnwTCcpMjsnCb",
               "type": "file",
               "name": "VRX云舱-中文版.pdf"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mwix51xu_w9tsi3": {
+      "id": "rv_mwix51xu_w9tsi3",
+      "status": "pending",
+      "createdAt": "2026-11-16T07:04:59.154Z",
+      "updatedAt": "2026-11-16T07:05:17.289Z",
+      "messageId": "om_x100b609efc7bf888cefb56201f8f834",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b609efc7bf888cefb56201f8f834"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b609efc04113cce8ee864b7381cc"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "TUZnbE5YHoxaxuxpC8UcYrlcnmh",
+        "TbGLbIdBaoOVAQxWwXPc38gmnIe",
+        "TKEKbbzLnoBvLyxwG7ic03SEnYc",
+        "Rnnjbu9FNoqJXCxcmPIcgmrpnKg",
+        "DhKlb2o0HoGtcXx8KYbcXTL3nrd",
+        "CdA9bcz1BoDvM0xVreNcDGlrnef",
+        "NvnRbhqWmofO5exu7gRc2J0Gnuh",
+        "IXTNb5ItKovQeGxKNPacM3IqnPb",
+        "V4XDbLSRdoAc3fx8EKkct45EnMS"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "TUZnbE5YHoxaxuxpC8UcYrlcnmh",
+          "TbGLbIdBaoOVAQxWwXPc38gmnIe",
+          "TKEKbbzLnoBvLyxwG7ic03SEnYc",
+          "Rnnjbu9FNoqJXCxcmPIcgmrpnKg",
+          "DhKlb2o0HoGtcXx8KYbcXTL3nrd",
+          "CdA9bcz1BoDvM0xVreNcDGlrnef",
+          "NvnRbhqWmofO5exu7gRc2J0Gnuh",
+          "IXTNb5ItKovQeGxKNPacM3IqnPb",
+          "V4XDbLSRdoAc3fx8EKkct45EnMS"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/S-西安华陆工程科技有限责任公司-软包(张荣燚)",
+          "fileNames": [
+            "图层 9.jpg",
+            "图层 8.jpg",
+            "图层 5.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 11.jpg",
+            "图层 10.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 9.jpg",
+              "token": "TUZnbE5YHoxaxuxpC8UcYrlcnmh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TUZnbE5YHoxaxuxpC8UcYrlcnmh"
+            },
+            {
+              "name": "图层 8.jpg",
+              "token": "TbGLbIdBaoOVAQxWwXPc38gmnIe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TbGLbIdBaoOVAQxWwXPc38gmnIe"
+            },
+            {
+              "name": "图层 5.jpg",
+              "token": "TKEKbbzLnoBvLyxwG7ic03SEnYc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TKEKbbzLnoBvLyxwG7ic03SEnYc"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "Rnnjbu9FNoqJXCxcmPIcgmrpnKg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Rnnjbu9FNoqJXCxcmPIcgmrpnKg"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "DhKlb2o0HoGtcXx8KYbcXTL3nrd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/DhKlb2o0HoGtcXx8KYbcXTL3nrd"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "CdA9bcz1BoDvM0xVreNcDGlrnef",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/CdA9bcz1BoDvM0xVreNcDGlrnef"
+            },
+            {
+              "name": "图层 11.jpg",
+              "token": "NvnRbhqWmofO5exu7gRc2J0Gnuh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/NvnRbhqWmofO5exu7gRc2J0Gnuh"
+            },
+            {
+              "name": "图层 10.jpg",
+              "token": "IXTNb5ItKovQeGxKNPacM3IqnPb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/IXTNb5ItKovQeGxKNPacM3IqnPb"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "V4XDbLSRdoAc3fx8EKkct45EnMS",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/V4XDbLSRdoAc3fx8EKkct45EnMS"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/S-西安华陆工程科技有限责任公司-软包(张荣燚)",
+            "token": "QwTpfdAcllD7MKdkn7dciRe7nsg",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/QwTpfdAcllD7MKdkn7dciRe7nsg"
+          },
+          "links": [
+            {
+              "label": "图层 9.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TUZnbE5YHoxaxuxpC8UcYrlcnmh"
+            },
+            {
+              "label": "图层 8.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TbGLbIdBaoOVAQxWwXPc38gmnIe"
+            },
+            {
+              "label": "图层 5.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TKEKbbzLnoBvLyxwG7ic03SEnYc"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Rnnjbu9FNoqJXCxcmPIcgmrpnKg"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/DhKlb2o0HoGtcXx8KYbcXTL3nrd"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/CdA9bcz1BoDvM0xVreNcDGlrnef"
+            },
+            {
+              "label": "图层 11.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/NvnRbhqWmofO5exu7gRc2J0Gnuh"
+            },
+            {
+              "label": "图层 10.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/IXTNb5ItKovQeGxKNPacM3IqnPb"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/V4XDbLSRdoAc3fx8EKkct45EnMS"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/QwTpfdAcllD7MKdkn7dciRe7nsg"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/S-西安华陆工程科技有限责任公司-软包(张荣燚)",
+          "folderToken": "QwTpfdAcllD7MKdkn7dciRe7nsg",
+          "zipNameHint": "S-西安华陆工程科技有限责任公司-软包(张荣燚)",
+          "files": [
+            {
+              "token": "TUZnbE5YHoxaxuxpC8UcYrlcnmh",
+              "type": "file",
+              "name": "图层 9.jpg"
+            },
+            {
+              "token": "TbGLbIdBaoOVAQxWwXPc38gmnIe",
+              "type": "file",
+              "name": "图层 8.jpg"
+            },
+            {
+              "token": "TKEKbbzLnoBvLyxwG7ic03SEnYc",
+              "type": "file",
+              "name": "图层 5.jpg"
+            },
+            {
+              "token": "Rnnjbu9FNoqJXCxcmPIcgmrpnKg",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "DhKlb2o0HoGtcXx8KYbcXTL3nrd",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "CdA9bcz1BoDvM0xVreNcDGlrnef",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "NvnRbhqWmofO5exu7gRc2J0Gnuh",
+              "type": "file",
+              "name": "图层 11.jpg"
+            },
+            {
+              "token": "IXTNb5ItKovQeGxKNPacM3IqnPb",
+              "type": "file",
+              "name": "图层 10.jpg"
+            },
+            {
+              "token": "V4XDbLSRdoAc3fx8EKkct45EnMS",
+              "type": "file",
+              "name": "图层 1.jpg"
             }
           ]
         }
