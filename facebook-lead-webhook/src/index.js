@@ -983,12 +983,14 @@ function formatQuickLine(dateStr, details) {
 __name(formatQuickLine, "formatQuickLine");
 function formatShanghaiDate(ms) {
   try {
-    return new Intl.DateTimeFormat("en-CA", {
+    const parts = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Shanghai",
       year: "numeric",
       month: "2-digit",
       day: "2-digit"
-    }).format(new Date(ms)).replace(/-/g, "/");
+    }).formatToParts(new Date(ms));
+    const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${byType.year}/${byType.month}/${byType.day}`;
   } catch {
     const d = new Date(ms);
     const y = d.getFullYear();
@@ -1243,47 +1245,64 @@ async function withSyncLock(env, leadId, fn) {
   return { skipped: true, reason: "locked" };
 }
 __name(withSyncLock, "withSyncLock");
+function stampQuickLines(quickText) {
+  const lines = parseQuickLines(quickText);
+  let stampedUndated = 0;
+  const stamped = lines.map((line) => {
+    if (!line.date && line.details) stampedUndated++;
+    const raw = formatQuickLine(line.date, line.details);
+    const match = raw.match(/^(\d{4}\/\d{2}\/\d{2})\s*\|\s*(.*)$/);
+    return { raw, date: match[1], details: match[2].trim() };
+  });
+  return { lines: stamped, stampedUndated };
+}
+__name(stampQuickLines, "stampQuickLines");
+function rebuildQuickFromPlan(existing, plan) {
+  const deleted = new Set(plan.softDeletes);
+  const patched = new Map(plan.updates.map((item) => [item.record_id, item.fields]));
+  const items = [];
+  for (const rec of existing) {
+    if (deleted.has(rec.record_id)) continue;
+    const patch = patched.get(rec.record_id) || {};
+    const details = patch[FOLLOWUP_DETAILS_FIELD] ?? rec.details;
+    const timeMs = patch[FOLLOWUP_TIME_FIELD] ?? rec.timeMs;
+    items.push({ details, timeMs, summary: details ? formatQuickLine(dateFromMs(timeMs), details) : "" });
+  }
+  for (const created of plan.creates) {
+    items.push({
+      details: created.details,
+      timeMs: created.timeMs,
+      summary: created.details ? formatQuickLine(dateFromMs(created.timeMs), created.details) : ""
+    });
+  }
+  items.sort((a, b) => (b.timeMs || 0) - (a.timeMs || 0));
+  return { items, text: buildQuickTextFromFollowups(items) };
+}
+__name(rebuildQuickFromPlan, "rebuildQuickFromPlan");
 async function alignQuickAsSource(token, env, leadRecordId, quickText, existing) {
   const normalizedQuick = String(quickText || "").trim();
-  const lines = parseQuickLines(quickText);
-  if (lines.length === 0) {
-    for (const rec of existing) {
-      await deleteFollowupRecord(token, env, rec.record_id);
-    }
-    if (normalizedQuick !== "") {
-      await updateLeadQuick(token, env, leadRecordId, "");
-    }
+  const stamped = stampQuickLines(quickText);
+  if (stamped.lines.length === 0) {
+    for (const rec of existing) await deleteFollowupRecord(token, env, rec.record_id);
+    if (normalizedQuick !== "") await updateLeadQuick(token, env, leadRecordId, "");
     return {
-      mode: "clear_all",
-      created: 0,
-      updated: 0,
-      soft_deleted: 0,
-      hard_deleted: existing.length,
-      active: 0
+      mode: "clear_all", created: 0, updated: 0, soft_deleted: 0,
+      hard_deleted: existing.length, active: 0, stamped_undated: 0
     };
   }
-  const plan = alignQuickToFollowups(lines, existing);
-  for (const u of plan.updates) {
-    await updateFollowupRecord(token, env, u.record_id, u.fields);
-  }
-  for (const id of plan.softDeletes) {
-    await deleteFollowupRecord(token, env, id);
-  }
-  for (const c of plan.creates) {
-    await createFollowupRecord(token, env, leadRecordId, c.details, c.timeMs);
-  }
-  const refreshed = await listActiveFollowupsForLead(token, env, leadRecordId);
-  const nextQuick = buildQuickTextFromFollowups(refreshed);
-  if (nextQuick.trim() !== normalizedQuick) {
-    await updateLeadQuick(token, env, leadRecordId, nextQuick);
+  const plan = alignQuickToFollowups(stamped.lines, existing);
+  for (const item of plan.updates) await updateFollowupRecord(token, env, item.record_id, item.fields);
+  for (const id of plan.softDeletes) await deleteFollowupRecord(token, env, id);
+  for (const item of plan.creates) await createFollowupRecord(token, env, leadRecordId, item.details, item.timeMs);
+  // Use the known writes; Feishu search can lag behind successful creates.
+  const rebuilt = rebuildQuickFromPlan(existing, plan);
+  if (rebuilt.text.trim() !== normalizedQuick) {
+    await updateLeadQuick(token, env, leadRecordId, rebuilt.text);
   }
   return {
-    mode: "align",
-    created: plan.creates.length,
-    updated: plan.updates.length,
-    soft_deleted: 0,
-    hard_deleted: plan.softDeletes.length,
-    active: refreshed.length
+    mode: "align", created: plan.creates.length, updated: plan.updates.length,
+    soft_deleted: 0, hard_deleted: plan.softDeletes.length,
+    active: rebuilt.items.length, stamped_undated: stamped.stampedUndated
   };
 }
 __name(alignQuickAsSource, "alignQuickAsSource");
