@@ -1,0 +1,49 @@
+name: Quick Follow-up Sync Health
+
+# The Feishu automation UI may report success after its HTTP action returns 400.
+# Read the live workflow definitions and inspect Base data instead of run status.
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"  # Every 15 minutes; allow 10 minutes for async sync.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Check without sending a Feishu alert"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quick-followup-health
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Verify workflow contract and follow-up data
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Check Quick Follow-up sync
+        env:
+          FEISHU_APP_ID:        ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET:    ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_APP_TOKEN:     ${{ secrets.FEISHU_APP_TOKEN }}
+          FEISHU_TABLE_ID:      ${{ secrets.FEISHU_TABLE_ID }}
+          FEISHU_FOLLOWUP_TABLE: ${{ secrets.FEISHU_FOLLOWUP_TABLE }}
+          FEISHU_ALERT_WEBHOOK: ${{ secrets.FEISHU_ALERT_WEBHOOK }}
+          GITHUB_RUN_URL:      ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DRY_RUN:             ${{ github.event.inputs.dry_run || 'false' }}
+        run: python cloud-quick-followup-health.py
