@@ -14,6 +14,8 @@ import {
 
 const STATE_PATH = 'drive-file-notifier/.remote-notified.json';
 const GITHUB_API = 'https://api.github.com';
+const SHOWROOM_CARD_URL = 'https://api.soundbox-pod.com/soundbox/showrooms/feishu/card';
+const SHOWROOM_ACTIONS = new Set(['approve_booking', 'cancel_booking', 'add_calendar', 'confirm_calendar']);
 const FEISHU_API = 'https://open.feishu.cn/open-apis';
 
 function callbackConfig() {
@@ -173,13 +175,7 @@ async function markSendFailed(env, review, message) {
   return { ...review, status: 'send_failed', error, updatedAt };
 }
 
-async function patchReviewMessages(env, review, card) {
-  const appId = env.DRIVE_REVIEW_APP_ID || env.FEISHU_APP_ID;
-  const appSecret = env.DRIVE_REVIEW_APP_SECRET || env.FEISHU_APP_SECRET;
-  if (!appId || !appSecret) {
-    console.warn('[drive-review] missing app credentials, other cards stay unchanged');
-    return;
-  }
+async function tenantToken(appId, appSecret) {
   const tokenRes = await fetch(`${FEISHU_API}/auth/v3/tenant_access_token/internal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -189,6 +185,17 @@ async function patchReviewMessages(env, review, card) {
   if (!tokenRes.ok || tokenBody.code !== 0 || !tokenBody.tenant_access_token) {
     throw new Error(tokenBody.msg || `tenant token HTTP ${tokenRes.status}`);
   }
+  return tokenBody.tenant_access_token;
+}
+
+async function patchReviewMessages(env, review, card) {
+  const appId = env.DRIVE_REVIEW_APP_ID || env.FEISHU_APP_ID;
+  const appSecret = env.DRIVE_REVIEW_APP_SECRET || env.FEISHU_APP_SECRET;
+  if (!appId || !appSecret) {
+    console.warn('[drive-review] missing app credentials, other cards stay unchanged');
+    return;
+  }
+  const token = await tenantToken(appId, appSecret);
   const notes = Array.isArray(review.messages) && review.messages.length
     ? review.messages
     : (review.messageId ? [{ messageId: review.messageId }] : []);
@@ -197,7 +204,7 @@ async function patchReviewMessages(env, review, card) {
     const res = await fetch(`${FEISHU_API}/im/v1/messages/${note.messageId}`, {
       method: 'PATCH',
       headers: {
-        Authorization: `Bearer ${tokenBody.tenant_access_token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ content: JSON.stringify(card) }),
@@ -209,8 +216,7 @@ async function patchReviewMessages(env, review, card) {
   }
 }
 
-async function readPayload(request, env) {
-  const raw = await request.text();
+async function readPayload(raw, env) {
   let payload = raw ? JSON.parse(raw) : {};
   const key = encryptKey(env);
   if (!payload.encrypt) return payload;
@@ -229,13 +235,136 @@ async function readPayload(request, env) {
   return payload;
 }
 
+function showroomAction(payload) {
+  let value = payload?.event?.action?.value;
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value); } catch {
+      return /noticeId|approve_booking|cancel_booking|add_calendar|confirm_calendar/.test(value) ? {} : null;
+    }
+  }
+  if (!value || typeof value !== 'object' ||
+      (!Object.hasOwn(value, 'noticeId') && !SHOWROOM_ACTIONS.has(value.action))) return null;
+  return value;
+}
+
+function sameText(left, right) {
+  if (typeof left !== 'string' || left.length !== right.length) return false;
+  let difference = 0;
+  for (let i = 0; i < right.length; i++) difference |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  return difference === 0;
+}
+
+async function showroomAuthError(request, raw, payload, env) {
+  const token = verificationToken(env);
+  const key = encryptKey(env);
+  if (!token && !key) return '展厅回调验证尚未配置，请管理员核对机器人的 Verification Token 或 Encrypt Key';
+  if (token && !sameText(payload.header?.token, token)) return '展厅回调校验失败，请管理员核对飞书 Verification Token';
+  if (!key) return '';
+  const timestamp = request.headers.get('X-Lark-Request-Timestamp') || '';
+  const nonce = request.headers.get('X-Lark-Request-Nonce') || '';
+  const signature = request.headers.get('X-Lark-Signature') || '';
+  if (!/^\d{10}$/.test(timestamp) || Math.abs(Date.now() / 1000 - Number(timestamp)) > 600 ||
+      !nonce || !/^[0-9a-f]{64}$/.test(signature)) return '飞书回调签名缺失或已失效';
+  const prefix = new TextEncoder().encode(timestamp + nonce + key);
+  const bytes = new Uint8Array(prefix.byteLength + raw.byteLength);
+  bytes.set(prefix);
+  bytes.set(new Uint8Array(raw), prefix.byteLength);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  const expected = Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('');
+  return sameText(signature, expected) ? '' : '展厅回调签名校验失败，请管理员核对飞书 Encrypt Key';
+}
+
+async function forwardShowroom(request, raw) {
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  for (const key of ['X-Lark-Request-Timestamp', 'X-Lark-Request-Nonce', 'X-Lark-Signature']) {
+    if (request.headers.has(key)) headers.set(key, request.headers.get(key));
+  }
+  // The backend validates Feishu's token/signature on these original bytes before processing.
+  const response = await fetch(SHOWROOM_CARD_URL, {
+    method: 'POST', headers, body: raw, redirect: 'error', signal: AbortSignal.timeout(20_000),
+  });
+  if ([401, 403].includes(response.status) ||
+      (response.ok && response.headers.get('X-Sbx-Showroom-Callback') !== 'verified')) {
+    const error = new Error('Unverified showroom response');
+    error.publicMessage = '展厅回调校验未通过，请管理员核对网站版本和飞书回调验证配置';
+    throw error;
+  }
+  if (response.status === 503) {
+    const error = new Error('Showroom service unavailable');
+    error.publicMessage = '展厅回调服务未就绪，请管理员检查网站服务和飞书回调验证配置';
+    throw error;
+  }
+  if (!response.ok) throw new Error('Showroom backend rejected callback');
+  const result = await response.json();
+  if (!['success', 'info', 'warning', 'error'].includes(result?.toast?.type) ||
+      typeof result.toast.content !== 'string' ||
+      (result.card && (result.card.type !== 'raw' || !result.card.data?.body))) {
+    throw new Error('Unexpected showroom response');
+  }
+  return result;
+}
+
+async function deliverDelayedShowroomResult(env, event, result) {
+  const card = result.card?.data;
+  if (!card && !['warning', 'error'].includes(result.toast.type)) return;
+  const appId = env.DRIVE_REVIEW_APP_ID || env.FEISHU_APP_ID;
+  const appSecret = env.DRIVE_REVIEW_APP_SECRET || env.FEISHU_APP_SECRET;
+  if (!appId || !appSecret) throw new Error('Missing Feishu app credentials');
+  const token = await tenantToken(appId, appSecret);
+  const messageId = event.context.open_message_id;
+  const url = card ? `${FEISHU_API}/im/v1/messages/${encodeURIComponent(messageId)}`
+    : `${FEISHU_API}/im/v1/messages?receive_id_type=open_id`;
+  const body = card ? { content: JSON.stringify(card) } : {
+    receive_id: event.operator.open_id, msg_type: 'text',
+    content: JSON.stringify({ text: `展厅预约处理提示：${result.toast.content}` }),
+  };
+  const response = await fetch(url, {
+    method: card ? 'PATCH' : 'POST', redirect: 'error',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok || (await response.json()).code !== 0) throw new Error('Feishu result update failed');
+}
+
+async function handleShowroom(request, raw, payload, value, env, ctx) {
+  const header = payload.header;
+  const event = payload.event;
+  const appId = env.DRIVE_REVIEW_APP_ID || env.FEISHU_APP_ID;
+  if (header?.event_type !== 'card.action.trigger' || !appId || header.app_id !== appId ||
+      !SHOWROOM_ACTIONS.has(value.action) || !/^[0-9a-f]{32}$/.test(value.noticeId || '') ||
+      !/^ou_[A-Za-z0-9]{8,64}$/.test(event.operator?.open_id || '') ||
+      !/^om_[A-Za-z0-9_-]+$/.test(event.context?.open_message_id || '')) {
+    return json({ toast: { type: 'error', content: '展厅卡片身份或应用配置不完整' } });
+  }
+  const authError = await showroomAuthError(request, raw, payload, env);
+  if (authError) return json({ toast: { type: 'error', content: authError } });
+  const result = forwardShowroom(request, raw);
+  let timer;
+  try {
+    // Only a response authenticated by the backend can cause a later Feishu write.
+    if (!ctx?.waitUntil) return json(await result);
+    const immediate = await Promise.race([result, new Promise(resolve => {
+      timer = setTimeout(() => resolve(null), 1200);
+    })]);
+    if (immediate) return json(immediate);
+    ctx.waitUntil(result.then(value => deliverDelayedShowroomResult(env, event, value))
+      .catch(() => console.warn('[drive-review] delayed showroom result unavailable')));
+    return json({ toast: { type: 'info', content: '已提交，正在处理。如卡片没有更新，请稍后重试。' } });
+  } catch (error) {
+    return json({ toast: { type: 'error', content: error.publicMessage || '展厅预约处理结果暂未确认，请查看卡片或稍后重试' } });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function handleDriveReview(request, env, ctx) {
-  if (request.method === 'GET') return json({ ok: true, service: 'drive-review' });
+  if (request.method === 'GET') return json({ ok: true, service: 'drive-review', showroomRouter: 1 });
   if (request.method !== 'POST') return json({ toast: { type: 'error', content: '不支持的请求' } }, 405);
 
-  let payload;
+  let raw, payload;
   try {
-    payload = await readPayload(request, env);
+    raw = await request.arrayBuffer();
+    payload = await readPayload(new TextDecoder().decode(raw), env);
   } catch (err) {
     console.error('[drive-review] payload failed', err);
     return json({ toast: { type: 'error', content: err.publicMessage || '无法识别的回调' } });
@@ -258,6 +387,9 @@ export async function handleDriveReview(request, env, ctx) {
   if (appId && payload?.header?.app_id && payload.header.app_id !== appId) {
     return json({ toast: { type: 'error', content: '回调应用不匹配' } });
   }
+
+  const showroom = showroomAction(payload);
+  if (showroom) return handleShowroom(request, raw, payload, showroom, env, ctx);
 
   const config = callbackConfig();
   let staged;
