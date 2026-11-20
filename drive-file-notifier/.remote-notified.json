@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-20T12:57:29.400Z",
+  "updatedAt": "2026-11-20T14:25:06.224Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1543,9 +1543,9 @@
     },
     "rv_mwozhp41_xcjmnv": {
       "id": "rv_mwozhp41_xcjmnv",
-      "status": "pending",
+      "status": "rejected",
       "createdAt": "2026-11-20T12:57:25.345Z",
-      "updatedAt": "2026-11-20T12:57:29.126Z",
+      "updatedAt": "2026-11-20T14:25:06.224Z",
       "messageId": "om_x100b7f3075b73ca4ce72fac783efaa3",
       "messages": [
         {
@@ -1559,7 +1559,7 @@
           "messageId": "om_x100b7f30754494a4b3a1deecca7aea1"
         }
       ],
-      "decidedByName": "",
+      "decidedByName": "米拉",
       "error": "",
       "groupSent": false,
       "tokens": [
