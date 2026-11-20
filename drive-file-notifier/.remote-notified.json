@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-20T12:57:23.431Z",
+  "updatedAt": "2026-11-20T12:57:29.400Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1538,6 +1538,76 @@
               "name": "图层 1.jpg"
             }
           ]
+        }
+      }
+    },
+    "rv_mwozhp41_xcjmnv": {
+      "id": "rv_mwozhp41_xcjmnv",
+      "status": "pending",
+      "createdAt": "2026-11-20T12:57:25.345Z",
+      "updatedAt": "2026-11-20T12:57:29.126Z",
+      "messageId": "om_x100b7f3075b73ca4ce72fac783efaa3",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f3075b73ca4ce72fac783efaa3"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f30754494a4b3a1deecca7aea1"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "J4DkbGY6BoxN2PxjxJQcM5zPnhg"
+      ],
+      "spec": {
+        "kind": "file",
+        "tokens": [
+          "J4DkbGY6BoxN2PxjxJQcM5zPnhg"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "C-产品画册&产品色卡_20260706-0355PM/COLOR 色卡",
+          "fileNames": [
+            "VRS ARS折页色卡-电子版RGB.pdf"
+          ],
+          "files": [
+            {
+              "name": "VRS ARS折页色卡-电子版RGB.pdf",
+              "token": "J4DkbGY6BoxN2PxjxJQcM5zPnhg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/J4DkbGY6BoxN2PxjxJQcM5zPnhg"
+            }
+          ],
+          "folder": {
+            "name": "C-产品画册&产品色卡_20260706-0355PM/COLOR 色卡",
+            "token": "FRLpfSXp7lYAdmdWiDScJ8o2nsv",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/FRLpfSXp7lYAdmdWiDScJ8o2nsv"
+          },
+          "links": [
+            {
+              "label": "VRS ARS折页色卡-电子版RGB.pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/J4DkbGY6BoxN2PxjxJQcM5zPnhg"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/FRLpfSXp7lYAdmdWiDScJ8o2nsv"
+            }
+          ]
+        },
+        "payload": {
+          "fileToken": "J4DkbGY6BoxN2PxjxJQcM5zPnhg",
+          "fileType": "file",
+          "reason": "文件夹有新上传/新建",
+          "titleHint": "VRS ARS折页色卡-电子版RGB.pdf",
+          "folderPath": "C-产品画册&产品色卡_20260706-0355PM/COLOR 色卡",
+          "folderToken": "FRLpfSXp7lYAdmdWiDScJ8o2nsv",
+          "driveUrl": "https://rcn1z5q6iyyc.feishu.cn/file/J4DkbGY6BoxN2PxjxJQcM5zPnhg"
         }
       }
     }
