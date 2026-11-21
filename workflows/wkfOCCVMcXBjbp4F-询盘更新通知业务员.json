@@ -51,6 +51,51 @@
                 ]
               }
             ]
+          },
+          {
+            "conjunction": "and",
+            "conditions": [
+              {
+                "field_name": "Follower（实际跟进人账号）",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Owner（最终负责人）",
+                "operator": "isNotEmpty",
+                "value": []
+              },
+              {
+                "field_name": "Owner（最终负责人）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "未命中规则",
+                    "value_type": "text"
+                  }
+                ]
+              },
+              {
+                "field_name": "Owner（最终负责人）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "匹配错误请检查",
+                    "value_type": "text"
+                  }
+                ]
+              },
+              {
+                "field_name": "Owner（最终负责人）",
+                "operator": "isNot",
+                "value": [
+                  {
+                    "value": "公式计算异常",
+                    "value_type": "text"
+                  }
+                ]
+              }
+            ]
           }
         ],
         "field_watch_info": [
@@ -120,7 +165,7 @@
       "id": "actEnquiryLookup",
       "type": "FindRecordAction",
       "title": "查找业务通知名单",
-      "next": "actEnquirySwitch",
+      "next": "actEnquiryFollower",
       "children": {
         "links": []
       },
@@ -150,16 +195,55 @@
       }
     },
     {
+      "id": "actEnquiryFollower",
+      "type": "FindRecordAction",
+      "title": "查找实际跟进人",
+      "next": "actEnquirySwitch",
+      "children": {
+        "links": []
+      },
+      "data": {
+        "table_name": "实际跟进人名单",
+        "field_names": [
+          "对应业务账号",
+          "业务名称"
+        ],
+        "filter_info": {
+          "conjunction": "and",
+          "conditions": [
+            {
+              "field_name": "业务名称",
+              "operator": "is",
+              "value": [
+                {
+                  "value": "$.trigEvBreo.fldOMcCv5Y",
+                  "value_type": "ref"
+                }
+              ]
+            }
+          ]
+        },
+        "ref_info": null,
+        "should_proceed_when_no_results": true
+      }
+    },
+    {
       "id": "actEnquirySwitch",
       "type": "SwitchBranch",
       "title": "多分支（Switch）",
       "children": {
         "links": [
           {
-            "desc": "分支 1",
+            "desc": "业务通知名单",
             "kind": "case",
             "label": "branch_1",
             "to": "act36Vyyk"
+          },
+          {
+            "desc": "实际跟进人",
+            "kind": "case",
+            "label": "branch_2",
+            "to": "actEnquiryMsgFollower"
           },
           {
             "desc": "默认分支",
@@ -174,7 +258,7 @@
         "no_match_action": "classifyToOther",
         "child_branch_list": [
           {
-            "name": "分支 1",
+            "name": "业务通知名单",
             "condition": {
               "conjunction": "or",
               "conditions": [
@@ -185,6 +269,45 @@
                       "operator": "isGreater",
                       "left_value": {
                         "value": "$.actEnquiryLookup.recordNum",
+                        "value_type": "ref"
+                      },
+                      "right_value": [
+                        {
+                          "value": 0,
+                          "value_type": "number"
+                        }
+                      ]
+                    },
+                    {
+                      "operator": "isGreater",
+                      "left_value": {
+                        "value": "$.actEnquiryFresh.recordNum",
+                        "value_type": "ref"
+                      },
+                      "right_value": [
+                        {
+                          "value": 0,
+                          "value_type": "number"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "实际跟进人",
+            "condition": {
+              "conjunction": "or",
+              "conditions": [
+                {
+                  "conjunction": "and",
+                  "conditions": [
+                    {
+                      "operator": "isGreater",
+                      "left_value": {
+                        "value": "$.actEnquiryFollower.recordNum",
                         "value_type": "ref"
                       },
                       "right_value": [
@@ -232,6 +355,10 @@
             ]
           }
         ],
+        "button_config": {
+          "mutual_exclusion": false,
+          "not_repeat_click_mode": "AllUser"
+        },
         "content": [
           {
             "value": "您好，您负责的线索询盘内容已更新，请及时查看。\n线索ID：",
@@ -250,6 +377,7 @@
             "value_type": "ref"
           }
         ],
+        "content_type": "plain_text",
         "receiver": [
           {
             "value": "$.actEnquiryLookup.firstfieldsRecord.fldEVPOdP6",
@@ -262,10 +390,70 @@
             "value": "询盘内容更新提醒",
             "value_type": "text"
           }
-        ]
+        ],
+        "title_template_color": "purple"
       },
       "id": "act36Vyyk",
       "title": "发送飞书消息",
+      "type": "LarkMessageAction"
+    },
+    {
+      "children": {
+        "links": []
+      },
+      "data": {
+        "btn_list": [
+          {
+            "text": "查看详情",
+            "btn_action": "openLink",
+            "link": [
+              {
+                "value": "$.trigEvBreo.recordLink",
+                "value_type": "ref"
+              }
+            ]
+          }
+        ],
+        "button_config": {
+          "mutual_exclusion": false,
+          "not_repeat_click_mode": "AllUser"
+        },
+        "content": [
+          {
+            "value": "您好，您负责的线索询盘内容已更新，请及时查看。\n线索ID：",
+            "value_type": "text"
+          },
+          {
+            "value": "$.actEnquiryFresh.firstfieldsRecord.flde0LY8qQ",
+            "value_type": "ref"
+          },
+          {
+            "value": "\n询盘内容：",
+            "value_type": "text"
+          },
+          {
+            "value": "$.actEnquiryFresh.firstfieldsRecord.fldNLj6Btg",
+            "value_type": "ref"
+          }
+        ],
+        "content_type": "plain_text",
+        "receiver": [
+          {
+            "value": "$.actEnquiryFollower.firstfieldsRecord.fldEVPOdP6",
+            "value_type": "ref"
+          }
+        ],
+        "send_to_everyone": false,
+        "title": [
+          {
+            "value": "询盘内容更新提醒",
+            "value_type": "text"
+          }
+        ],
+        "title_template_color": "purple"
+      },
+      "id": "actEnquiryMsgFollower",
+      "title": "发送飞书消息（实际跟进人）",
       "type": "LarkMessageAction"
     }
   ]

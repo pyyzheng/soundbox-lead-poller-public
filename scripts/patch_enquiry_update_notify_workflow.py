@@ -9,6 +9,8 @@
   1) Delay 1 分钟（平台最小单位）挡住秒级误操作；
   2) 按线索ID 重读当前 Enquiry details，消息正文嵌入重读后的全文
      （与业务员打开记录一致，不再用易过期的触发瞬间快照）。
+- 2026-11-21：人工指派可能落到不在「业务通知名单」里的跟进人。
+  业务员仍走业务通知名单；名单未命中时改查「实际跟进人名单」补发同一张卡片。
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ WORKFLOW_ID = "wkfOCCVMcXBjbp4F"
 BASE_TOKEN_ENV = "FEISHU_APP_TOKEN"
 ERROR_ASSIGNEES = ("未命中规则", "匹配错误请检查", "公式计算异常")
 FIELD_MATCHED_ACCOUNT = "Assigned Salesperson（匹配的业务员账号）"
+FIELD_FOLLOWER_ACCOUNT = "Follower（实际跟进人账号）"
 FIELD_ID_CLUE = "flde0LY8qQ"
 FIELD_ID_ENQUIRY = "fldNLj6Btg"
 DELAY_MINUTES = 1
@@ -105,12 +108,16 @@ def _fresh_enquiry_step() -> dict:
     }
 
 
+def _owner_ref() -> dict:
+    return {"value": "$.trigEvBreo.fldOMcCv5Y", "value_type": "ref"}
+
+
 def _lookup_step() -> dict:
     return {
         "id": "actEnquiryLookup",
         "type": "FindRecordAction",
         "title": "查找业务通知名单",
-        "next": "actEnquirySwitch",
+        "next": "actEnquiryFollower",
         "children": {"links": []},
         "data": {
             "table_name": "业务通知名单",
@@ -121,12 +128,7 @@ def _lookup_step() -> dict:
                     {
                         "field_name": "业务名单",
                         "operator": "is",
-                        "value": [
-                            {
-                                "value": "$.trigEvBreo.fldOMcCv5Y",
-                                "value_type": "ref",
-                            }
-                        ],
+                        "value": [_owner_ref()],
                     }
                 ],
             },
@@ -136,12 +138,60 @@ def _lookup_step() -> dict:
     }
 
 
+def _follower_lookup_step() -> dict:
+    """人工指派的跟进人不在业务通知名单时，用实际跟进人名单取原生 user。"""
+    return {
+        "id": "actEnquiryFollower",
+        "type": "FindRecordAction",
+        "title": "查找实际跟进人",
+        "next": "actEnquirySwitch",
+        "children": {"links": []},
+        "data": {
+            "table_name": "实际跟进人名单",
+            "field_names": ["对应业务账号", "业务名称"],
+            "filter_info": {
+                "conjunction": "and",
+                "conditions": [
+                    {
+                        "field_name": "业务名称",
+                        "operator": "is",
+                        "value": [_owner_ref()],
+                    }
+                ],
+            },
+            "ref_info": None,
+            "should_proceed_when_no_results": True,
+        },
+    }
+
+
+def _hit_and_fresh(record_num_ref: str) -> dict:
+    return {
+        "conjunction": "and",
+        "conditions": [
+            {
+                "operator": "isGreater",
+                "left_value": {"value": record_num_ref, "value_type": "ref"},
+                "right_value": [{"value": 0, "value_type": "number"}],
+            },
+            {
+                "operator": "isGreater",
+                "left_value": {
+                    "value": "$.actEnquiryFresh.recordNum",
+                    "value_type": "ref",
+                },
+                "right_value": [{"value": 0, "value_type": "number"}],
+            },
+        ],
+    }
+
+
 def _switch_step() -> dict:
-    """有收件人 + 重读成功才发。
+    """业务通知名单命中优先；未命中则发给实际跟进人。
 
     不在此比较询盘全文是否等于触发快照：长文本 ref==ref 会在工作流校验/
     migrate 时被拍扁导致部署失败。秒级误粘贴回滚靠 Delay(1min)+重读消化：
-    发出去的是发送时刻表内全文，与业务员打开记录一致。
+    发出去的是发送时刻表内全文，与打开记录一致。
     """
     return {
         "id": "actEnquirySwitch",
@@ -150,10 +200,16 @@ def _switch_step() -> dict:
         "children": {
             "links": [
                 {
-                    "desc": "分支 1",
+                    "desc": "业务通知名单",
                     "kind": "case",
                     "label": "branch_1",
                     "to": "act36Vyyk",
+                },
+                {
+                    "desc": "实际跟进人",
+                    "kind": "case",
+                    "label": "branch_2",
+                    "to": "actEnquiryMsgFollower",
                 },
                 {
                     "desc": "默认分支",
@@ -168,38 +224,23 @@ def _switch_step() -> dict:
             "no_match_action": "classifyToOther",
             "child_branch_list": [
                 {
-                    "name": "分支 1",
+                    "name": "业务通知名单",
                     "condition": {
                         "conjunction": "or",
                         "conditions": [
-                            {
-                                "conjunction": "and",
-                                "conditions": [
-                                    {
-                                        "operator": "isGreater",
-                                        "left_value": {
-                                            "value": "$.actEnquiryLookup.recordNum",
-                                            "value_type": "ref",
-                                        },
-                                        "right_value": [
-                                            {"value": 0, "value_type": "number"}
-                                        ],
-                                    },
-                                    {
-                                        "operator": "isGreater",
-                                        "left_value": {
-                                            "value": "$.actEnquiryFresh.recordNum",
-                                            "value_type": "ref",
-                                        },
-                                        "right_value": [
-                                            {"value": 0, "value_type": "number"}
-                                        ],
-                                    },
-                                ],
-                            }
+                            _hit_and_fresh("$.actEnquiryLookup.recordNum"),
                         ],
                     },
-                }
+                },
+                {
+                    "name": "实际跟进人",
+                    "condition": {
+                        "conjunction": "or",
+                        "conditions": [
+                            _hit_and_fresh("$.actEnquiryFollower.recordNum"),
+                        ],
+                    },
+                },
             ],
         },
     }
@@ -224,12 +265,46 @@ def _message_content() -> list[dict]:
     ]
 
 
+def _owner_guards() -> list[dict]:
+    return [
+        {
+            "field_name": FIELD_ASSIGNEE,
+            "operator": "isNotEmpty",
+            "value": [],
+        },
+        *[
+            {
+                "field_name": FIELD_ASSIGNEE,
+                "operator": "isNot",
+                "value": [{"value": err, "value_type": "text"}],
+            }
+            for err in ERROR_ASSIGNEES
+        ],
+    ]
+
+
+def _apply_message(step: dict, receiver_ref: str) -> dict:
+    step["data"]["receiver"] = [{"value": receiver_ref, "value_type": "ref"}]
+    step["data"]["content"] = _message_content()
+    step["data"]["title"] = [{"value": "询盘内容更新提醒", "value_type": "text"}]
+    step["data"]["btn_list"] = [
+        {
+            "text": "查看详情",
+            "btn_action": "openLink",
+            "link": [{"value": "$.trigEvBreo.recordLink", "value_type": "ref"}],
+        }
+    ]
+    step["data"]["send_to_everyone"] = False
+    return step
+
+
 def patch_workflow(data: dict) -> dict:
     out = deepcopy(data)
     steps = {s["id"]: s for s in out["steps"]}
 
     trigger = steps["trigEvBreo"]
     trigger["next"] = "actEnquiryDelay"
+    # 条件组之间是 OR：业务员账号或实际跟进人账号有值都触发。
     trigger["data"]["condition_list"] = [
         {
             "conjunction": "and",
@@ -239,46 +314,39 @@ def patch_workflow(data: dict) -> dict:
                     "operator": "isNotEmpty",
                     "value": [],
                 },
+                *_owner_guards(),
+            ],
+        },
+        {
+            "conjunction": "and",
+            "conditions": [
                 {
-                    "field_name": FIELD_ASSIGNEE,
+                    "field_name": FIELD_FOLLOWER_ACCOUNT,
                     "operator": "isNotEmpty",
                     "value": [],
                 },
-                *[
-                    {
-                        "field_name": FIELD_ASSIGNEE,
-                        "operator": "isNot",
-                        "value": [{"value": err, "value_type": "text"}],
-                    }
-                    for err in ERROR_ASSIGNEES
-                ],
+                *_owner_guards(),
             ],
-        }
+        },
     ]
 
-    msg = steps["act36Vyyk"]
-    msg["data"]["receiver"] = [
-        {"value": "$.actEnquiryLookup.firstfieldsRecord.fldEVPOdP6", "value_type": "ref"},
-    ]
-    msg["data"]["content"] = _message_content()
-    msg["data"]["title"] = [
-        {"value": "询盘内容更新提醒", "value_type": "text"},
-    ]
-    msg["data"]["btn_list"] = [
-        {
-            "text": "查看详情",
-            "btn_action": "openLink",
-            "link": [{"value": "$.trigEvBreo.recordLink", "value_type": "ref"}],
-        }
-    ]
+    msg = _apply_message(
+        steps["act36Vyyk"],
+        "$.actEnquiryLookup.firstfieldsRecord.fldEVPOdP6",
+    )
+    follower_msg = _apply_message(deepcopy(msg), "$.actEnquiryFollower.firstfieldsRecord.fldEVPOdP6")
+    follower_msg["id"] = "actEnquiryMsgFollower"
+    follower_msg["title"] = "发送飞书消息（实际跟进人）"
 
     out["steps"] = [
         trigger,
         _delay_step(),
         _fresh_enquiry_step(),
         _lookup_step(),
+        _follower_lookup_step(),
         _switch_step(),
         msg,
+        follower_msg,
     ]
 
     _strip_option_ids(out["steps"])

@@ -34,6 +34,7 @@ from lead_notify import (
     FIELD_CUSTOMER,
     FIELD_ENQUIRY,
     FIELD_ENTRY_TIME,
+    FIELD_FOLLOWER_USER,
     FIELD_LEAD_ID,
     FIELD_NOTIFY_USER,
     FOLLOWUP_MARKER_ASSIGN,
@@ -43,8 +44,10 @@ from lead_notify import (
     enquiry_snippet,
     followup_marker_exists,
     is_valid_assignee,
+    load_follower_open_id_map,
     load_sales_open_id_map,
     record_url,
+    resolve_enquiry_open_id,
     resolve_notify_open_id,
     send_im_card,
     write_followup_marker,
@@ -71,9 +74,9 @@ def _ms_hours_ago(hours: int) -> int:
     return int(dt.timestamp() * 1000)
 
 
-def _search_assigned_since(token: str, entry_cutoff_ms: int) -> list[dict]:
+def _search_since(token: str, account_field: str, entry_cutoff_ms: int) -> list[dict]:
     conditions = [
-        {"field_name": FIELD_NOTIFY_USER, "operator": "isNotEmpty", "value": []},
+        {"field_name": account_field, "operator": "isNotEmpty", "value": []},
         {"field_name": FIELD_ASSIGNEE, "operator": "isNotEmpty", "value": []},
         {"field_name": FIELD_ENTRY_TIME, "operator": "isGreater", "value": ["ExactDate", str(entry_cutoff_ms)]},
     ]
@@ -104,6 +107,27 @@ def _search_assigned_since(token: str, entry_cutoff_ms: int) -> list[dict]:
             break
         page_token = data.get("data", {}).get("page_token", "")
     return items[:MAX_RECORDS]
+
+
+def _search_assigned_since(token: str, entry_cutoff_ms: int) -> list[dict]:
+    return _search_since(token, FIELD_NOTIFY_USER, entry_cutoff_ms)
+
+
+def _search_follower_since(token: str, entry_cutoff_ms: int) -> list[dict]:
+    return _search_since(token, FIELD_FOLLOWER_USER, entry_cutoff_ms)
+
+
+def _merge_records(*groups: list[dict]) -> list[dict]:
+    seen: set[str] = set()
+    merged: list[dict] = []
+    for group in groups:
+        for item in group:
+            rid = item.get("record_id", "")
+            if not rid or rid in seen:
+                continue
+            seen.add(rid)
+            merged.append(item)
+    return merged
 
 
 def _modified_after(item: dict, cutoff_ms: int) -> bool:
@@ -187,6 +211,7 @@ def process_enquiry_backfill(
     token: str,
     records: list[dict],
     sales_map: dict[str, str],
+    follower_map: dict[str, str],
     modified_cutoff_ms: int,
 ) -> int:
     """仅当询盘 hash 变化且曾有标记时补发（避免与首次分配重复）。"""
@@ -209,8 +234,9 @@ def process_enquiry_backfill(
         if followup_marker_exists(token, FOLLOWUP_TABLE_ID, rid, marker):
             continue
 
-        open_id = resolve_notify_open_id(fields, sales_map)
+        open_id = resolve_enquiry_open_id(fields, sales_map, follower_map)
         if not open_id:
+            log.warning("无 open_id，跳过询盘更新: lead=%s", lead_id)
             continue
 
         customer = extract_text(fields.get(FIELD_CUSTOMER, ""))
@@ -241,18 +267,22 @@ def audit_sales_roster(records: list[dict], sales_map: dict[str, str]) -> list[s
 def main() -> int:
     token = get_feishu_token()
     sales_map = load_sales_open_id_map(token)
+    follower_map = load_follower_open_id_map(token)
     log.info(
-        "业务通知名单 %d 人 | dry_run=%s | assign_h=%s enquiry_h=%s",
-        len(sales_map), DRY_RUN, ASSIGN_LOOKBACK_HOURS, ENQUIRY_LOOKBACK_HOURS,
+        "业务通知名单 %d 人 | 实际跟进人 %d 人 | dry_run=%s | assign_h=%s enquiry_h=%s",
+        len(sales_map), len(follower_map), DRY_RUN, ASSIGN_LOOKBACK_HOURS, ENQUIRY_LOOKBACK_HOURS,
     )
 
     entry_cutoff = _ms_hours_ago(max(ASSIGN_LOOKBACK_HOURS, ENQUIRY_LOOKBACK_HOURS, AUDIT_LOOKBACK_HOURS))
     records = _search_assigned_since(token, entry_cutoff)
+    enquiry_records = _merge_records(records, _search_follower_since(token, entry_cutoff))
     assign_cutoff = _ms_hours_ago(ASSIGN_LOOKBACK_HOURS)
     enquiry_cutoff = _ms_hours_ago(ENQUIRY_LOOKBACK_HOURS)
 
     assign_sent = process_assignment_backfill(token, records, sales_map, assign_cutoff)
-    enquiry_sent = process_enquiry_backfill(token, records, sales_map, enquiry_cutoff)
+    enquiry_sent = process_enquiry_backfill(
+        token, enquiry_records, sales_map, follower_map, enquiry_cutoff,
+    )
 
     audit_records = [r for r in records if _modified_after(r, _ms_hours_ago(AUDIT_LOOKBACK_HOURS))]
     gaps = audit_sales_roster(audit_records, sales_map)
