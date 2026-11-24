@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T04:56:27.153Z",
+  "updatedAt": "2026-11-24T04:56:49.832Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1802,6 +1802,350 @@
             },
             {
               "token": "Y5tLbxXfmobxW3xGEAacKhhJnTe",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mwu82m83_z6ttzu": {
+      "id": "rv_mwu82m83_z6ttzu",
+      "status": "pending",
+      "createdAt": "2026-11-24T04:56:29.187Z",
+      "updatedAt": "2026-11-24T04:56:49.587Z",
+      "messageId": "om_x100b7f65dfceeca0c136cd6e0141f2b",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f65dfceeca0c136cd6e0141f2b"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f65dfdcd0acdfb9c318924c9d4"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "B9JGb4CFHoUfqQxh0b8cZTpJnlg",
+        "Eiw1bO8LioEbocxqfMycSUCbnMc",
+        "LeeubukaUoYMHGxuL6LcSaurnQh",
+        "QlK6bHCYcoaN3QxhfEscvf4dnJc",
+        "KydkbKoCMojC14x0WFOca8rqnph",
+        "HmR5bDxs2oiZZYxR9U2cRuRnnwd",
+        "GQAKbiRatohWTpxxxIQcLG3Nnrd",
+        "QY7abq3U0oelbJxg5t1cjqdknnd",
+        "DqQNbOvt6oqYtLxIvF7cKtcCnIf",
+        "K81NbZ8PIotWYNxlexzcymATnGe",
+        "FZD1blVLroV9N8x3zWxcsZGanXd",
+        "ZztMbzMX7obeERxO2npclLxQndd",
+        "XCMYbbbJCoA6RLxxbvhcI0IKn3f",
+        "EB1mbZDeAoJLa0xnxmmcAdSanig",
+        "Lh38bDWOcorNBNxgl3BcrPxgnlf",
+        "O7AobkZAFogiN9xUZz7cSEqjnVk"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "B9JGb4CFHoUfqQxh0b8cZTpJnlg",
+          "Eiw1bO8LioEbocxqfMycSUCbnMc",
+          "LeeubukaUoYMHGxuL6LcSaurnQh",
+          "QlK6bHCYcoaN3QxhfEscvf4dnJc",
+          "KydkbKoCMojC14x0WFOca8rqnph",
+          "HmR5bDxs2oiZZYxR9U2cRuRnnwd",
+          "GQAKbiRatohWTpxxxIQcLG3Nnrd",
+          "QY7abq3U0oelbJxg5t1cjqdknnd",
+          "DqQNbOvt6oqYtLxIvF7cKtcCnIf",
+          "K81NbZ8PIotWYNxlexzcymATnGe",
+          "FZD1blVLroV9N8x3zWxcsZGanXd",
+          "ZztMbzMX7obeERxO2npclLxQndd",
+          "XCMYbbbJCoA6RLxxbvhcI0IKn3f",
+          "EB1mbZDeAoJLa0xnxmmcAdSanig",
+          "Lh38bDWOcorNBNxgl3BcrPxgnlf",
+          "O7AobkZAFogiN9xUZz7cSEqjnVk"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-延安大学鲁迅艺术学院音乐厅 墙面碳钙MLS800(张芸珲)",
+          "fileNames": [
+            "图层 9.jpg",
+            "图层 8.jpg",
+            "图层 7.jpg",
+            "图层 6.jpg",
+            "图层 5.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 16.jpg",
+            "图层 15.jpg",
+            "图层 14.jpg",
+            "图层 13.jpg",
+            "图层 12.jpg",
+            "图层 11.jpg",
+            "图层 10.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 9.jpg",
+              "token": "B9JGb4CFHoUfqQxh0b8cZTpJnlg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/B9JGb4CFHoUfqQxh0b8cZTpJnlg"
+            },
+            {
+              "name": "图层 8.jpg",
+              "token": "Eiw1bO8LioEbocxqfMycSUCbnMc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Eiw1bO8LioEbocxqfMycSUCbnMc"
+            },
+            {
+              "name": "图层 7.jpg",
+              "token": "LeeubukaUoYMHGxuL6LcSaurnQh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/LeeubukaUoYMHGxuL6LcSaurnQh"
+            },
+            {
+              "name": "图层 6.jpg",
+              "token": "QlK6bHCYcoaN3QxhfEscvf4dnJc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QlK6bHCYcoaN3QxhfEscvf4dnJc"
+            },
+            {
+              "name": "图层 5.jpg",
+              "token": "KydkbKoCMojC14x0WFOca8rqnph",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KydkbKoCMojC14x0WFOca8rqnph"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "HmR5bDxs2oiZZYxR9U2cRuRnnwd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/HmR5bDxs2oiZZYxR9U2cRuRnnwd"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "GQAKbiRatohWTpxxxIQcLG3Nnrd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GQAKbiRatohWTpxxxIQcLG3Nnrd"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "QY7abq3U0oelbJxg5t1cjqdknnd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QY7abq3U0oelbJxg5t1cjqdknnd"
+            },
+            {
+              "name": "图层 16.jpg",
+              "token": "DqQNbOvt6oqYtLxIvF7cKtcCnIf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/DqQNbOvt6oqYtLxIvF7cKtcCnIf"
+            },
+            {
+              "name": "图层 15.jpg",
+              "token": "K81NbZ8PIotWYNxlexzcymATnGe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/K81NbZ8PIotWYNxlexzcymATnGe"
+            },
+            {
+              "name": "图层 14.jpg",
+              "token": "FZD1blVLroV9N8x3zWxcsZGanXd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/FZD1blVLroV9N8x3zWxcsZGanXd"
+            },
+            {
+              "name": "图层 13.jpg",
+              "token": "ZztMbzMX7obeERxO2npclLxQndd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ZztMbzMX7obeERxO2npclLxQndd"
+            },
+            {
+              "name": "图层 12.jpg",
+              "token": "XCMYbbbJCoA6RLxxbvhcI0IKn3f",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/XCMYbbbJCoA6RLxxbvhcI0IKn3f"
+            },
+            {
+              "name": "图层 11.jpg",
+              "token": "EB1mbZDeAoJLa0xnxmmcAdSanig",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/EB1mbZDeAoJLa0xnxmmcAdSanig"
+            },
+            {
+              "name": "图层 10.jpg",
+              "token": "Lh38bDWOcorNBNxgl3BcrPxgnlf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Lh38bDWOcorNBNxgl3BcrPxgnlf"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "O7AobkZAFogiN9xUZz7cSEqjnVk",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/O7AobkZAFogiN9xUZz7cSEqjnVk"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-延安大学鲁迅艺术学院音乐厅 墙面碳钙MLS800(张芸珲)",
+            "token": "VwKnff0C9lzKq2dcCR6c0iMInch",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/VwKnff0C9lzKq2dcCR6c0iMInch"
+          },
+          "links": [
+            {
+              "label": "图层 9.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/B9JGb4CFHoUfqQxh0b8cZTpJnlg"
+            },
+            {
+              "label": "图层 8.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Eiw1bO8LioEbocxqfMycSUCbnMc"
+            },
+            {
+              "label": "图层 7.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/LeeubukaUoYMHGxuL6LcSaurnQh"
+            },
+            {
+              "label": "图层 6.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QlK6bHCYcoaN3QxhfEscvf4dnJc"
+            },
+            {
+              "label": "图层 5.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KydkbKoCMojC14x0WFOca8rqnph"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/HmR5bDxs2oiZZYxR9U2cRuRnnwd"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GQAKbiRatohWTpxxxIQcLG3Nnrd"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QY7abq3U0oelbJxg5t1cjqdknnd"
+            },
+            {
+              "label": "图层 16.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/DqQNbOvt6oqYtLxIvF7cKtcCnIf"
+            },
+            {
+              "label": "图层 15.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/K81NbZ8PIotWYNxlexzcymATnGe"
+            },
+            {
+              "label": "图层 14.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/FZD1blVLroV9N8x3zWxcsZGanXd"
+            },
+            {
+              "label": "图层 13.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ZztMbzMX7obeERxO2npclLxQndd"
+            },
+            {
+              "label": "图层 12.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/XCMYbbbJCoA6RLxxbvhcI0IKn3f"
+            },
+            {
+              "label": "图层 11.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/EB1mbZDeAoJLa0xnxmmcAdSanig"
+            },
+            {
+              "label": "图层 10.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Lh38bDWOcorNBNxgl3BcrPxgnlf"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/O7AobkZAFogiN9xUZz7cSEqjnVk"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/VwKnff0C9lzKq2dcCR6c0iMInch"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-延安大学鲁迅艺术学院音乐厅 墙面碳钙MLS800(张芸珲)",
+          "folderToken": "VwKnff0C9lzKq2dcCR6c0iMInch",
+          "zipNameHint": "S-延安大学鲁迅艺术学院音乐厅 墙面碳钙MLS800(张芸珲)",
+          "files": [
+            {
+              "token": "B9JGb4CFHoUfqQxh0b8cZTpJnlg",
+              "type": "file",
+              "name": "图层 9.jpg"
+            },
+            {
+              "token": "Eiw1bO8LioEbocxqfMycSUCbnMc",
+              "type": "file",
+              "name": "图层 8.jpg"
+            },
+            {
+              "token": "LeeubukaUoYMHGxuL6LcSaurnQh",
+              "type": "file",
+              "name": "图层 7.jpg"
+            },
+            {
+              "token": "QlK6bHCYcoaN3QxhfEscvf4dnJc",
+              "type": "file",
+              "name": "图层 6.jpg"
+            },
+            {
+              "token": "KydkbKoCMojC14x0WFOca8rqnph",
+              "type": "file",
+              "name": "图层 5.jpg"
+            },
+            {
+              "token": "HmR5bDxs2oiZZYxR9U2cRuRnnwd",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "GQAKbiRatohWTpxxxIQcLG3Nnrd",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "QY7abq3U0oelbJxg5t1cjqdknnd",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "DqQNbOvt6oqYtLxIvF7cKtcCnIf",
+              "type": "file",
+              "name": "图层 16.jpg"
+            },
+            {
+              "token": "K81NbZ8PIotWYNxlexzcymATnGe",
+              "type": "file",
+              "name": "图层 15.jpg"
+            },
+            {
+              "token": "FZD1blVLroV9N8x3zWxcsZGanXd",
+              "type": "file",
+              "name": "图层 14.jpg"
+            },
+            {
+              "token": "ZztMbzMX7obeERxO2npclLxQndd",
+              "type": "file",
+              "name": "图层 13.jpg"
+            },
+            {
+              "token": "XCMYbbbJCoA6RLxxbvhcI0IKn3f",
+              "type": "file",
+              "name": "图层 12.jpg"
+            },
+            {
+              "token": "EB1mbZDeAoJLa0xnxmmcAdSanig",
+              "type": "file",
+              "name": "图层 11.jpg"
+            },
+            {
+              "token": "Lh38bDWOcorNBNxgl3BcrPxgnlf",
+              "type": "file",
+              "name": "图层 10.jpg"
+            },
+            {
+              "token": "O7AobkZAFogiN9xUZz7cSEqjnVk",
               "type": "file",
               "name": "图层 1.jpg"
             }
