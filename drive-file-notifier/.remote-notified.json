@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T05:53:17.785Z",
+  "updatedAt": "2026-11-24T05:54:21.258Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -940,9 +940,9 @@
     },
     "rv_mwu80c3k_4bfccx": {
       "id": "rv_mwu80c3k_4bfccx",
-      "status": "pending",
+      "status": "sending",
       "createdAt": "2026-11-24T04:54:42.752Z",
-      "updatedAt": "2026-11-24T04:55:24.740Z",
+      "updatedAt": "2026-11-24T05:54:21.258Z",
       "messageId": "om_x100b7f65c57abcb0dc106bc1e756e82",
       "messages": [
         {
@@ -956,7 +956,7 @@
           "messageId": "om_x100b7f65c50e78a4c04a83da76dfd7e"
         }
       ],
-      "decidedByName": "",
+      "decidedByName": "米拉",
       "error": "",
       "groupSent": false,
       "tokens": [
@@ -1622,7 +1622,8 @@
             }
           ]
         }
-      }
+      },
+      "publishRequestedAt": "2026-11-24T05:54:21.258Z"
     },
     "rv_mwu81neg_sfhn1q": {
       "id": "rv_mwu81neg_sfhn1q",
