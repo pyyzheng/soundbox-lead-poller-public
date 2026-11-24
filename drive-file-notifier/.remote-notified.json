@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T05:48:09.425Z",
+  "updatedAt": "2026-11-24T05:48:43.263Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -2491,6 +2491,458 @@
               "token": "HnJabIZP3ofwVMxzN6CcsryGnac",
               "type": "file",
               "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mwu9x41k_wdpjp0": {
+      "id": "rv_mwu9x41k_wdpjp0",
+      "status": "pending",
+      "createdAt": "2026-11-24T05:48:11.576Z",
+      "updatedAt": "2026-11-24T05:48:43.070Z",
+      "messageId": "om_x100b7f661d5578a4dd6156ad76070f5",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f661d5578a4dd6156ad76070f5"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f661d65b8b0c1f8d8a9b2e63cc"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "VhlVbaCQaoRRzcx6mtScn0Lyn2g",
+        "ElVhbDz92ovFn7xpvM6cBwienoe",
+        "SW3AbwEaWocLURxG0aVcBzTRnuh",
+        "XdXJbXnbdoHyjlxrlUecxoXEn5g",
+        "MIgZbN1hloaeC4xs58pcB0cvnTc",
+        "IjY1bptF7opjM2xd9lLcHTTwnnd",
+        "X3qNbnnZtomPuoxs3zAcWg7inGd",
+        "C0RXbXJN5omM1Zx9tfMcnuuEnHg",
+        "Gfm0bxw2Yoser0xbJPHcqeWUnPQ",
+        "OUTEbAxqioTTSsxg6a2cjwYmnpN",
+        "J8nybULFsoVvqkxrxI3cMJWsnIf",
+        "NFu8bq8OwoAbFpxu35Yc2lyTnmb",
+        "AuZhbOgRpoGuysxzptTco0JZnff",
+        "EObXbBgYLowHxAxZ0SKcGfRXnmc",
+        "VfaibfnOgoYc9fxx7Xrcy5RynHd",
+        "AIPMbFMbdoo0kjx46qGckga1nAb",
+        "UMp7bZsi5o7JjvxtBiQcuXJznNY",
+        "BnXMb2lg9oGfsox0ZNhcsn3qnt0",
+        "QcLkb4TUtoGlUKxvGd1cdtYdnsb",
+        "BntgbQA7Eo0E8Ix9soGcU240n5b",
+        "K6XqbleBmoZftBxW46mc4uxBn2b",
+        "BerzbuYPRoib9Ex5bGDczLurnBp"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "VhlVbaCQaoRRzcx6mtScn0Lyn2g",
+          "ElVhbDz92ovFn7xpvM6cBwienoe",
+          "SW3AbwEaWocLURxG0aVcBzTRnuh",
+          "XdXJbXnbdoHyjlxrlUecxoXEn5g",
+          "MIgZbN1hloaeC4xs58pcB0cvnTc",
+          "IjY1bptF7opjM2xd9lLcHTTwnnd",
+          "X3qNbnnZtomPuoxs3zAcWg7inGd",
+          "C0RXbXJN5omM1Zx9tfMcnuuEnHg",
+          "Gfm0bxw2Yoser0xbJPHcqeWUnPQ",
+          "OUTEbAxqioTTSsxg6a2cjwYmnpN",
+          "J8nybULFsoVvqkxrxI3cMJWsnIf",
+          "NFu8bq8OwoAbFpxu35Yc2lyTnmb",
+          "AuZhbOgRpoGuysxzptTco0JZnff",
+          "EObXbBgYLowHxAxZ0SKcGfRXnmc",
+          "VfaibfnOgoYc9fxx7Xrcy5RynHd",
+          "AIPMbFMbdoo0kjx46qGckga1nAb",
+          "UMp7bZsi5o7JjvxtBiQcuXJznNY",
+          "BnXMb2lg9oGfsox0ZNhcsn3qnt0",
+          "QcLkb4TUtoGlUKxvGd1cdtYdnsb",
+          "BntgbQA7Eo0E8Ix9soGcU240n5b",
+          "K6XqbleBmoZftBxW46mc4uxBn2b",
+          "BerzbuYPRoib9Ex5bGDczLurnBp"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/广州南沙liverse音乐艺术中心 -黑客吸声板CK1，白棉，声学障板，精工声学软包 (肖宛珊)",
+          "fileNames": [
+            "图层 9.jpg",
+            "图层 8.jpg",
+            "图层 7.jpg",
+            "图层 6.jpg",
+            "图层 5.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 22.jpg",
+            "图层 21.jpg",
+            "图层 20.jpg",
+            "图层 2.jpg",
+            "图层 19.jpg",
+            "图层 18.jpg",
+            "图层 17.jpg",
+            "图层 15.jpg",
+            "图层 14.jpg",
+            "图层 13.jpg",
+            "图层 12.jpg",
+            "图层 11.jpg",
+            "图层 10.jpg",
+            "图层 1.jpg",
+            "Thumbs.db"
+          ],
+          "files": [
+            {
+              "name": "图层 9.jpg",
+              "token": "VhlVbaCQaoRRzcx6mtScn0Lyn2g",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/VhlVbaCQaoRRzcx6mtScn0Lyn2g"
+            },
+            {
+              "name": "图层 8.jpg",
+              "token": "ElVhbDz92ovFn7xpvM6cBwienoe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ElVhbDz92ovFn7xpvM6cBwienoe"
+            },
+            {
+              "name": "图层 7.jpg",
+              "token": "SW3AbwEaWocLURxG0aVcBzTRnuh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SW3AbwEaWocLURxG0aVcBzTRnuh"
+            },
+            {
+              "name": "图层 6.jpg",
+              "token": "XdXJbXnbdoHyjlxrlUecxoXEn5g",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/XdXJbXnbdoHyjlxrlUecxoXEn5g"
+            },
+            {
+              "name": "图层 5.jpg",
+              "token": "MIgZbN1hloaeC4xs58pcB0cvnTc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/MIgZbN1hloaeC4xs58pcB0cvnTc"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "IjY1bptF7opjM2xd9lLcHTTwnnd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/IjY1bptF7opjM2xd9lLcHTTwnnd"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "X3qNbnnZtomPuoxs3zAcWg7inGd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/X3qNbnnZtomPuoxs3zAcWg7inGd"
+            },
+            {
+              "name": "图层 22.jpg",
+              "token": "C0RXbXJN5omM1Zx9tfMcnuuEnHg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/C0RXbXJN5omM1Zx9tfMcnuuEnHg"
+            },
+            {
+              "name": "图层 21.jpg",
+              "token": "Gfm0bxw2Yoser0xbJPHcqeWUnPQ",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Gfm0bxw2Yoser0xbJPHcqeWUnPQ"
+            },
+            {
+              "name": "图层 20.jpg",
+              "token": "OUTEbAxqioTTSsxg6a2cjwYmnpN",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/OUTEbAxqioTTSsxg6a2cjwYmnpN"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "J8nybULFsoVvqkxrxI3cMJWsnIf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/J8nybULFsoVvqkxrxI3cMJWsnIf"
+            },
+            {
+              "name": "图层 19.jpg",
+              "token": "NFu8bq8OwoAbFpxu35Yc2lyTnmb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/NFu8bq8OwoAbFpxu35Yc2lyTnmb"
+            },
+            {
+              "name": "图层 18.jpg",
+              "token": "AuZhbOgRpoGuysxzptTco0JZnff",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/AuZhbOgRpoGuysxzptTco0JZnff"
+            },
+            {
+              "name": "图层 17.jpg",
+              "token": "EObXbBgYLowHxAxZ0SKcGfRXnmc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/EObXbBgYLowHxAxZ0SKcGfRXnmc"
+            },
+            {
+              "name": "图层 15.jpg",
+              "token": "VfaibfnOgoYc9fxx7Xrcy5RynHd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/VfaibfnOgoYc9fxx7Xrcy5RynHd"
+            },
+            {
+              "name": "图层 14.jpg",
+              "token": "AIPMbFMbdoo0kjx46qGckga1nAb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/AIPMbFMbdoo0kjx46qGckga1nAb"
+            },
+            {
+              "name": "图层 13.jpg",
+              "token": "UMp7bZsi5o7JjvxtBiQcuXJznNY",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/UMp7bZsi5o7JjvxtBiQcuXJznNY"
+            },
+            {
+              "name": "图层 12.jpg",
+              "token": "BnXMb2lg9oGfsox0ZNhcsn3qnt0",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BnXMb2lg9oGfsox0ZNhcsn3qnt0"
+            },
+            {
+              "name": "图层 11.jpg",
+              "token": "QcLkb4TUtoGlUKxvGd1cdtYdnsb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QcLkb4TUtoGlUKxvGd1cdtYdnsb"
+            },
+            {
+              "name": "图层 10.jpg",
+              "token": "BntgbQA7Eo0E8Ix9soGcU240n5b",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BntgbQA7Eo0E8Ix9soGcU240n5b"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "K6XqbleBmoZftBxW46mc4uxBn2b",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/K6XqbleBmoZftBxW46mc4uxBn2b"
+            },
+            {
+              "name": "Thumbs.db",
+              "token": "BerzbuYPRoib9Ex5bGDczLurnBp",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BerzbuYPRoib9Ex5bGDczLurnBp"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/广州南沙liverse音乐艺术中心 -黑客吸声板CK1，白棉，声学障板，精工声学软包 (肖宛珊)",
+            "token": "I7CLfXWG7loSG7dR2HAcbTeEnVc",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/I7CLfXWG7loSG7dR2HAcbTeEnVc"
+          },
+          "links": [
+            {
+              "label": "图层 9.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/VhlVbaCQaoRRzcx6mtScn0Lyn2g"
+            },
+            {
+              "label": "图层 8.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ElVhbDz92ovFn7xpvM6cBwienoe"
+            },
+            {
+              "label": "图层 7.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SW3AbwEaWocLURxG0aVcBzTRnuh"
+            },
+            {
+              "label": "图层 6.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/XdXJbXnbdoHyjlxrlUecxoXEn5g"
+            },
+            {
+              "label": "图层 5.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/MIgZbN1hloaeC4xs58pcB0cvnTc"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/IjY1bptF7opjM2xd9lLcHTTwnnd"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/X3qNbnnZtomPuoxs3zAcWg7inGd"
+            },
+            {
+              "label": "图层 22.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/C0RXbXJN5omM1Zx9tfMcnuuEnHg"
+            },
+            {
+              "label": "图层 21.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Gfm0bxw2Yoser0xbJPHcqeWUnPQ"
+            },
+            {
+              "label": "图层 20.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/OUTEbAxqioTTSsxg6a2cjwYmnpN"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/J8nybULFsoVvqkxrxI3cMJWsnIf"
+            },
+            {
+              "label": "图层 19.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/NFu8bq8OwoAbFpxu35Yc2lyTnmb"
+            },
+            {
+              "label": "图层 18.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/AuZhbOgRpoGuysxzptTco0JZnff"
+            },
+            {
+              "label": "图层 17.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/EObXbBgYLowHxAxZ0SKcGfRXnmc"
+            },
+            {
+              "label": "图层 15.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/VfaibfnOgoYc9fxx7Xrcy5RynHd"
+            },
+            {
+              "label": "图层 14.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/AIPMbFMbdoo0kjx46qGckga1nAb"
+            },
+            {
+              "label": "图层 13.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/UMp7bZsi5o7JjvxtBiQcuXJznNY"
+            },
+            {
+              "label": "图层 12.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BnXMb2lg9oGfsox0ZNhcsn3qnt0"
+            },
+            {
+              "label": "图层 11.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QcLkb4TUtoGlUKxvGd1cdtYdnsb"
+            },
+            {
+              "label": "图层 10.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BntgbQA7Eo0E8Ix9soGcU240n5b"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/K6XqbleBmoZftBxW46mc4uxBn2b"
+            },
+            {
+              "label": "Thumbs.db",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BerzbuYPRoib9Ex5bGDczLurnBp"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/I7CLfXWG7loSG7dR2HAcbTeEnVc"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/广州南沙liverse音乐艺术中心 -黑客吸声板CK1，白棉，声学障板，精工声学软包 (肖宛珊)",
+          "folderToken": "I7CLfXWG7loSG7dR2HAcbTeEnVc",
+          "zipNameHint": "广州南沙liverse音乐艺术中心 -黑客吸声板CK1，白棉，声学障板，精工声学软包 (肖宛珊)",
+          "files": [
+            {
+              "token": "VhlVbaCQaoRRzcx6mtScn0Lyn2g",
+              "type": "file",
+              "name": "图层 9.jpg"
+            },
+            {
+              "token": "ElVhbDz92ovFn7xpvM6cBwienoe",
+              "type": "file",
+              "name": "图层 8.jpg"
+            },
+            {
+              "token": "SW3AbwEaWocLURxG0aVcBzTRnuh",
+              "type": "file",
+              "name": "图层 7.jpg"
+            },
+            {
+              "token": "XdXJbXnbdoHyjlxrlUecxoXEn5g",
+              "type": "file",
+              "name": "图层 6.jpg"
+            },
+            {
+              "token": "MIgZbN1hloaeC4xs58pcB0cvnTc",
+              "type": "file",
+              "name": "图层 5.jpg"
+            },
+            {
+              "token": "IjY1bptF7opjM2xd9lLcHTTwnnd",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "X3qNbnnZtomPuoxs3zAcWg7inGd",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "C0RXbXJN5omM1Zx9tfMcnuuEnHg",
+              "type": "file",
+              "name": "图层 22.jpg"
+            },
+            {
+              "token": "Gfm0bxw2Yoser0xbJPHcqeWUnPQ",
+              "type": "file",
+              "name": "图层 21.jpg"
+            },
+            {
+              "token": "OUTEbAxqioTTSsxg6a2cjwYmnpN",
+              "type": "file",
+              "name": "图层 20.jpg"
+            },
+            {
+              "token": "J8nybULFsoVvqkxrxI3cMJWsnIf",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "NFu8bq8OwoAbFpxu35Yc2lyTnmb",
+              "type": "file",
+              "name": "图层 19.jpg"
+            },
+            {
+              "token": "AuZhbOgRpoGuysxzptTco0JZnff",
+              "type": "file",
+              "name": "图层 18.jpg"
+            },
+            {
+              "token": "EObXbBgYLowHxAxZ0SKcGfRXnmc",
+              "type": "file",
+              "name": "图层 17.jpg"
+            },
+            {
+              "token": "VfaibfnOgoYc9fxx7Xrcy5RynHd",
+              "type": "file",
+              "name": "图层 15.jpg"
+            },
+            {
+              "token": "AIPMbFMbdoo0kjx46qGckga1nAb",
+              "type": "file",
+              "name": "图层 14.jpg"
+            },
+            {
+              "token": "UMp7bZsi5o7JjvxtBiQcuXJznNY",
+              "type": "file",
+              "name": "图层 13.jpg"
+            },
+            {
+              "token": "BnXMb2lg9oGfsox0ZNhcsn3qnt0",
+              "type": "file",
+              "name": "图层 12.jpg"
+            },
+            {
+              "token": "QcLkb4TUtoGlUKxvGd1cdtYdnsb",
+              "type": "file",
+              "name": "图层 11.jpg"
+            },
+            {
+              "token": "BntgbQA7Eo0E8Ix9soGcU240n5b",
+              "type": "file",
+              "name": "图层 10.jpg"
+            },
+            {
+              "token": "K6XqbleBmoZftBxW46mc4uxBn2b",
+              "type": "file",
+              "name": "图层 1.jpg"
+            },
+            {
+              "token": "BerzbuYPRoib9Ex5bGDczLurnBp",
+              "type": "file",
+              "name": "Thumbs.db"
             }
           ]
         }
