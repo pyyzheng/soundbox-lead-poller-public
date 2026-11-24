@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T04:53:23.645Z",
+  "updatedAt": "2026-11-24T04:53:30.259Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -750,6 +750,98 @@
           "folderPath": "C-产品画册&产品色卡_20260706-0355PM/COLOR 色卡",
           "folderToken": "FRLpfSXp7lYAdmdWiDScJ8o2nsv",
           "driveUrl": "https://rcn1z5q6iyyc.feishu.cn/file/J4DkbGY6BoxN2PxjxJQcM5zPnhg"
+        }
+      }
+    },
+    "rv_mwu7yona_8zhu5p": {
+      "id": "rv_mwu7yona_8zhu5p",
+      "status": "pending",
+      "createdAt": "2026-11-24T04:53:25.702Z",
+      "updatedAt": "2026-11-24T04:53:30.093Z",
+      "messageId": "om_x100b7f65ca40f4b8ddb1c367c034dcc",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f65ca40f4b8ddb1c367c034dcc"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f65ca578ca4df8b37039018856"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "YxJObM6MLobFqhxJ4HlcpQI9nbg",
+        "VpABbFktDoWXV5xVyWwcJsA1nPC"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "YxJObM6MLobFqhxJ4HlcpQI9nbg",
+          "VpABbFktDoWXV5xVyWwcJsA1nPC"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "M-Marketing 品牌营销资料/Brand Imagery & Video 品牌宣传照片、视频/产品",
+          "fileNames": [
+            "静音舱-空调安装教程（英文版）.mp4",
+            "静音舱-空调安装教程(中文版).mp4"
+          ],
+          "files": [
+            {
+              "name": "静音舱-空调安装教程（英文版）.mp4",
+              "token": "YxJObM6MLobFqhxJ4HlcpQI9nbg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/YxJObM6MLobFqhxJ4HlcpQI9nbg"
+            },
+            {
+              "name": "静音舱-空调安装教程(中文版).mp4",
+              "token": "VpABbFktDoWXV5xVyWwcJsA1nPC",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/VpABbFktDoWXV5xVyWwcJsA1nPC"
+            }
+          ],
+          "folder": {
+            "name": "M-Marketing 品牌营销资料/Brand Imagery & Video 品牌宣传照片、视频/产品",
+            "token": "AqFFfaCEultjrIdy7yLc3kMnnte",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/AqFFfaCEultjrIdy7yLc3kMnnte"
+          },
+          "links": [
+            {
+              "label": "静音舱-空调安装教程（英文版）.mp4",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/YxJObM6MLobFqhxJ4HlcpQI9nbg"
+            },
+            {
+              "label": "静音舱-空调安装教程(中文版).mp4",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/VpABbFktDoWXV5xVyWwcJsA1nPC"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/AqFFfaCEultjrIdy7yLc3kMnnte"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "M-Marketing 品牌营销资料/Brand Imagery & Video 品牌宣传照片、视频/产品",
+          "folderToken": "AqFFfaCEultjrIdy7yLc3kMnnte",
+          "zipNameHint": "产品",
+          "files": [
+            {
+              "token": "YxJObM6MLobFqhxJ4HlcpQI9nbg",
+              "type": "file",
+              "name": "静音舱-空调安装教程（英文版）.mp4"
+            },
+            {
+              "token": "VpABbFktDoWXV5xVyWwcJsA1nPC",
+              "type": "file",
+              "name": "静音舱-空调安装教程(中文版).mp4"
+            }
+          ]
         }
       }
     }
