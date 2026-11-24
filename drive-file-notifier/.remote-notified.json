@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T05:01:05.453Z",
+  "updatedAt": "2026-11-24T05:01:14.335Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -2150,6 +2150,134 @@
             },
             {
               "token": "O7AobkZAFogiN9xUZz7cSEqjnVk",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mwu88kta_wd8w1i": {
+      "id": "rv_mwu88kta_wd8w1i",
+      "status": "pending",
+      "createdAt": "2026-11-24T05:01:07.294Z",
+      "updatedAt": "2026-11-24T05:01:14.144Z",
+      "messageId": "om_x100b7f65ef40eca0c3c68d02f1fe7d5",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f65ef40eca0c3c68d02f1fe7d5"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f65ef570cacc3214f78a525419"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "RlfrboEILoMFVSxc58BclZQqnVf",
+        "E6AYbdD02oGVc4xACdBcormKnsf",
+        "K6cnbvnaOoVTERx9WkAcXPAdndg",
+        "BKrDbpjVxoTfpexGgq6cp6mFnaf"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "RlfrboEILoMFVSxc58BclZQqnVf",
+          "E6AYbdD02oGVc4xACdBcormKnsf",
+          "K6cnbvnaOoVTERx9WkAcXPAdndg",
+          "BKrDbpjVxoTfpexGgq6cp6mFnaf"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/H-长沙三一智联重卡产业园报告厅精工声学软包、全息声学模组(黄嘉杰)",
+          "fileNames": [
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 4.jpg",
+              "token": "RlfrboEILoMFVSxc58BclZQqnVf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/RlfrboEILoMFVSxc58BclZQqnVf"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "E6AYbdD02oGVc4xACdBcormKnsf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/E6AYbdD02oGVc4xACdBcormKnsf"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "K6cnbvnaOoVTERx9WkAcXPAdndg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/K6cnbvnaOoVTERx9WkAcXPAdndg"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "BKrDbpjVxoTfpexGgq6cp6mFnaf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BKrDbpjVxoTfpexGgq6cp6mFnaf"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/H-长沙三一智联重卡产业园报告厅精工声学软包、全息声学模组(黄嘉杰)",
+            "token": "NnC9fvR0flIYq5dKZL2ce1VNnbe",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/NnC9fvR0flIYq5dKZL2ce1VNnbe"
+          },
+          "links": [
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/RlfrboEILoMFVSxc58BclZQqnVf"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/E6AYbdD02oGVc4xACdBcormKnsf"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/K6cnbvnaOoVTERx9WkAcXPAdndg"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BKrDbpjVxoTfpexGgq6cp6mFnaf"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/NnC9fvR0flIYq5dKZL2ce1VNnbe"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/H-长沙三一智联重卡产业园报告厅精工声学软包、全息声学模组(黄嘉杰)",
+          "folderToken": "NnC9fvR0flIYq5dKZL2ce1VNnbe",
+          "zipNameHint": "H-长沙三一智联重卡产业园报告厅精工声学软包、全息声学模组(黄嘉杰)",
+          "files": [
+            {
+              "token": "RlfrboEILoMFVSxc58BclZQqnVf",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "E6AYbdD02oGVc4xACdBcormKnsf",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "K6cnbvnaOoVTERx9WkAcXPAdndg",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "BKrDbpjVxoTfpexGgq6cp6mFnaf",
               "type": "file",
               "name": "图层 1.jpg"
             }
