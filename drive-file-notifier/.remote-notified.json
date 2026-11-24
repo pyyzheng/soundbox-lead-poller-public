@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T05:01:28.262Z",
+  "updatedAt": "2026-11-24T05:01:41.178Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -2285,6 +2285,188 @@
             },
             {
               "token": "BKrDbpjVxoTfpexGgq6cp6mFnaf",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mwu892gm_pzhtd9": {
+      "id": "rv_mwu892gm_pzhtd9",
+      "status": "pending",
+      "createdAt": "2026-11-24T05:01:30.166Z",
+      "updatedAt": "2026-11-24T05:01:40.962Z",
+      "messageId": "om_x100b7f65edf4cca8c1b93ae835d24c5",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f65edf4cca8c1b93ae835d24c5"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f65ed8ad0a0c332cfec59154a3"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "SsgibN0hGoNjQexN6HBcdhMEnOQ",
+        "EPF9b1008oG78Cx6F1bcg1pTnP8",
+        "QulTbsPI5oqiEfxO3fqcvVElnEf",
+        "Tv1wbZxuWobBklxjKakcr4N7nyc",
+        "JIicbt4DUoFpvuxhG5ickirknmg",
+        "KfKWbqPoJoyLdsxFofVcKw5Cnmh",
+        "HnJabIZP3ofwVMxzN6CcsryGnac"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "SsgibN0hGoNjQexN6HBcdhMEnOQ",
+          "EPF9b1008oG78Cx6F1bcg1pTnP8",
+          "QulTbsPI5oqiEfxO3fqcvVElnEf",
+          "Tv1wbZxuWobBklxjKakcr4N7nyc",
+          "JIicbt4DUoFpvuxhG5ickirknmg",
+          "KfKWbqPoJoyLdsxFofVcKw5Cnmh",
+          "HnJabIZP3ofwVMxzN6CcsryGnac"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-北京高思教育集团办公区-ART M2静音舱(牛杰、公绪)",
+          "fileNames": [
+            "图层 8.jpg",
+            "图层 7.jpg",
+            "图层 6.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 8.jpg",
+              "token": "SsgibN0hGoNjQexN6HBcdhMEnOQ",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SsgibN0hGoNjQexN6HBcdhMEnOQ"
+            },
+            {
+              "name": "图层 7.jpg",
+              "token": "EPF9b1008oG78Cx6F1bcg1pTnP8",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/EPF9b1008oG78Cx6F1bcg1pTnP8"
+            },
+            {
+              "name": "图层 6.jpg",
+              "token": "QulTbsPI5oqiEfxO3fqcvVElnEf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QulTbsPI5oqiEfxO3fqcvVElnEf"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "Tv1wbZxuWobBklxjKakcr4N7nyc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Tv1wbZxuWobBklxjKakcr4N7nyc"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "JIicbt4DUoFpvuxhG5ickirknmg",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/JIicbt4DUoFpvuxhG5ickirknmg"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "KfKWbqPoJoyLdsxFofVcKw5Cnmh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KfKWbqPoJoyLdsxFofVcKw5Cnmh"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "HnJabIZP3ofwVMxzN6CcsryGnac",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/HnJabIZP3ofwVMxzN6CcsryGnac"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-北京高思教育集团办公区-ART M2静音舱(牛杰、公绪)",
+            "token": "VZwtfaztTlpQXKdI905cbwYTnUh",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/VZwtfaztTlpQXKdI905cbwYTnUh"
+          },
+          "links": [
+            {
+              "label": "图层 8.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SsgibN0hGoNjQexN6HBcdhMEnOQ"
+            },
+            {
+              "label": "图层 7.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/EPF9b1008oG78Cx6F1bcg1pTnP8"
+            },
+            {
+              "label": "图层 6.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/QulTbsPI5oqiEfxO3fqcvVElnEf"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Tv1wbZxuWobBklxjKakcr4N7nyc"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/JIicbt4DUoFpvuxhG5ickirknmg"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/KfKWbqPoJoyLdsxFofVcKw5Cnmh"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/HnJabIZP3ofwVMxzN6CcsryGnac"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/VZwtfaztTlpQXKdI905cbwYTnUh"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/B-办公商用 Office & Commercial cases/B-北京高思教育集团办公区-ART M2静音舱(牛杰、公绪)",
+          "folderToken": "VZwtfaztTlpQXKdI905cbwYTnUh",
+          "zipNameHint": "B-北京高思教育集团办公区-ART M2静音舱(牛杰、公绪)",
+          "files": [
+            {
+              "token": "SsgibN0hGoNjQexN6HBcdhMEnOQ",
+              "type": "file",
+              "name": "图层 8.jpg"
+            },
+            {
+              "token": "EPF9b1008oG78Cx6F1bcg1pTnP8",
+              "type": "file",
+              "name": "图层 7.jpg"
+            },
+            {
+              "token": "QulTbsPI5oqiEfxO3fqcvVElnEf",
+              "type": "file",
+              "name": "图层 6.jpg"
+            },
+            {
+              "token": "Tv1wbZxuWobBklxjKakcr4N7nyc",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "JIicbt4DUoFpvuxhG5ickirknmg",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "KfKWbqPoJoyLdsxFofVcKw5Cnmh",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "HnJabIZP3ofwVMxzN6CcsryGnac",
               "type": "file",
               "name": "图层 1.jpg"
             }
