@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T04:55:42.480Z",
+  "updatedAt": "2026-11-24T04:55:56.604Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -1568,6 +1568,224 @@
             },
             {
               "token": "S8gNbUdgWo2zrrxqjUacZnoMnlg",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mwu81neg_sfhn1q": {
+      "id": "rv_mwu81neg_sfhn1q",
+      "status": "pending",
+      "createdAt": "2026-11-24T04:55:44.056Z",
+      "updatedAt": "2026-11-24T04:55:56.451Z",
+      "messageId": "om_x100b7f65c37fb8a0c1b16808d6dcbc1",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f65c37fb8a0c1b16808d6dcbc1"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f65c372bca4c4952f9097b6f30"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "RknjbZY10ooVTrxxyTJc2FHonWh",
+        "SBLMb8Regolg8lxReutc2HCSnUe",
+        "Q94FbNZQzox2UMx2fG2cwY28nGd",
+        "Lm1YbQDz6oyJtTx93smcwMXvnqc",
+        "UZILbyUufodnn1xby9wc127fnMe",
+        "SQCMb1rvxopZdaxSh69cvH8dned",
+        "EjCHbNmeBob7AxxCfQ8cxlKRnme",
+        "WqPDb592KoiLnbxvbOqc9snPn6c",
+        "Y5tLbxXfmobxW3xGEAacKhhJnTe"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "RknjbZY10ooVTrxxyTJc2FHonWh",
+          "SBLMb8Regolg8lxReutc2HCSnUe",
+          "Q94FbNZQzox2UMx2fG2cwY28nGd",
+          "Lm1YbQDz6oyJtTx93smcwMXvnqc",
+          "UZILbyUufodnn1xby9wc127fnMe",
+          "SQCMb1rvxopZdaxSh69cvH8dned",
+          "EjCHbNmeBob7AxxCfQ8cxlKRnme",
+          "WqPDb592KoiLnbxvbOqc9snPn6c",
+          "Y5tLbxXfmobxW3xGEAacKhhJnTe"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/G-广西体育高等专科学校阶梯教室 声学软包(盘梁燕)",
+          "fileNames": [
+            "图层 9.jpg",
+            "图层 8.jpg",
+            "图层 7.jpg",
+            "图层 6.jpg",
+            "图层 5.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 9.jpg",
+              "token": "RknjbZY10ooVTrxxyTJc2FHonWh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/RknjbZY10ooVTrxxyTJc2FHonWh"
+            },
+            {
+              "name": "图层 8.jpg",
+              "token": "SBLMb8Regolg8lxReutc2HCSnUe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SBLMb8Regolg8lxReutc2HCSnUe"
+            },
+            {
+              "name": "图层 7.jpg",
+              "token": "Q94FbNZQzox2UMx2fG2cwY28nGd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Q94FbNZQzox2UMx2fG2cwY28nGd"
+            },
+            {
+              "name": "图层 6.jpg",
+              "token": "Lm1YbQDz6oyJtTx93smcwMXvnqc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Lm1YbQDz6oyJtTx93smcwMXvnqc"
+            },
+            {
+              "name": "图层 5.jpg",
+              "token": "UZILbyUufodnn1xby9wc127fnMe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/UZILbyUufodnn1xby9wc127fnMe"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "SQCMb1rvxopZdaxSh69cvH8dned",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SQCMb1rvxopZdaxSh69cvH8dned"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "EjCHbNmeBob7AxxCfQ8cxlKRnme",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/EjCHbNmeBob7AxxCfQ8cxlKRnme"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "WqPDb592KoiLnbxvbOqc9snPn6c",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/WqPDb592KoiLnbxvbOqc9snPn6c"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "Y5tLbxXfmobxW3xGEAacKhhJnTe",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Y5tLbxXfmobxW3xGEAacKhhJnTe"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/G-广西体育高等专科学校阶梯教室 声学软包(盘梁燕)",
+            "token": "Q3ROfJoGRlArendS7ZGck44snVb",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/Q3ROfJoGRlArendS7ZGck44snVb"
+          },
+          "links": [
+            {
+              "label": "图层 9.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/RknjbZY10ooVTrxxyTJc2FHonWh"
+            },
+            {
+              "label": "图层 8.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SBLMb8Regolg8lxReutc2HCSnUe"
+            },
+            {
+              "label": "图层 7.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Q94FbNZQzox2UMx2fG2cwY28nGd"
+            },
+            {
+              "label": "图层 6.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Lm1YbQDz6oyJtTx93smcwMXvnqc"
+            },
+            {
+              "label": "图层 5.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/UZILbyUufodnn1xby9wc127fnMe"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/SQCMb1rvxopZdaxSh69cvH8dned"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/EjCHbNmeBob7AxxCfQ8cxlKRnme"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/WqPDb592KoiLnbxvbOqc9snPn6c"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/Y5tLbxXfmobxW3xGEAacKhhJnTe"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/Q3ROfJoGRlArendS7ZGck44snVb"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/G-广西体育高等专科学校阶梯教室 声学软包(盘梁燕)",
+          "folderToken": "Q3ROfJoGRlArendS7ZGck44snVb",
+          "zipNameHint": "G-广西体育高等专科学校阶梯教室 声学软包(盘梁燕)",
+          "files": [
+            {
+              "token": "RknjbZY10ooVTrxxyTJc2FHonWh",
+              "type": "file",
+              "name": "图层 9.jpg"
+            },
+            {
+              "token": "SBLMb8Regolg8lxReutc2HCSnUe",
+              "type": "file",
+              "name": "图层 8.jpg"
+            },
+            {
+              "token": "Q94FbNZQzox2UMx2fG2cwY28nGd",
+              "type": "file",
+              "name": "图层 7.jpg"
+            },
+            {
+              "token": "Lm1YbQDz6oyJtTx93smcwMXvnqc",
+              "type": "file",
+              "name": "图层 6.jpg"
+            },
+            {
+              "token": "UZILbyUufodnn1xby9wc127fnMe",
+              "type": "file",
+              "name": "图层 5.jpg"
+            },
+            {
+              "token": "SQCMb1rvxopZdaxSh69cvH8dned",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "EjCHbNmeBob7AxxCfQ8cxlKRnme",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "WqPDb592KoiLnbxvbOqc9snPn6c",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "Y5tLbxXfmobxW3xGEAacKhhJnTe",
               "type": "file",
               "name": "图层 1.jpg"
             }
