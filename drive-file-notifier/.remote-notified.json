@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-25T02:35:54.419Z",
+  "updatedAt": "2026-11-25T02:36:07.121Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -2970,6 +2970,152 @@
       "publishRequestedAt": "2026-11-24T05:57:35.997Z",
       "publishClaimOwner": "45336930696",
       "publishClaimedAt": "2026-11-24T05:58:09.613Z"
+    },
+    "rv_mwvihq1m_vokltj": {
+      "id": "rv_mwvihq1m_vokltj",
+      "status": "pending",
+      "createdAt": "2026-11-25T02:35:56.314Z",
+      "updatedAt": "2026-11-25T02:36:06.892Z",
+      "messageId": "om_x100b7f50d79c7c8ccf5e7df8891bbe4",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f50d79c7c8ccf5e7df8891bbe4"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f50d7ae40accd1653dad68666d"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "PISXbgODYofQttxff11c8yqMnnh",
+        "BsnCbIQXmopYJqxtNmMckugfnoh",
+        "X8i2bs6lgo66H3xOx2ic0YVongb",
+        "ABdGblPJponiOrxiuLXct03Mnid",
+        "X8ZJbr7HXoopfdxhGQ2cjjYynyh"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "PISXbgODYofQttxff11c8yqMnnh",
+          "BsnCbIQXmopYJqxtNmMckugfnoh",
+          "X8i2bs6lgo66H3xOx2ic0YVongb",
+          "ABdGblPJponiOrxiuLXct03Mnid",
+          "X8ZJbr7HXoopfdxhGQ2cjjYynyh"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-陕西省榆林市靖边县靖边中学文化艺术体育中心-产品 M50(张芸珲)",
+          "fileNames": [
+            "图层 5.jpg",
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 5.jpg",
+              "token": "PISXbgODYofQttxff11c8yqMnnh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/PISXbgODYofQttxff11c8yqMnnh"
+            },
+            {
+              "name": "图层 4.jpg",
+              "token": "BsnCbIQXmopYJqxtNmMckugfnoh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BsnCbIQXmopYJqxtNmMckugfnoh"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "X8i2bs6lgo66H3xOx2ic0YVongb",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/X8i2bs6lgo66H3xOx2ic0YVongb"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "ABdGblPJponiOrxiuLXct03Mnid",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ABdGblPJponiOrxiuLXct03Mnid"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "X8ZJbr7HXoopfdxhGQ2cjjYynyh",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/X8ZJbr7HXoopfdxhGQ2cjjYynyh"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-陕西省榆林市靖边县靖边中学文化艺术体育中心-产品 M50(张芸珲)",
+            "token": "I9lJfV0aBluyvudEVjYcZPMPnGd",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/I9lJfV0aBluyvudEVjYcZPMPnGd"
+          },
+          "links": [
+            {
+              "label": "图层 5.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/PISXbgODYofQttxff11c8yqMnnh"
+            },
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/BsnCbIQXmopYJqxtNmMckugfnoh"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/X8i2bs6lgo66H3xOx2ic0YVongb"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ABdGblPJponiOrxiuLXct03Mnid"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/X8ZJbr7HXoopfdxhGQ2cjjYynyh"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/I9lJfV0aBluyvudEVjYcZPMPnGd"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/S-陕西省榆林市靖边县靖边中学文化艺术体育中心-产品 M50(张芸珲)",
+          "folderToken": "I9lJfV0aBluyvudEVjYcZPMPnGd",
+          "zipNameHint": "S-陕西省榆林市靖边县靖边中学文化艺术体育中心-产品 M50(张芸珲)",
+          "files": [
+            {
+              "token": "PISXbgODYofQttxff11c8yqMnnh",
+              "type": "file",
+              "name": "图层 5.jpg"
+            },
+            {
+              "token": "BsnCbIQXmopYJqxtNmMckugfnoh",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "X8i2bs6lgo66H3xOx2ic0YVongb",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "ABdGblPJponiOrxiuLXct03Mnid",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "X8ZJbr7HXoopfdxhGQ2cjjYynyh",
+              "type": "file",
+              "name": "图层 1.jpg"
+            }
+          ]
+        }
+      }
     }
   }
 }
