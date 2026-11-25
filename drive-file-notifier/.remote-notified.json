@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-25T14:27:00.033Z",
+  "updatedAt": "2026-11-25T14:27:09.079Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -3123,6 +3123,134 @@
       "publishRequestedAt": "2026-11-25T02:46:42.383Z",
       "publishClaimOwner": "45535371770",
       "publishClaimedAt": "2026-11-25T02:47:11.167Z"
+    },
+    "rv_mww7w72j_sl54op": {
+      "id": "rv_mww7w72j_sl54op",
+      "status": "pending",
+      "createdAt": "2026-11-25T14:27:01.963Z",
+      "updatedAt": "2026-11-25T14:27:08.793Z",
+      "messageId": "om_x100b7f5b4d7a50a4dd5f6b489f8615a",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f5b4d7a50a4dd5f6b489f8615a"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f5b4d0954a8c349e44401fb890"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "OhYobXDigoyTkXxhSmxcxDTinId",
+        "G2AtbMfBsohyYjxV7kjcGEuVn9k",
+        "GxKFbYWcZot04kxPBgHcX2U3nNd",
+        "GX3LbZTOWo3IS1xAwc9cTz6Mn7e"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "OhYobXDigoyTkXxhSmxcxDTinId",
+          "G2AtbMfBsohyYjxV7kjcGEuVn9k",
+          "GxKFbYWcZot04kxPBgHcX2U3nNd",
+          "GX3LbZTOWo3IS1xAwc9cTz6Mn7e"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "C-产品画册&产品色卡_20260706-0355PM",
+          "fileNames": [
+            "VRT POD画册20261125(中文版）.pdf",
+            "VRT POD画册20261125(英文版）.pdf",
+            "ART POD画册20261125(中文版).pdf",
+            "ART POD画册20261125(英文版).pdf"
+          ],
+          "files": [
+            {
+              "name": "VRT POD画册20261125(中文版）.pdf",
+              "token": "OhYobXDigoyTkXxhSmxcxDTinId",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/OhYobXDigoyTkXxhSmxcxDTinId"
+            },
+            {
+              "name": "VRT POD画册20261125(英文版）.pdf",
+              "token": "G2AtbMfBsohyYjxV7kjcGEuVn9k",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/G2AtbMfBsohyYjxV7kjcGEuVn9k"
+            },
+            {
+              "name": "ART POD画册20261125(中文版).pdf",
+              "token": "GxKFbYWcZot04kxPBgHcX2U3nNd",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GxKFbYWcZot04kxPBgHcX2U3nNd"
+            },
+            {
+              "name": "ART POD画册20261125(英文版).pdf",
+              "token": "GX3LbZTOWo3IS1xAwc9cTz6Mn7e",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GX3LbZTOWo3IS1xAwc9cTz6Mn7e"
+            }
+          ],
+          "folder": {
+            "name": "C-产品画册&产品色卡_20260706-0355PM",
+            "token": "YYFCfwjMMley4md1SMgcPLvznEb",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/YYFCfwjMMley4md1SMgcPLvznEb"
+          },
+          "links": [
+            {
+              "label": "VRT POD画册20261125(中文版）.pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/OhYobXDigoyTkXxhSmxcxDTinId"
+            },
+            {
+              "label": "VRT POD画册20261125(英文版）.pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/G2AtbMfBsohyYjxV7kjcGEuVn9k"
+            },
+            {
+              "label": "ART POD画册20261125(中文版).pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GxKFbYWcZot04kxPBgHcX2U3nNd"
+            },
+            {
+              "label": "ART POD画册20261125(英文版).pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/GX3LbZTOWo3IS1xAwc9cTz6Mn7e"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/YYFCfwjMMley4md1SMgcPLvznEb"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "C-产品画册&产品色卡_20260706-0355PM",
+          "folderToken": "YYFCfwjMMley4md1SMgcPLvznEb",
+          "zipNameHint": "C-产品画册&产品色卡_20260706-0355PM",
+          "files": [
+            {
+              "token": "OhYobXDigoyTkXxhSmxcxDTinId",
+              "type": "file",
+              "name": "VRT POD画册20261125(中文版）.pdf"
+            },
+            {
+              "token": "G2AtbMfBsohyYjxV7kjcGEuVn9k",
+              "type": "file",
+              "name": "VRT POD画册20261125(英文版）.pdf"
+            },
+            {
+              "token": "GxKFbYWcZot04kxPBgHcX2U3nNd",
+              "type": "file",
+              "name": "ART POD画册20261125(中文版).pdf"
+            },
+            {
+              "token": "GX3LbZTOWo3IS1xAwc9cTz6Mn7e",
+              "type": "file",
+              "name": "ART POD画册20261125(英文版).pdf"
+            }
+          ]
+        }
+      }
     }
   }
 }
