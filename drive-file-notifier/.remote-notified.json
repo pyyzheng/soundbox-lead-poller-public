@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-26T00:51:16.380Z",
+  "updatedAt": "2026-11-26T00:51:26.520Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -3258,9 +3258,9 @@
     },
     "rv_mwwu1dkp_0uajwk": {
       "id": "rv_mwwu1dkp_0uajwk",
-      "status": "sending",
+      "status": "send_failed",
       "createdAt": "2026-11-26T00:46:55.225Z",
-      "updatedAt": "2026-11-26T00:51:16.188Z",
+      "updatedAt": "2026-11-26T00:51:26.237Z",
       "messageId": "om_x100b7f4c569aa4a0b37e231e0db8056",
       "messages": [
         {
@@ -3275,7 +3275,7 @@
         }
       ],
       "decidedByName": "米拉",
-      "error": "",
+      "error": "Request failed with status code 404",
       "groupSent": false,
       "tokens": [
         "T04nbxJwBo65ivxZt2OcikaLnTf",
