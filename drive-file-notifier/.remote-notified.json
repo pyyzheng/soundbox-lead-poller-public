@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-26T00:46:53.171Z",
+  "updatedAt": "2026-11-26T00:47:03.368Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -3251,6 +3251,134 @@
               "token": "GX3LbZTOWo3IS1xAwc9cTz6Mn7e",
               "type": "file",
               "name": "ART POD画册20261125(英文版).pdf"
+            }
+          ]
+        }
+      }
+    },
+    "rv_mwwu1dkp_0uajwk": {
+      "id": "rv_mwwu1dkp_0uajwk",
+      "status": "pending",
+      "createdAt": "2026-11-26T00:46:55.225Z",
+      "updatedAt": "2026-11-26T00:47:02.998Z",
+      "messageId": "om_x100b7f4c569aa4a0b37e231e0db8056",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f4c569aa4a0b37e231e0db8056"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f4c56abdcb4b4f35df4772bc66"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "T04nbxJwBo65ivxZt2OcikaLnTf",
+        "TsbGbHPoBoCoosxuYqecBAb1nMo",
+        "ZP0CbhJyvoki12xIqVRcFgcWnpc",
+        "J3gObsFOForOUfxCt9Mclp2Wn2d"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "T04nbxJwBo65ivxZt2OcikaLnTf",
+          "TsbGbHPoBoCoosxuYqecBAb1nMo",
+          "ZP0CbhJyvoki12xIqVRcFgcWnpc",
+          "J3gObsFOForOUfxCt9Mclp2Wn2d"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/H-湖南益阳桃江县第一中学体育馆-天花M30 墙面MGP CK5(黄嘉杰)",
+          "fileNames": [
+            "图层 4.jpg",
+            "图层 3.jpg",
+            "图层 2.jpg",
+            "图层 1.jpg"
+          ],
+          "files": [
+            {
+              "name": "图层 4.jpg",
+              "token": "T04nbxJwBo65ivxZt2OcikaLnTf",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/T04nbxJwBo65ivxZt2OcikaLnTf"
+            },
+            {
+              "name": "图层 3.jpg",
+              "token": "TsbGbHPoBoCoosxuYqecBAb1nMo",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TsbGbHPoBoCoosxuYqecBAb1nMo"
+            },
+            {
+              "name": "图层 2.jpg",
+              "token": "ZP0CbhJyvoki12xIqVRcFgcWnpc",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ZP0CbhJyvoki12xIqVRcFgcWnpc"
+            },
+            {
+              "name": "图层 1.jpg",
+              "token": "J3gObsFOForOUfxCt9Mclp2Wn2d",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/J3gObsFOForOUfxCt9Mclp2Wn2d"
+            }
+          ],
+          "folder": {
+            "name": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/H-湖南益阳桃江县第一中学体育馆-天花M30 墙面MGP CK5(黄嘉杰)",
+            "token": "O1r5ff4Uqlsy4hdUU5ncoRgnnOc",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/O1r5ff4Uqlsy4hdUU5ncoRgnnOc"
+          },
+          "links": [
+            {
+              "label": "图层 4.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/T04nbxJwBo65ivxZt2OcikaLnTf"
+            },
+            {
+              "label": "图层 3.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/TsbGbHPoBoCoosxuYqecBAb1nMo"
+            },
+            {
+              "label": "图层 2.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/ZP0CbhJyvoki12xIqVRcFgcWnpc"
+            },
+            {
+              "label": "图层 1.jpg",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/J3gObsFOForOUfxCt9Mclp2Wn2d"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/O1r5ff4Uqlsy4hdUU5ncoRgnnOc"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "A-Case Gallery案例（图片-视频)/W-文体教育 Education/H-湖南益阳桃江县第一中学体育馆-天花M30 墙面MGP CK5(黄嘉杰)",
+          "folderToken": "O1r5ff4Uqlsy4hdUU5ncoRgnnOc",
+          "zipNameHint": "H-湖南益阳桃江县第一中学体育馆-天花M30 墙面MGP CK5(黄嘉杰)",
+          "files": [
+            {
+              "token": "T04nbxJwBo65ivxZt2OcikaLnTf",
+              "type": "file",
+              "name": "图层 4.jpg"
+            },
+            {
+              "token": "TsbGbHPoBoCoosxuYqecBAb1nMo",
+              "type": "file",
+              "name": "图层 3.jpg"
+            },
+            {
+              "token": "ZP0CbhJyvoki12xIqVRcFgcWnpc",
+              "type": "file",
+              "name": "图层 2.jpg"
+            },
+            {
+              "token": "J3gObsFOForOUfxCt9Mclp2Wn2d",
+              "type": "file",
+              "name": "图层 1.jpg"
             }
           ]
         }
