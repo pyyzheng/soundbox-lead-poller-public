@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-28T07:53:54.209Z",
+  "updatedAt": "2026-11-28T07:54:01.738Z",
   "notified": {
     "SuPkbSD26o3gStxISgncWwFdnVq": 1787037340,
     "HumCbM9ProQIWmxW1kvcOtnRntd": 1787037485,
@@ -3392,6 +3392,98 @@
       "publishRequestedAt": "2026-11-26T01:29:50.436Z",
       "publishClaimOwner": "45736149845",
       "publishClaimedAt": "2026-11-26T01:30:20.999Z"
+    },
+    "rv_mx04682c_yfz70u": {
+      "id": "rv_mx04682c_yfz70u",
+      "status": "pending",
+      "createdAt": "2026-11-28T07:53:56.052Z",
+      "updatedAt": "2026-11-28T07:54:01.396Z",
+      "messageId": "om_x100b7f9cc7b1eca0b0f3a281eb462d3",
+      "messages": [
+        {
+          "openId": "ou_6355ed1e5ec6d298f6644df9e0187534",
+          "name": "郑培友",
+          "messageId": "om_x100b7f9cc7b1eca0b0f3a281eb462d3"
+        },
+        {
+          "openId": "ou_c575f681cd46a96c9400632d98c5c632",
+          "name": "米拉",
+          "messageId": "om_x100b7f9cc74114a0b0bcc87b42fa22d"
+        }
+      ],
+      "decidedByName": "",
+      "error": "",
+      "groupSent": false,
+      "tokens": [
+        "LWkxbFgI8ozHtQxlrqrcYMlDnef",
+        "HzdmbdQOToihuPxtpNncfbNFnog"
+      ],
+      "spec": {
+        "kind": "zip",
+        "tokens": [
+          "LWkxbFgI8ozHtQxlrqrcYMlDnef",
+          "HzdmbdQOToihuPxtpNncfbNFnog"
+        ],
+        "summary": {
+          "eventLabel": "文件夹有新上传/新建",
+          "folderPath": "C-产品画册&产品色卡_20260706-0355PM",
+          "fileNames": [
+            "VRS画册-中文版20261128.pdf",
+            "VRS画册-英文版20261128.pdf"
+          ],
+          "files": [
+            {
+              "name": "VRS画册-中文版20261128.pdf",
+              "token": "LWkxbFgI8ozHtQxlrqrcYMlDnef",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/LWkxbFgI8ozHtQxlrqrcYMlDnef"
+            },
+            {
+              "name": "VRS画册-英文版20261128.pdf",
+              "token": "HzdmbdQOToihuPxtpNncfbNFnog",
+              "type": "file",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/HzdmbdQOToihuPxtpNncfbNFnog"
+            }
+          ],
+          "folder": {
+            "name": "C-产品画册&产品色卡_20260706-0355PM",
+            "token": "YYFCfwjMMley4md1SMgcPLvznEb",
+            "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/YYFCfwjMMley4md1SMgcPLvznEb"
+          },
+          "links": [
+            {
+              "label": "VRS画册-中文版20261128.pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/LWkxbFgI8ozHtQxlrqrcYMlDnef"
+            },
+            {
+              "label": "VRS画册-英文版20261128.pdf",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/file/HzdmbdQOToihuPxtpNncfbNFnog"
+            },
+            {
+              "label": "文件夹",
+              "url": "https://rcn1z5q6iyyc.feishu.cn/drive/folder/YYFCfwjMMley4md1SMgcPLvznEb"
+            }
+          ]
+        },
+        "payload": {
+          "reason": "文件夹有新上传/新建",
+          "folderName": "C-产品画册&产品色卡_20260706-0355PM",
+          "folderToken": "YYFCfwjMMley4md1SMgcPLvznEb",
+          "zipNameHint": "C-产品画册&产品色卡_20260706-0355PM",
+          "files": [
+            {
+              "token": "LWkxbFgI8ozHtQxlrqrcYMlDnef",
+              "type": "file",
+              "name": "VRS画册-中文版20261128.pdf"
+            },
+            {
+              "token": "HzdmbdQOToihuPxtpNncfbNFnog",
+              "type": "file",
+              "name": "VRS画册-英文版20261128.pdf"
+            }
+          ]
+        }
+      }
     }
   }
 }
